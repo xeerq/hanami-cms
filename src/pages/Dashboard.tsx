@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,68 +7,90 @@ import { Calendar, User, ShoppingBag, Settings, Clock, Heart, Utensils, Star } f
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfileForm from "@/components/ProfileForm";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
   const [selectedCalories, setSelectedCalories] = useState(1500);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
+  const [appointmentHistory, setAppointmentHistory] = useState<any[]>([]);
+  const [orderHistory, setOrderHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const upcomingAppointments = [
-    {
-      id: 1,
-      service: "Masaż relaksacyjny",
-      therapist: "Anna Kowalska",
-      date: "2024-01-25",
-      time: "14:00",
-      duration: 60,
-      status: "confirmed"
-    },
-    {
-      id: 2,
-      service: "Masaż hot stone",
-      therapist: "Maria Nowak", 
-      date: "2024-02-02",
-      time: "16:30",
-      duration: 75,
-      status: "confirmed"
+  useEffect(() => {
+    if (user) {
+      loadUserData();
     }
-  ];
+  }, [user]);
 
-  const appointmentHistory = [
-    {
-      id: 1,
-      service: "Masaż terapeutyczny",
-      therapist: "Anna Kowalska",
-      date: "2024-01-15",
-      time: "15:00",
-      status: "completed",
-      rating: 5
-    },
-    {
-      id: 2,
-      service: "Masaż relaksacyjny",
-      therapist: "Maria Nowak",
-      date: "2024-01-10",
-      time: "10:30", 
-      status: "completed",
-      rating: 5
-    }
-  ];
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
 
-  const orderHistory = [
-    {
-      id: 1,
-      items: ["Olejek do masażu Sakura", "Świeca aromaterapeutyczna"],
-      total: 134,
-      date: "2024-01-20",
-      status: "delivered"
-    },
-    {
-      id: 2,
-      items: ["Krem regenerujący Hanami"],
-      total: 65,
-      date: "2024-01-18",
-      status: "delivered"
+      // Załaduj nadchodzące wizyty
+      const today = new Date().toISOString().split('T')[0];
+      const { data: appointments, error: appointmentsError } = await supabase
+        .from("appointments")
+        .select(`
+          *,
+          services(name, duration, price),
+          therapists(name)
+        `)
+        .eq("user_id", user.id)
+        .gte("appointment_date", today)
+        .order("appointment_date", { ascending: true })
+        .order("appointment_time", { ascending: true });
+
+      if (appointmentsError) throw appointmentsError;
+
+      // Załaduj historię wizyt
+      const { data: history, error: historyError } = await supabase
+        .from("appointments")
+        .select(`
+          *,
+          services(name, duration, price),
+          therapists(name)
+        `)
+        .eq("user_id", user.id)
+        .lt("appointment_date", today)
+        .order("appointment_date", { ascending: false })
+        .order("appointment_time", { ascending: false });
+
+      if (historyError) throw historyError;
+
+      // Załaduj historię zamówień
+      const { data: orders, error: ordersError } = await supabase
+        .from("orders")
+        .select(`
+          *,
+          order_items(
+            *,
+            products(name)
+          )
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (ordersError) throw ordersError;
+
+      setUpcomingAppointments(appointments || []);
+      setAppointmentHistory(history || []);
+      setOrderHistory(orders || []);
+
+    } catch (error: any) {
+      console.error("Error loading user data:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się załadować danych",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const generateMealPlan = () => {
     const meals = {
@@ -154,34 +176,46 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {upcomingAppointments.map((appointment) => (
-                      <div key={appointment.id} className="flex items-center justify-between p-4 border border-hanami-accent/20 rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-hanami-secondary rounded-full flex items-center justify-center">
-                            <Calendar className="h-6 w-6 text-hanami-primary" />
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <p>Ładowanie wizyt...</p>
+                    </div>
+                  ) : upcomingAppointments.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-hanami-neutral">Brak nadchodzących wizyt</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {upcomingAppointments.map((appointment) => (
+                        <div key={appointment.id} className="flex items-center justify-between p-4 border border-hanami-accent/20 rounded-lg">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-hanami-secondary rounded-full flex items-center justify-center">
+                              <Calendar className="h-6 w-6 text-hanami-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-hanami-primary">
+                                {appointment.services?.name}
+                              </h3>
+                              <p className="text-sm text-hanami-neutral">
+                                {appointment.therapists?.name} • {appointment.services?.duration} min
+                              </p>
+                              <p className="text-sm text-hanami-neutral">
+                                {new Date(appointment.appointment_date).toLocaleDateString('pl-PL')} o {appointment.appointment_time.slice(0, 5)}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-hanami-primary">
-                              {appointment.service}
-                            </h3>
-                            <p className="text-sm text-hanami-neutral">
-                              {appointment.therapist} • {appointment.duration} min
-                            </p>
-                            <p className="text-sm text-hanami-neutral">
-                              {new Date(appointment.date).toLocaleDateString('pl-PL')} o {appointment.time}
-                            </p>
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="outline">
+                              {appointment.status === 'confirmed' ? 'Potwierdzona' : appointment.status}
+                            </Badge>
+                            <Button variant="outline" size="sm">
+                              Anuluj
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline">Potwierdzona</Badge>
-                          <Button variant="outline" size="sm">
-                            Anuluj
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-6">
                     <Button>Zarezerwuj nową wizytę</Button>
                   </div>
@@ -199,45 +233,55 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {appointmentHistory.map((appointment) => (
-                      <div key={appointment.id} className="flex items-center justify-between p-4 border border-hanami-accent/20 rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-hanami-secondary rounded-full flex items-center justify-center">
-                            <Clock className="h-6 w-6 text-hanami-primary" />
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <p>Ładowanie historii...</p>
+                    </div>
+                  ) : appointmentHistory.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-hanami-neutral">Brak historii wizyt</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {appointmentHistory.map((appointment) => (
+                        <div key={appointment.id} className="flex items-center justify-between p-4 border border-hanami-accent/20 rounded-lg">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-hanami-secondary rounded-full flex items-center justify-center">
+                              <Clock className="h-6 w-6 text-hanami-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-hanami-primary">
+                                {appointment.services?.name}
+                              </h3>
+                              <p className="text-sm text-hanami-neutral">
+                                {appointment.therapists?.name}
+                              </p>
+                              <p className="text-sm text-hanami-neutral">
+                                {new Date(appointment.appointment_date).toLocaleDateString('pl-PL')} o {appointment.appointment_time.slice(0, 5)}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-hanami-primary">
-                              {appointment.service}
-                            </h3>
-                            <p className="text-sm text-hanami-neutral">
-                              {appointment.therapist}
-                            </p>
-                            <p className="text-sm text-hanami-neutral">
-                              {new Date(appointment.date).toLocaleDateString('pl-PL')} o {appointment.time}
-                            </p>
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star 
+                                  key={i} 
+                                  className={`h-4 w-4 ${
+                                    i < 5 
+                                      ? "text-yellow-400 fill-current" 
+                                      : "text-gray-300"
+                                  }`} 
+                                />
+                              ))}
+                            </div>
+                            <Button variant="outline" size="sm">
+                              Zarezerwuj ponownie
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="flex items-center">
-                            {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
-                                className={`h-4 w-4 ${
-                                  i < appointment.rating 
-                                    ? "text-yellow-400 fill-current" 
-                                    : "text-gray-300"
-                                }`} 
-                              />
-                            ))}
-                          </div>
-                          <Button variant="outline" size="sm">
-                            Zarezerwuj ponownie
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -252,34 +296,46 @@ const Dashboard = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {orderHistory.map((order) => (
-                      <div key={order.id} className="flex items-center justify-between p-4 border border-hanami-accent/20 rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 bg-hanami-secondary rounded-full flex items-center justify-center">
-                            <ShoppingBag className="h-6 w-6 text-hanami-primary" />
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <p>Ładowanie zamówień...</p>
+                    </div>
+                  ) : orderHistory.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-hanami-neutral">Brak historii zamówień</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {orderHistory.map((order) => (
+                        <div key={order.id} className="flex items-center justify-between p-4 border border-hanami-accent/20 rounded-lg">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-hanami-secondary rounded-full flex items-center justify-center">
+                              <ShoppingBag className="h-6 w-6 text-hanami-primary" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-hanami-primary">
+                                Zamówienie #{order.id.slice(0, 8)}
+                              </h3>
+                              <p className="text-sm text-hanami-neutral">
+                                {order.order_items?.map((item: any) => item.products?.name).join(", ") || "Brak produktów"}
+                              </p>
+                              <p className="text-sm text-hanami-neutral">
+                                {new Date(order.created_at).toLocaleDateString('pl-PL')}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <h3 className="font-semibold text-hanami-primary">
-                              Zamówienie #{order.id}
-                            </h3>
-                            <p className="text-sm text-hanami-neutral">
-                              {order.items.join(", ")}
+                          <div className="text-right">
+                            <p className="font-semibold text-hanami-primary">
+                              {order.total_amount} zł
                             </p>
-                            <p className="text-sm text-hanami-neutral">
-                              {new Date(order.date).toLocaleDateString('pl-PL')}
-                            </p>
+                            <Badge variant="outline">
+                              {order.status === 'delivered' ? 'Dostarczone' : order.status}
+                            </Badge>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-hanami-primary">
-                            {order.total} zł
-                          </p>
-                          <Badge variant="outline">Dostarczone</Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
