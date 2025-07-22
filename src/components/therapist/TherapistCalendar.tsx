@@ -184,6 +184,60 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
     return currentTimeMinutes >= slotTimeMinutes && currentTimeMinutes < nextSlotTimeMinutes;
   };
 
+  // Anuluj wizytę
+  const handleCancelAppointment = async (appointmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("id", appointmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Wizyta anulowana",
+        description: "Wizyta została anulowana. Slot czasowy jest teraz wolny.",
+      });
+
+      // Odśwież dane
+      fetchAppointments();
+    } catch (error: any) {
+      console.error("Error cancelling appointment:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się anulować wizyty",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Przywróć wizytę (zmień z anulowanej na potwierdzoną)
+  const handleRestoreAppointment = async (appointmentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "confirmed" })
+        .eq("id", appointmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Wizyta przywrócona",
+        description: "Wizyta została przywrócona i slot jest ponownie zajęty.",
+      });
+
+      // Odśwież dane
+      fetchAppointments();
+    } catch (error: any) {
+      console.error("Error restoring appointment:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się przywrócić wizyty",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Renderuj wskaźnik aktualnej godziny
   const renderCurrentTimeIndicator = (time: string, day: Date) => {
     if (!isCurrentTimeSlot(time, day)) return null;
@@ -321,7 +375,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                             return (
                               <div
                                 key={appointment.id}
-                                className={`relative p-3 rounded-xl text-xs shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group/appointment cursor-pointer animate-fade-in mb-1 overflow-hidden ${
+                                className={`relative p-3 rounded-xl text-xs shadow-lg hover:shadow-xl transition-all duration-300 group/appointment cursor-pointer animate-fade-in mb-1 overflow-hidden ${
                                   isPastAppointment ? "opacity-50 grayscale" : ""
                                 } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow}`}
                               >
@@ -341,11 +395,41 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                                     📞 {appointment.guest_phone}
                                   </div>
                                 )}
+                                
+                                {/* Przyciski akcji - widoczne tylko przy hover */}
+                                <div className="absolute top-1 right-1 opacity-0 group-hover/appointment:opacity-100 transition-opacity duration-200 flex space-x-1">
+                                  {appointment.status === 'confirmed' && !isPastAppointment && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCancelAppointment(appointment.id);
+                                      }}
+                                      className="w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
+                                      title="Anuluj wizytę"
+                                    >
+                                      ×
+                                    </button>
+                                  )}
+                                  {appointment.status === 'cancelled' && !isPastAppointment && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRestoreAppointment(appointment.id);
+                                      }}
+                                      className="w-5 h-5 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
+                                      title="Przywróć wizytę"
+                                    >
+                                      ↺
+                                    </button>
+                                  )}
+                                </div>
+                                
                                 {isPastAppointment && (
                                   <div className="absolute top-1 right-1 text-xs opacity-75">
                                     ✓
                                   </div>
                                 )}
+                                
                                 <div className="absolute inset-0 bg-white/0 group-hover/appointment:bg-white/10 rounded-xl transition-colors duration-300"></div>
                               </div>
                             );

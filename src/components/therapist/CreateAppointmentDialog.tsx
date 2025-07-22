@@ -163,7 +163,7 @@ const CreateAppointmentDialog = ({
         `)
         .eq("therapist_id", therapistId)
         .eq("appointment_date", format(date, "yyyy-MM-dd"))
-        .in("status", ["confirmed", "pending"]);
+        .in("status", ["confirmed", "pending"]); // Nie sprawdzaj anulowanych
 
       if (checkError) throw checkError;
 

@@ -151,7 +151,7 @@ const Booking = () => {
         `)
         .eq("therapist_id", therapistId)
         .eq("appointment_date", date)
-        .in("status", ["confirmed", "pending"]);
+        .in("status", ["confirmed", "pending"]); // Nie blokuj anulowanych wizyt
 
       if (error) throw error;
 
