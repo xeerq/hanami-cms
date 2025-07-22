@@ -14,7 +14,12 @@ export const useAdminCheck = () => {
   }, [user]);
 
   const checkAdminRole = async () => {
-    if (!user || authLoading) {
+    if (authLoading) {
+      return;
+    }
+    
+    if (!user) {
+      setIsAdmin(false);
       setLoading(false);
       return;
     }
