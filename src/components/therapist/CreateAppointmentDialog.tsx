@@ -149,6 +149,46 @@ const CreateAppointmentDialog = ({
 
     setLoading(true);
     try {
+      // Sprawdź konflikty z istniejącymi wizytami
+      const selectedServiceData = services.find(s => s.id === serviceId);
+      const serviceDuration = selectedServiceData?.duration || 60;
+      
+      const { data: existingAppointments, error: checkError } = await supabase
+        .from("appointments")
+        .select(`
+          appointment_time,
+          services (
+            duration
+          )
+        `)
+        .eq("therapist_id", therapistId)
+        .eq("appointment_date", format(date, "yyyy-MM-dd"))
+        .in("status", ["confirmed", "pending"]);
+
+      if (checkError) throw checkError;
+
+      // Sprawdź czy nowa wizyta koliduje z istniejącymi
+      const newAppointmentTimeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+      const newAppointmentEndMinutes = newAppointmentTimeMinutes + serviceDuration;
+
+      const hasConflict = existingAppointments?.some(apt => {
+        const existingTimeMinutes = parseInt(apt.appointment_time.slice(0, 5).split(':')[0]) * 60 + parseInt(apt.appointment_time.slice(0, 5).split(':')[1]);
+        const existingEndMinutes = existingTimeMinutes + (apt.services?.duration || 60);
+
+        // Sprawdź nakładanie się czasów
+        return (newAppointmentTimeMinutes < existingEndMinutes && newAppointmentEndMinutes > existingTimeMinutes);
+      });
+
+      if (hasConflict) {
+        toast({
+          title: "Konflikt terminów",
+          description: "Wybrany termin nakłada się z istniejącą wizytą. Wybierz inny czas.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const appointmentData = {
         therapist_id: therapistId,
         service_id: serviceId,

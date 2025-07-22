@@ -151,53 +151,60 @@ const Booking = () => {
         `)
         .eq("therapist_id", therapistId)
         .eq("appointment_date", date)
-        .in("status", ["confirmed", "pending"]); // Blokuj również wizyty w trakcie przetwarzania
+        .in("status", ["confirmed", "pending"]);
 
       if (error) throw error;
 
       console.log("Booked appointments:", bookedAppointments);
 
-      // Stwórz listę wszystkich zablokowanych godzin na podstawie czasu trwania usług
+      // Jeśli brak wybranej usługi, nie blokuj niczego
+      if (!selectedService) {
+        setAvailableTimes(timeSlots);
+        return;
+      }
+
+      const selectedServiceDuration = selectedService.duration;
       const blockedTimes = new Set<string>();
-      
-      bookedAppointments?.forEach(apt => {
-        const appointmentTime = apt.appointment_time.slice(0, 5); // Remove seconds
-        const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
-        const serviceDurationMinutes = apt.services?.duration || 60; // Default 60 minutes
-        
-        // Zablokuj wszystkie sloty w czasie trwania usługi
-        timeSlots.forEach(slot => {
-          const slotTimeMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
-          if (slotTimeMinutes >= appointmentTimeMinutes && 
-              slotTimeMinutes < appointmentTimeMinutes + serviceDurationMinutes) {
-            blockedTimes.add(slot);
-          }
-        });
-      });
-      
-      // Dodatkowo, sprawdź czy nowa wizyta nie będzie kolidować z istniejącymi
-      // - blokuj sloty, gdzie nowa usługa rozpoczynałaby się, ale nie skończyłaby przed kolejną wizytą
-      const selectedServiceDuration = selectedService?.duration || 60;
-      const additionalBlockedTimes = new Set<string>();
-      
+
+      // Dla każdego slotu czasowego sprawdź czy można zarezerwować usługę
       timeSlots.forEach(slot => {
         const slotTimeMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
         const slotEndTimeMinutes = slotTimeMinutes + selectedServiceDuration;
         
-        // Sprawdź czy jakakolwiek część nowej usługi kolidowałaby z istniejącymi wizytami
+        let isSlotAvailable = true;
+
+        // Sprawdź konflikt z każdą istniejącą wizytą
         bookedAppointments?.forEach(apt => {
           const appointmentTime = apt.appointment_time.slice(0, 5);
           const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
+          const appointmentEndTimeMinutes = appointmentTimeMinutes + (apt.services?.duration || 60);
+
+          // Sprawdź czy nowa wizyta koliduje z istniejącą
+          // Kolizja występuje gdy:
+          // 1. Nowa wizyta zaczyna się w trakcie istniejącej wizyty
+          // 2. Nowa wizyta kończy się w trakcie istniejącej wizyty  
+          // 3. Nowa wizyta całkowicie zawiera istniejącą wizytę
+          // 4. Istniejąca wizyta całkowicie zawiera nową wizytę
           
-          // Jeśli nowa usługa kończyłaby się po rozpoczęciu istniejącej wizyty
-          if (slotEndTimeMinutes > appointmentTimeMinutes && slotTimeMinutes <= appointmentTimeMinutes) {
-            additionalBlockedTimes.add(slot);
+          const newStartsBeforeExistingEnds = slotTimeMinutes < appointmentEndTimeMinutes;
+          const newEndsAfterExistingStarts = slotEndTimeMinutes > appointmentTimeMinutes;
+          
+          if (newStartsBeforeExistingEnds && newEndsAfterExistingStarts) {
+            isSlotAvailable = false;
           }
         });
+
+        // Sprawdź też czy wizyta nie wykracza poza godziny pracy (18:00)
+        const endHour = Math.floor(slotEndTimeMinutes / 60);
+        const endMinute = slotEndTimeMinutes % 60;
+        if (endHour > 18 || (endHour === 18 && endMinute > 0)) {
+          isSlotAvailable = false;
+        }
+
+        if (!isSlotAvailable) {
+          blockedTimes.add(slot);
+        }
       });
-      
-      // Połącz oba zestawy zablokowanych godzin
-      additionalBlockedTimes.forEach(time => blockedTimes.add(time));
       
       console.log("Blocked times with duration:", Array.from(blockedTimes));
       
