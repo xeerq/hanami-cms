@@ -25,12 +25,16 @@ export const useAdminCheck = () => {
     }
 
     try {
+      console.log("Checking admin role for user:", user.id);
+      
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .eq("role", "admin")
-        .single();
+        .maybeSingle();
+
+      console.log("Admin role check result:", { data, error });
 
       if (error && error.code !== "PGRST116") {
         throw error;
