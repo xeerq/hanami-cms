@@ -238,6 +238,35 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
     }
   };
 
+  // Sprawdź czy slot jest zajęty przez jakąś wizytę
+  const isSlotOccupied = (time: string, day: Date, appointments: Appointment[]) => {
+    const dayString = format(day, "yyyy-MM-dd");
+    const slotTime = new Date(`${dayString}T${time}:00`);
+    
+    return appointments.some(appointment => {
+      const appointmentStart = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
+      const appointmentEnd = new Date(appointmentStart);
+      appointmentEnd.setMinutes(appointmentEnd.getMinutes() + (appointment.services?.duration || 30));
+      
+      return slotTime >= appointmentStart && slotTime < appointmentEnd;
+    });
+  };
+
+  // Znajdź wizytę która zaczyna się w tym slocie
+  const getAppointmentStartingAtSlot = (time: string, day: Date, appointments: Appointment[]) => {
+    const dayString = format(day, "yyyy-MM-dd");
+    return appointments.find(appointment => 
+      appointment.appointment_date === dayString && 
+      appointment.appointment_time.slice(0, 5) === time
+    );
+  };
+
+  // Oblicz ile slotów powinna zajmować wizyta
+  const getAppointmentSlotSpan = (appointment: Appointment) => {
+    const duration = appointment.services?.duration || 30;
+    return Math.ceil(duration / 30);
+  };
+
   // Renderuj wskaźnik aktualnej godziny
   const renderCurrentTimeIndicator = (time: string, day: Date) => {
     if (!isCurrentTimeSlot(time, day)) return null;
@@ -350,9 +379,13 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                     {/* Day cells */}
                     {weekDays.map((day, dayIndex) => {
                       const dayString = format(day, "yyyy-MM-dd");
-                      const dayAppointments = appointments.filter(
-                        apt => apt.appointment_date === dayString && apt.appointment_time.slice(0, 5) === time
-                      );
+                      const dayAppointmentsAll = appointments.filter(apt => apt.appointment_date === dayString);
+                      
+                      // Sprawdź czy ten slot jest zajęty przez jakąś wizytę
+                      const isOccupied = isSlotOccupied(time, day, dayAppointmentsAll);
+                      
+                      // Znajdź wizytę która zaczyna się w tym slocie
+                      const appointmentStartingHere = getAppointmentStartingAtSlot(time, day, dayAppointmentsAll);
                       
                       const isTodayDay = dayString === format(new Date(), "yyyy-MM-dd");
                       const isPastDay = day < new Date();
@@ -363,81 +396,104 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                           key={dayString}
                           className={`relative p-2 min-h-[60px] bg-white transition-all duration-300 group ${
                             isTodayDay ? "border-l-2 border-pink-400" : ""
-                          } ${isPastDay ? "opacity-60" : ""} hover:bg-gradient-to-br hover:from-pink-50 hover:to-rose-50`}
+                          } ${isPastDay ? "opacity-60" : ""} ${
+                            isOccupied && !appointmentStartingHere ? "bg-gray-50/50" : "hover:bg-gradient-to-br hover:from-pink-50 hover:to-rose-50"
+                          }`}
                         >
                           {/* Wskaźnik aktualnej godziny */}
                           {currentTimeIndicator}
                           
-                          {dayAppointments.map((appointment) => {
-                            const colors = getAppointmentStatusColors(appointment.status);
-                            const isPastAppointment = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
-                            
-                            return (
-                              <div
-                                key={appointment.id}
-                                className={`relative p-3 rounded-xl text-xs shadow-lg hover:shadow-xl transition-all duration-300 group/appointment cursor-pointer animate-fade-in mb-1 overflow-hidden ${
-                                  isPastAppointment ? "opacity-50 grayscale" : ""
-                                } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow}`}
-                              >
-                                <div className="font-semibold mb-1 transition-colors duration-200">
-                                  {appointment.services?.name}
-                                </div>
-                                <div className="opacity-90 transition-colors duration-200">
-                                  {getClientName(appointment)}
-                                </div>
-                                <div className="text-xs mt-1 opacity-80 capitalize">
-                                  Status: {appointment.status === 'confirmed' ? 'Potwierdzona' : 
-                                           appointment.status === 'cancelled' ? 'Anulowana' :
-                                           appointment.status === 'pending' ? 'Oczekująca' : appointment.status}
-                                </div>
-                                {appointment.is_guest && (
-                                  <div className="opacity-80 mt-1 text-xs transition-colors duration-200">
-                                    📞 {appointment.guest_phone}
+                          {/* Renderuj wizytę tylko jeśli zaczyna się w tym slocie */}
+                          {appointmentStartingHere && (
+                            (() => {
+                              const appointment = appointmentStartingHere;
+                              const colors = getAppointmentStatusColors(appointment.status);
+                              const isPastAppointment = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
+                              const slotSpan = getAppointmentSlotSpan(appointment);
+                              const appointmentHeight = slotSpan * 60 - 4; // 60px na slot minus margines
+                              
+                              return (
+                                <div
+                                  key={appointment.id}
+                                  style={{ 
+                                    height: `${appointmentHeight}px`,
+                                    minHeight: `${appointmentHeight}px`
+                                  }}
+                                  className={`absolute inset-x-2 top-2 p-3 rounded-xl text-xs shadow-lg hover:shadow-xl transition-all duration-300 group/appointment cursor-pointer animate-fade-in overflow-hidden z-10 ${
+                                    isPastAppointment ? "opacity-50 grayscale" : ""
+                                  } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow}`}
+                                >
+                                  <div className="font-semibold mb-1 transition-colors duration-200">
+                                    {appointment.services?.name}
                                   </div>
-                                )}
-                                
-                                {/* Przyciski akcji - widoczne tylko przy hover */}
-                                <div className="absolute top-1 right-1 opacity-0 group-hover/appointment:opacity-100 transition-opacity duration-200 flex space-x-1">
-                                  {appointment.status === 'confirmed' && !isPastAppointment && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCancelAppointment(appointment.id);
-                                      }}
-                                      className="w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
-                                      title="Anuluj wizytę"
-                                    >
-                                      ×
-                                    </button>
-                                  )}
-                                  {appointment.status === 'cancelled' && !isPastAppointment && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRestoreAppointment(appointment.id);
-                                      }}
-                                      className="w-5 h-5 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
-                                      title="Przywróć wizytę"
-                                    >
-                                      ↺
-                                    </button>
-                                  )}
-                                </div>
-                                
-                                {isPastAppointment && (
-                                  <div className="absolute top-1 right-1 text-xs opacity-75">
-                                    ✓
+                                  <div className="opacity-90 transition-colors duration-200">
+                                    {getClientName(appointment)}
                                   </div>
-                                )}
-                                
-                                <div className="absolute inset-0 bg-white/0 group-hover/appointment:bg-white/10 rounded-xl transition-colors duration-300"></div>
-                              </div>
-                            );
-                          })}
+                                  <div className="text-xs mt-1 opacity-80">
+                                    {appointment.services?.duration}min
+                                  </div>
+                                  <div className="text-xs mt-1 opacity-80 capitalize">
+                                    Status: {appointment.status === 'confirmed' ? 'Potwierdzona' : 
+                                             appointment.status === 'cancelled' ? 'Anulowana' :
+                                             appointment.status === 'pending' ? 'Oczekująca' : appointment.status}
+                                  </div>
+                                  {appointment.is_guest && (
+                                    <div className="opacity-80 mt-1 text-xs transition-colors duration-200">
+                                      📞 {appointment.guest_phone}
+                                    </div>
+                                  )}
+                                  
+                                  {/* Przyciski akcji - widoczne tylko przy hover */}
+                                  <div className="absolute top-1 right-1 opacity-0 group-hover/appointment:opacity-100 transition-opacity duration-200 flex space-x-1">
+                                    {appointment.status === 'confirmed' && !isPastAppointment && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCancelAppointment(appointment.id);
+                                        }}
+                                        className="w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
+                                        title="Anuluj wizytę"
+                                      >
+                                        ×
+                                      </button>
+                                    )}
+                                    {appointment.status === 'cancelled' && !isPastAppointment && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRestoreAppointment(appointment.id);
+                                        }}
+                                        className="w-5 h-5 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
+                                        title="Przywróć wizytę"
+                                      >
+                                        ↺
+                                      </button>
+                                    )}
+                                  </div>
+                                  
+                                  {isPastAppointment && (
+                                    <div className="absolute top-1 right-1 text-xs opacity-75">
+                                      ✓
+                                    </div>
+                                  )}
+                                  
+                                  <div className="absolute inset-0 bg-white/0 group-hover/appointment:bg-white/10 rounded-xl transition-colors duration-300"></div>
+                                </div>
+                              );
+                            })()
+                          )}
                           
-                          {dayAppointments.length === 0 && !isPastDay && (
+                          {/* Pokaż informację o wolnym terminie tylko jeśli slot nie jest zajęty */}
+                          {!isOccupied && !isPastDay && (
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-gray-400 text-center mt-4">
                               Wolny termin
+                            </div>
+                          )}
+                          
+                          {/* Informacja o zajętym slocie (dla kontynuacji wizyty) */}
+                          {isOccupied && !appointmentStartingHere && (
+                            <div className="opacity-50 text-xs text-gray-400 text-center mt-4 italic">
+                              Wizyta w trakcie...
                             </div>
                           )}
                         </div>
