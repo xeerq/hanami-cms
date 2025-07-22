@@ -26,13 +26,17 @@ export const useTherapistCheck = () => {
     }
 
     try {
+      console.log("Checking therapist role for user:", user.id);
+      
       // Check if user has therapist role
       const { data: roleData, error: roleError } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .eq("role", "therapist")
-        .single();
+        .maybeSingle();
+
+      console.log("Role check result:", { roleData, roleError });
 
       if (roleError && roleError.code !== "PGRST116") {
         throw roleError;
