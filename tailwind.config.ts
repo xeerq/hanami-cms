@@ -52,6 +52,15 @@ export default {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
 				},
+				hanami: {
+					primary: 'hsl(var(--hanami-primary))',
+					'primary-light': 'hsl(var(--hanami-primary-light))',
+					secondary: 'hsl(var(--hanami-secondary))',
+					accent: 'hsl(var(--hanami-accent))',
+					warm: 'hsl(var(--hanami-warm))',
+					cream: 'hsl(var(--hanami-cream))',
+					neutral: 'hsl(var(--hanami-neutral))'
+				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
 					foreground: 'hsl(var(--sidebar-foreground))',
@@ -67,6 +76,20 @@ export default {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			backgroundImage: {
+				'gradient-hanami': 'var(--gradient-hanami)',
+				'gradient-sakura': 'var(--gradient-sakura)',
+				'gradient-warm': 'var(--gradient-warm)'
+			},
+			boxShadow: {
+				'soft': 'var(--shadow-soft)',
+				'elegant': 'var(--shadow-elegant)',
+				'floating': 'var(--shadow-floating)'
+			},
+			transitionTimingFunction: {
+				'zen': 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+				'gentle': 'cubic-bezier(0.4, 0, 0.2, 1)'
 			},
 			keyframes: {
 				'accordion-down': {
