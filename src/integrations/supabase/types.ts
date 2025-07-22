@@ -19,40 +19,49 @@ export type Database = {
           appointment_date: string
           appointment_time: string
           created_at: string
+          guest_name: string | null
+          guest_phone: string | null
           id: string
+          is_guest: boolean | null
           notes: string | null
           notification_sent: boolean | null
           service_id: string
           status: string | null
           therapist_id: string
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           appointment_date: string
           appointment_time: string
           created_at?: string
+          guest_name?: string | null
+          guest_phone?: string | null
           id?: string
+          is_guest?: boolean | null
           notes?: string | null
           notification_sent?: boolean | null
           service_id: string
           status?: string | null
           therapist_id: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           appointment_date?: string
           appointment_time?: string
           created_at?: string
+          guest_name?: string | null
+          guest_phone?: string | null
           id?: string
+          is_guest?: boolean | null
           notes?: string | null
           notification_sent?: boolean | null
           service_id?: string
           status?: string | null
           therapist_id?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {

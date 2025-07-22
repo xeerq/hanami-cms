@@ -13,6 +13,9 @@ interface Appointment {
   appointment_date: string;
   appointment_time: string;
   user_id?: string;
+  guest_name?: string;
+  guest_phone?: string;
+  is_guest: boolean;
   status: string;
   services: {
     name: string;
@@ -59,6 +62,9 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
           appointment_date,
           appointment_time,
           user_id,
+          guest_name,
+          guest_phone,
+          is_guest,
           status,
           services (
             name,
@@ -71,7 +77,24 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
         .order("appointment_time");
 
       if (error) throw error;
-      setAppointments(data || []);
+      
+      // Po pobraniu wizyt, pobieramy dodatkowe dane o klientach jeśli potrzebne
+      const appointmentsWithProfiles = await Promise.all(
+        (data || []).map(async (appointment) => {
+          if (!appointment.is_guest && appointment.user_id) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("first_name, last_name")
+              .eq("user_id", appointment.user_id)
+              .single();
+            
+            return { ...appointment, profiles: profile };
+          }
+          return appointment;
+        })
+      );
+      
+      setAppointments(appointmentsWithProfiles as Appointment[]);
     } catch (error: any) {
       console.error("Error fetching appointments:", error);
       toast({
@@ -92,7 +115,12 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   };
 
   const getClientName = (appointment: Appointment) => {
-    return "Klient"; // Simplified for now until migration is applied
+    if (appointment.is_guest) {
+      return appointment.guest_name || "Gość";
+    }
+    return appointment.profiles 
+      ? `${appointment.profiles.first_name} ${appointment.profiles.last_name}`
+      : "Nieznany klient";
   };
 
   const previousWeek = () => setCurrentWeek(subWeeks(currentWeek, 1));
@@ -176,6 +204,11 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                             <div className="text-hanami-neutral">
                               {appointment.services?.name}
                             </div>
+                            {appointment.is_guest && appointment.guest_phone && (
+                              <div className="text-xs text-hanami-neutral">
+                                Tel: {appointment.guest_phone}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
