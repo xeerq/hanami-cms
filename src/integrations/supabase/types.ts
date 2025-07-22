@@ -21,6 +21,7 @@ export type Database = {
           created_at: string
           id: string
           notes: string | null
+          notification_sent: boolean | null
           service_id: string
           status: string | null
           therapist_id: string
@@ -33,6 +34,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          notification_sent?: boolean | null
           service_id: string
           status?: string | null
           therapist_id: string
@@ -45,6 +47,7 @@ export type Database = {
           created_at?: string
           id?: string
           notes?: string | null
+          notification_sent?: boolean | null
           service_id?: string
           status?: string | null
           therapist_id?: string
