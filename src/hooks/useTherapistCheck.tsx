@@ -43,12 +43,17 @@ export const useTherapistCheck = () => {
       }
 
       const hasTherapistRole = !!roleData;
+      console.log("Has therapist role:", hasTherapistRole, "roleData:", roleData);
       setIsTherapist(hasTherapistRole);
 
       // If user is therapist, get therapist info from user_roles for now
       if (hasTherapistRole) {
+        console.log("Setting therapist info for user:", user.id);
         // For now, we'll use a simple approach since therapist_users table is new
         setTherapistInfo({ therapist_id: user.id, name: "Masażysta" });
+      } else {
+        console.log("User is not a therapist, clearing therapist info");
+        setTherapistInfo(null);
       }
     } catch (error: any) {
       console.error("Error checking therapist role:", error);
