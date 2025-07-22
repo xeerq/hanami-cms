@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { CalendarIcon, Clock, User, Phone } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,11 +10,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -51,10 +49,7 @@ const CreateAppointmentDialog = ({
   const [date, setDate] = useState<Date>();
   const [time, setTime] = useState("");
   const [serviceId, setServiceId] = useState("");
-  const [isGuest, setIsGuest] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
-  const [guestName, setGuestName] = useState("");
-  const [guestPhone, setGuestPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -87,14 +82,12 @@ const CreateAppointmentDialog = ({
       setServices(servicesData || []);
 
       // Load profiles for registered users
-      if (!isGuest) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("user_id, first_name, last_name, phone");
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, first_name, last_name, phone");
 
-        if (profilesError) throw profilesError;
-        setProfiles(profilesData || []);
-      }
+      if (profilesError) throw profilesError;
+      setProfiles(profilesData || []);
     } catch (error: any) {
       console.error("Error loading data:", error);
       toast({
@@ -110,28 +103,10 @@ const CreateAppointmentDialog = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!date || !time || !serviceId) {
+    if (!date || !time || !serviceId || !selectedUserId) {
       toast({
         title: "Błąd",
         description: "Wypełnij wszystkie wymagane pola",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (isGuest && (!guestName || !guestPhone)) {
-      toast({
-        title: "Błąd",
-        description: "Dla gościa wymagane są imię i numer telefonu",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!isGuest && !selectedUserId) {
-      toast({
-        title: "Błąd",
-        description: "Wybierz zarejestrowanego użytkownika",
         variant: "destructive",
       });
       return;
@@ -142,23 +117,11 @@ const CreateAppointmentDialog = ({
       const appointmentData = {
         therapist_id: therapistId,
         service_id: serviceId,
+        user_id: selectedUserId,
         appointment_date: format(date, "yyyy-MM-dd"),
         appointment_time: time,
         notes: notes || null,
         status: "confirmed",
-        is_guest: isGuest,
-        ...(isGuest 
-          ? { 
-              guest_name: guestName,
-              guest_phone: guestPhone,
-              user_id: null
-            }
-          : { 
-              user_id: selectedUserId,
-              guest_name: null,
-              guest_phone: null
-            }
-        ),
       };
 
       const { error } = await supabase
@@ -177,10 +140,7 @@ const CreateAppointmentDialog = ({
       setTime("");
       setServiceId("");
       setSelectedUserId("");
-      setGuestName("");
-      setGuestPhone("");
       setNotes("");
-      setIsGuest(false);
       
       onSuccess();
       onOpenChange(false);
@@ -202,21 +162,11 @@ const CreateAppointmentDialog = ({
         <DialogHeader>
           <DialogTitle>Dodaj nową wizytę</DialogTitle>
           <DialogDescription>
-            Utwórz wizytę dla zarejestrowanego użytkownika lub gościa
+            Utwórz wizytę dla zarejestrowanego użytkownika
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Guest/Registered User Toggle */}
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="guest-mode"
-              checked={isGuest}
-              onCheckedChange={setIsGuest}
-            />
-            <Label htmlFor="guest-mode">Wizyta dla gościa (bez rejestracji)</Label>
-          </div>
-
           {/* Date Selection */}
           <div className="space-y-2">
             <Label>Data wizyty</Label>
@@ -281,43 +231,22 @@ const CreateAppointmentDialog = ({
           </div>
 
           {/* Client Selection */}
-          {isGuest ? (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Imię i nazwisko gościa</Label>
-                <Input
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Jan Kowalski"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Numer telefonu</Label>
-                <Input
-                  value={guestPhone}
-                  onChange={(e) => setGuestPhone(e.target.value)}
-                  placeholder="+48 123 456 789"
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Label>Zarejestrowany użytkownik</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Wybierz klienta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {profiles.map((profile) => (
-                    <SelectItem key={profile.user_id} value={profile.user_id}>
-                      {profile.first_name} {profile.last_name}
-                      {profile.phone && ` (${profile.phone})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label>Zarejestrowany użytkownik</Label>
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Wybierz klienta" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((profile) => (
+                  <SelectItem key={profile.user_id} value={profile.user_id}>
+                    {profile.first_name} {profile.last_name}
+                    {profile.phone && ` (${profile.phone})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* Notes */}
           <div className="space-y-2">
