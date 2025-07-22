@@ -12,16 +12,16 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
-
-    // Get user from auth token
+    // Get user from auth token first
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       throw new Error("Missing authorization header");
     }
+
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     const user = userData.user;
-    const { serviceId, therapistId, appointmentDate, appointmentTime, notes } = await req.json();
+    const { serviceId, therapistId, appointmentDate, appointmentTime, notes, isGuest, guestName, guestPhone } = await req.json();
 
     if (!serviceId || !therapistId || !appointmentDate || !appointmentTime) {
       throw new Error("Missing required booking parameters");
@@ -51,18 +51,33 @@ serve(async (req) => {
       throw new Error("This time slot is no longer available");
     }
 
+    // Prepare appointment data based on whether it's a guest or registered user
+    const appointmentData = {
+      service_id: serviceId,
+      therapist_id: therapistId,
+      appointment_date: appointmentDate,
+      appointment_time: appointmentTime,
+      status: "confirmed",
+      notes: notes || null,
+      is_guest: isGuest || false,
+      ...(isGuest 
+        ? { 
+            guest_name: guestName,
+            guest_phone: guestPhone,
+            user_id: null
+          }
+        : { 
+            user_id: user.id,
+            guest_name: null,
+            guest_phone: null
+          }
+      ),
+    };
+
     // Create the appointment
     const { data: appointment, error: insertError } = await supabaseClient
       .from("appointments")
-      .insert({
-        user_id: user.id,
-        service_id: serviceId,
-        therapist_id: therapistId,
-        appointment_date: appointmentDate,
-        appointment_time: appointmentTime,
-        status: "confirmed",
-        notes: notes || null
-      })
+      .insert(appointmentData)
       .select(`
         *,
         services(name, duration, price),
