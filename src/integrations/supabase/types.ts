@@ -301,6 +301,42 @@ export type Database = {
         }
         Relationships: []
       }
+      therapist_services: {
+        Row: {
+          created_at: string
+          id: string
+          service_id: string
+          therapist_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          service_id: string
+          therapist_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          service_id?: string
+          therapist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_therapist_services_service"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_therapist_services_therapist"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       therapists: {
         Row: {
           bio: string | null

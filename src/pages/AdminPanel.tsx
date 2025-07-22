@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Users, UserCog, Settings, Package, ShoppingBag } from "lucide-react";
+import { Calendar, Users, UserCog, Settings, Package, ShoppingBag, Link2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/Header";
@@ -12,6 +12,7 @@ import ServicesManager from "@/components/admin/ServicesManager";
 import ProductsManager from "@/components/admin/ProductsManager";
 import UsersManager from "@/components/admin/UsersManager";
 import BlockedSlotsManager from "@/components/admin/BlockedSlotsManager";
+import TherapistServicesManager from "@/components/admin/TherapistServicesManager";
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAdminCheck();
@@ -56,7 +57,7 @@ const AdminPanel = () => {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="appointments" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="appointments" className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline">Wizyty</span>
@@ -68,6 +69,10 @@ const AdminPanel = () => {
               <TabsTrigger value="services" className="flex items-center space-x-2">
                 <Settings className="h-4 w-4" />
                 <span className="hidden sm:inline">Usługi</span>
+              </TabsTrigger>
+              <TabsTrigger value="assignments" className="flex items-center space-x-2">
+                <Link2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Przypisania</span>
               </TabsTrigger>
               <TabsTrigger value="products" className="flex items-center space-x-2">
                 <Package className="h-4 w-4" />
@@ -93,6 +98,10 @@ const AdminPanel = () => {
 
             <TabsContent value="services">
               <ServicesManager />
+            </TabsContent>
+
+            <TabsContent value="assignments">
+              <TherapistServicesManager />
             </TabsContent>
 
             <TabsContent value="products">

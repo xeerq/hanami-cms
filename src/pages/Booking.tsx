@@ -80,6 +80,11 @@ const Booking = () => {
     fetchTherapists();
   }, []);
 
+  // Refetch therapists when selected service changes
+  useEffect(() => {
+    fetchTherapists();
+  }, [selectedService]);
+
   const fetchServices = async () => {
     try {
       const { data, error } = await supabase
@@ -102,12 +107,30 @@ const Booking = () => {
 
   const fetchTherapists = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("therapists")
         .select("*")
         .eq("is_active", true)
         .order("name");
-
+      
+      // Jeśli wybrano usługę, pobierz tylko terapeutów którzy mogą ją wykonywać
+      if (selectedService) {
+        const { data: therapistServices } = await supabase
+          .from("therapist_services")
+          .select("therapist_id")
+          .eq("service_id", selectedService.id);
+        
+        if (therapistServices && therapistServices.length > 0) {
+          const therapistIds = therapistServices.map(ts => ts.therapist_id);
+          query = query.in("id", therapistIds);
+        } else {
+          // Jeśli usługa nie ma przypisanych terapeutów, pokaż wszystkich (fallback)
+          console.warn("No therapists assigned to this service, showing all therapists");
+        }
+      }
+      
+      const { data, error } = await query;
+      
       if (error) throw error;
       setTherapists(data || []);
     } catch (error: any) {
@@ -220,6 +243,8 @@ const Booking = () => {
 
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
+    // Reset selected therapist when service changes
+    setSelectedTherapist(null);
     setStep(2);
   };
 
