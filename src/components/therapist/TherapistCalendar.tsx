@@ -1,23 +1,23 @@
-import { useState, useEffect } from "react";
-import { format, startOfWeek, addDays, addWeeks, subWeeks, isSameDay, parseISO } from "date-fns";
+import React, { useEffect, useState } from "react";
+import { format, addDays, subWeeks, addWeeks, startOfWeek, endOfWeek } from "date-fns";
 import { pl } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import CreateAppointmentDialog from "@/components/therapist/CreateAppointmentDialog";
+import CreateAppointmentDialog from "./CreateAppointmentDialog";
 
 interface Appointment {
   id: string;
   appointment_date: string;
   appointment_time: string;
-  user_id?: string;
-  guest_name?: string;
-  guest_phone?: string;
+  user_id: string | null;
+  guest_name: string | null;
+  guest_phone: string | null;
   is_guest: boolean;
   status: string;
-  services: {
+  services?: {
     name: string;
     duration: number;
   };
@@ -34,11 +34,11 @@ interface TherapistCalendarProps {
 const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const { toast } = useToast();
 
-  // Generowanie godzin co 15 minut - tak samo jak w dialog'u
+  // Generowanie godzin co 30 minut
   const generateTimeSlots = () => {
     const slots = [];
     for (let hour = 8; hour <= 18; hour++) {
@@ -53,7 +53,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
 
   const timeSlots = generateTimeSlots();
 
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Monday start
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   useEffect(() => {
@@ -126,35 +126,6 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
     }
   };
 
-  const isTimeSlotBlocked = (day: Date, time: string) => {
-    const currentTimeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-    
-    return appointments.some(apt => {
-      const isSameDate = isSameDay(parseISO(apt.appointment_date), day);
-      if (!isSameDate) return false;
-      
-      const appointmentTime = apt.appointment_time.slice(0, 5); // Remove seconds
-      const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
-      const serviceDurationMinutes = apt.services?.duration || 60; // Default 60 minutes if duration not available
-      
-      // Check if current time slot is within the appointment duration
-      return currentTimeMinutes >= appointmentTimeMinutes && 
-             currentTimeMinutes < appointmentTimeMinutes + serviceDurationMinutes;
-    });
-  };
-
-  const getAppointmentForSlot = (day: Date, time: string) => {
-    // Return the main appointment (the one that starts at this time)
-    const appointment = appointments.find(apt => {
-      const isSameDate = isSameDay(parseISO(apt.appointment_date), day);
-      const isSameTime = apt.appointment_time === time + ":00";
-      
-      return isSameDate && isSameTime;
-    });
-    
-    return appointment;
-  };
-
   const getClientName = (appointment: Appointment) => {
     if (appointment.is_guest) {
       return appointment.guest_name || "Gość";
@@ -169,7 +140,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
 
   if (loading) {
     return (
-      <Card>
+      <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-hanami-primary"></div>
@@ -181,96 +152,151 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-2xl font-light">
+      <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+          <CardTitle className="text-2xl font-light bg-gradient-to-r from-hanami-primary to-hanami-accent bg-clip-text text-transparent">
             Kalendarz wizyt
           </CardTitle>
-          <Button onClick={() => setShowCreateDialog(true)}>
+          <Button 
+            onClick={() => setShowCreateDialog(true)}
+            className="bg-gradient-to-r from-hanami-primary to-hanami-accent hover:from-hanami-accent hover:to-hanami-primary transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Dodaj wizytę
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {/* Week Navigation */}
-          <div className="flex items-center justify-between mb-6">
-            <Button variant="outline" onClick={previousWeek}>
+          <div className="flex items-center justify-between mb-8">
+            <Button 
+              variant="outline" 
+              onClick={previousWeek}
+              className="rounded-xl border-gray-200 hover:bg-gray-50 hover:border-hanami-primary transition-all duration-300 hover:scale-105 hover:shadow-md"
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h3 className="text-lg font-medium">
+            <h3 className="text-xl font-medium text-gray-800 bg-white px-6 py-2 rounded-2xl shadow-sm border border-gray-100">
               {format(weekStart, "d MMMM", { locale: pl })} - {format(addDays(weekStart, 6), "d MMMM yyyy", { locale: pl })}
             </h3>
-            <Button variant="outline" onClick={nextWeek}>
+            <Button 
+              variant="outline" 
+              onClick={nextWeek}
+              className="rounded-xl border-gray-200 hover:bg-gray-50 hover:border-hanami-primary transition-all duration-300 hover:scale-105 hover:shadow-md"
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Calendar Grid */}
           <div className="overflow-x-auto">
-            <div className="min-w-[800px]">
+            <div className="min-w-[900px] bg-white rounded-2xl shadow-lg border border-gray-100">
               {/* Header with days */}
-              <div className="grid grid-cols-8 gap-2 mb-2">
-                <div className="p-2 text-sm font-medium text-hanami-neutral">Godzina</div>
-                {weekDays.map((day) => (
-                  <div key={day.toISOString()} className="p-2 text-center text-sm font-medium">
-                    <div>{format(day, "EEEE", { locale: pl })}</div>
-                    <div className="text-hanami-neutral">{format(day, "d.MM")}</div>
-                  </div>
-                ))}
+              <div className="grid grid-cols-8 gap-px bg-gray-100 rounded-t-2xl overflow-hidden">
+                <div className="p-4 text-sm font-semibold text-gray-600 bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
+                  Godzina
+                </div>
+                {weekDays.map((day, index) => {
+                  const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+                  return (
+                    <div 
+                      key={day.toISOString()} 
+                      className={`p-4 text-center text-sm font-semibold transition-all duration-300 ${
+                        isToday 
+                          ? "bg-gradient-to-br from-hanami-primary/10 to-hanami-accent/10 text-hanami-primary" 
+                          : "bg-gradient-to-br from-gray-50 to-white text-gray-700 hover:from-hanami-primary/5 hover:to-hanami-accent/5"
+                      }`}
+                    >
+                      <div className={`transition-all duration-300 ${isToday ? "font-bold" : ""}`}>
+                        {format(day, "EEEE", { locale: pl })}
+                      </div>
+                      <div className={`mt-1 px-2 py-1 rounded-lg inline-block transition-all duration-300 ${
+                        isToday 
+                          ? "bg-hanami-primary text-white shadow-md" 
+                          : "text-gray-500"
+                      }`}>
+                        {format(day, "d.MM")}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Time slots */}
-              {timeSlots.map((time) => (
-                <div key={time} className="grid grid-cols-8 gap-2 mb-1">
-                  <div className="p-2 text-sm text-hanami-neutral border-r">
-                    {time}
-                  </div>
-                  {weekDays.map((day) => {
-                    const appointment = getAppointmentForSlot(day, time);
-                    const isBlocked = isTimeSlotBlocked(day, time);
-                    const isMainAppointment = appointment !== undefined;
+              <div className="divide-y divide-gray-100">
+                {timeSlots.map((time, timeIndex) => (
+                  <div key={time} className="grid grid-cols-8 gap-px bg-gray-50">
+                    {/* Time label */}
+                    <div className="p-4 text-sm font-medium text-gray-600 bg-white flex items-center justify-center border-r border-gray-100">
+                      <span className="px-3 py-1 bg-gray-50 rounded-lg">{time}</span>
+                    </div>
                     
-                    return (
-                      <div
-                        key={`${day.toISOString()}-${time}`}
-                        className={`
-                          p-1 min-h-[60px] border border-hanami-neutral/20 rounded
-                          ${isBlocked && !isMainAppointment ? 'bg-hanami-neutral/10' : ''}
-                        `}
-                      >
-                        {isMainAppointment && (
-                          <div className={`
-                            p-2 rounded text-xs h-full
-                            ${appointment.status === 'confirmed' ? 'bg-hanami-primary/20 text-hanami-primary' : ''}
-                            ${appointment.status === 'completed' ? 'bg-green-100 text-green-800' : ''}
-                            ${appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' : ''}
-                          `}>
-                            <div className="font-medium">
-                              {getClientName(appointment)}
-                            </div>
-                            <div className="text-hanami-neutral">
-                              {appointment.services?.name}
-                            </div>
-                            <div className="text-xs text-hanami-neutral">
-                              {appointment.services?.duration} min
-                            </div>
-                            {appointment.is_guest && appointment.guest_phone && (
-                              <div className="text-xs text-hanami-neutral">
-                                Tel: {appointment.guest_phone}
+                    {/* Day cells */}
+                    {weekDays.map((day, dayIndex) => {
+                      const dayString = format(day, "yyyy-MM-dd");
+                      const dayAppointments = appointments.filter(
+                        apt => apt.appointment_date === dayString && apt.appointment_time.slice(0, 5) === time
+                      );
+                      
+                      const isToday = dayString === format(new Date(), "yyyy-MM-dd");
+                      const isPast = day < new Date();
+                      
+                      return (
+                        <div
+                          key={dayString}
+                          className={`p-2 min-h-[60px] bg-white hover:bg-gradient-to-br hover:from-hanami-primary/5 hover:to-hanami-accent/5 transition-all duration-300 group ${
+                            isToday ? "border-l-2 border-hanami-primary" : ""
+                          } ${isPast ? "opacity-60" : ""}`}
+                        >
+                          {dayAppointments.map((appointment) => (
+                            <div
+                              key={appointment.id}
+                              className="p-3 rounded-xl text-xs bg-gradient-to-r from-hanami-primary to-hanami-accent text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group/appointment cursor-pointer animate-fade-in mb-1 relative overflow-hidden"
+                            >
+                              <div className="font-semibold mb-1 group-hover/appointment:text-yellow-200 transition-colors duration-200">
+                                {appointment.services?.name}
                               </div>
-                            )}
-                          </div>
-                        )}
-                        {isBlocked && !isMainAppointment && (
-                          <div className="text-xs text-hanami-neutral/60 p-1">
-                            Zajęte
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+                              <div className="text-white/90 group-hover/appointment:text-white transition-colors duration-200">
+                                {getClientName(appointment)}
+                              </div>
+                              {appointment.is_guest && (
+                                <div className="text-white/80 mt-1 text-xs group-hover/appointment:text-white/90 transition-colors duration-200">
+                                  📞 {appointment.guest_phone}
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-white/0 group-hover/appointment:bg-white/10 rounded-xl transition-colors duration-300"></div>
+                            </div>
+                          ))}
+                          {dayAppointments.length === 0 && !isPast && (
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-gray-400 text-center mt-4">
+                              Wolny termin
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Legend */}
+      <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center space-x-8">
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-hanami-primary to-hanami-accent shadow-sm"></div>
+              <span className="text-sm text-gray-600 font-medium">Potwierdzona wizyta</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded-full border-2 border-hanami-primary bg-white shadow-sm"></div>
+              <span className="text-sm text-gray-600 font-medium">Dzisiejszy dzień</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded-full bg-gray-200 opacity-60"></div>
+              <span className="text-sm text-gray-600 font-medium">Przeszłe terminy</span>
             </div>
           </div>
         </CardContent>
