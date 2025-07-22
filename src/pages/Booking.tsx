@@ -47,10 +47,20 @@ const Booking = () => {
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
 
-  const timeSlots = [
-    "08:00", "09:00", "10:00", "11:00", "12:00", 
-    "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"
-  ];
+  // Generowanie godzin co 15 minut - tak samo jak w panelu masażysty
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 8; hour <= 18; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        if (hour === 18 && minute > 0) break; // Kończymy o 18:00
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        slots.push(timeString);
+      }
+    }
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots();
 
   // Redirect if not logged in
   useEffect(() => {
@@ -129,18 +139,29 @@ const Booking = () => {
 
   const checkAvailableTimes = async (date: string, therapistId: string) => {
     try {
+      console.log("Checking availability for:", { date, therapistId });
+      
       const { data: bookedAppointments, error } = await supabase
         .from("appointments")
         .select("appointment_time")
         .eq("therapist_id", therapistId)
         .eq("appointment_date", date)
-        .eq("status", "confirmed");
+        .in("status", ["confirmed", "pending"]); // Blokuj również wizyty w trakcie przetwarzania
 
       if (error) throw error;
 
-      const bookedTimes = bookedAppointments?.map(apt => apt.appointment_time) || [];
+      console.log("Booked appointments:", bookedAppointments);
+
+      const bookedTimes = bookedAppointments?.map(apt => {
+        // Usuń sekundy z czasu (format 08:30:00 -> 08:30)
+        return apt.appointment_time.slice(0, 5);
+      }) || [];
+      
+      console.log("Booked times formatted:", bookedTimes);
+      
       const available = timeSlots.filter(time => !bookedTimes.includes(time));
       
+      console.log("Available times:", available);
       setAvailableTimes(available);
     } catch (error: any) {
       console.error("Error checking availability:", error);
