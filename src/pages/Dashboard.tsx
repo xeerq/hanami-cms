@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, User, ShoppingBag, Settings, Clock, Heart, Utensils, Star } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ProfileForm from "@/components/ProfileForm";
 
 const Dashboard = () => {
   const [selectedCalories, setSelectedCalories] = useState(1500);
@@ -368,61 +369,7 @@ const Dashboard = () => {
 
             {/* Profile Settings */}
             <TabsContent value="profile">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-hanami-primary">Ustawienia profilu</CardTitle>
-                  <CardDescription>
-                    Zarządzaj swoimi danymi osobowymi i preferencjami
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-hanami-primary mb-2">
-                          Imię
-                        </label>
-                        <input 
-                          className="w-full px-3 py-2 border border-hanami-accent/20 rounded-md"
-                          defaultValue="Anna"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-hanami-primary mb-2">
-                          Nazwisko
-                        </label>
-                        <input 
-                          className="w-full px-3 py-2 border border-hanami-accent/20 rounded-md"
-                          defaultValue="Kowalska"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-hanami-primary mb-2">
-                          Email
-                        </label>
-                        <input 
-                          className="w-full px-3 py-2 border border-hanami-accent/20 rounded-md"
-                          defaultValue="anna.kowalska@email.com"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-hanami-primary mb-2">
-                          Telefon
-                        </label>
-                        <input 
-                          className="w-full px-3 py-2 border border-hanami-accent/20 rounded-md"
-                          defaultValue="+48 123 456 789"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex space-x-4">
-                      <Button>Zapisz zmiany</Button>
-                      <Button variant="outline">Zmień hasło</Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <ProfileForm />
             </TabsContent>
           </Tabs>
         </div>
