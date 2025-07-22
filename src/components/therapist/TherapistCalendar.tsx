@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { format, addDays, subWeeks, addWeeks, startOfWeek, endOfWeek } from "date-fns";
+import { format, addDays, subWeeks, addWeeks, startOfWeek, endOfWeek, isToday, isBefore, isAfter, setHours, setMinutes } from "date-fns";
 import { pl } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -135,6 +135,69 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
       : "Nieznany klient";
   };
 
+  // Funkcja do uzyskania kolorów na podstawie statusu wizyty
+  const getAppointmentStatusColors = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return {
+          gradient: "from-emerald-500 to-green-600", // Zielony dla potwierdzonych
+          text: "text-white",
+          glow: "shadow-emerald-500/30"
+        };
+      case 'cancelled':
+        return {
+          gradient: "from-red-500 to-rose-600", // Czerwony dla anulowanych
+          text: "text-white",
+          glow: "shadow-red-500/30"
+        };
+      case 'pending':
+        return {
+          gradient: "from-amber-400 to-yellow-500", // Żółty dla oczekujących
+          text: "text-gray-900",
+          glow: "shadow-yellow-500/30"
+        };
+      default:
+        return {
+          gradient: "from-pink-400 to-rose-500", // Kolor wiśni japonskiej jako domyślny
+          text: "text-white",
+          glow: "shadow-pink-500/30"
+        };
+    }
+  };
+
+  // Sprawdź czy wizyta już się odbyła
+  const isAppointmentPast = (appointmentDate: string, appointmentTime: string) => {
+    const now = new Date();
+    const appointmentDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
+    return isBefore(appointmentDateTime, now);
+  };
+
+  // Sprawdź czy to aktualny czas
+  const isCurrentTimeSlot = (time: string, day: Date) => {
+    if (!isToday(day)) return false;
+    
+    const now = new Date();
+    const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
+    const slotTimeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+    const nextSlotTimeMinutes = slotTimeMinutes + 30;
+    
+    return currentTimeMinutes >= slotTimeMinutes && currentTimeMinutes < nextSlotTimeMinutes;
+  };
+
+  // Renderuj wskaźnik aktualnej godziny
+  const renderCurrentTimeIndicator = (time: string, day: Date) => {
+    if (!isCurrentTimeSlot(time, day)) return null;
+    
+    return (
+      <div className="absolute left-0 right-0 top-1/2 transform -translate-y-1/2 z-10">
+        <div className="flex items-center">
+          <div className="w-3 h-3 bg-red-500 rounded-full shadow-lg animate-pulse"></div>
+          <div className="flex-1 h-0.5 bg-red-500 shadow-lg"></div>
+        </div>
+      </div>
+    );
+  };
+
   const previousWeek = () => setCurrentWeek(subWeeks(currentWeek, 1));
   const nextWeek = () => setCurrentWeek(addWeeks(currentWeek, 1));
 
@@ -237,36 +300,58 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                         apt => apt.appointment_date === dayString && apt.appointment_time.slice(0, 5) === time
                       );
                       
-                      const isToday = dayString === format(new Date(), "yyyy-MM-dd");
-                      const isPast = day < new Date();
+                      const isTodayDay = dayString === format(new Date(), "yyyy-MM-dd");
+                      const isPastDay = day < new Date();
+                      const currentTimeIndicator = renderCurrentTimeIndicator(time, day);
                       
                       return (
                         <div
                           key={dayString}
-                          className={`p-2 min-h-[60px] bg-white hover:bg-gradient-to-br hover:from-hanami-primary/5 hover:to-hanami-accent/5 transition-all duration-300 group ${
-                            isToday ? "border-l-2 border-hanami-primary" : ""
-                          } ${isPast ? "opacity-60" : ""}`}
+                          className={`relative p-2 min-h-[60px] bg-white transition-all duration-300 group ${
+                            isTodayDay ? "border-l-2 border-pink-400" : ""
+                          } ${isPastDay ? "opacity-60" : ""} hover:bg-gradient-to-br hover:from-pink-50 hover:to-rose-50`}
                         >
-                          {dayAppointments.map((appointment) => (
-                            <div
-                              key={appointment.id}
-                              className="p-3 rounded-xl text-xs bg-gradient-to-r from-hanami-primary to-hanami-accent text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group/appointment cursor-pointer animate-fade-in mb-1 relative overflow-hidden"
-                            >
-                              <div className="font-semibold mb-1 group-hover/appointment:text-yellow-200 transition-colors duration-200">
-                                {appointment.services?.name}
-                              </div>
-                              <div className="text-white/90 group-hover/appointment:text-white transition-colors duration-200">
-                                {getClientName(appointment)}
-                              </div>
-                              {appointment.is_guest && (
-                                <div className="text-white/80 mt-1 text-xs group-hover/appointment:text-white/90 transition-colors duration-200">
-                                  📞 {appointment.guest_phone}
+                          {/* Wskaźnik aktualnej godziny */}
+                          {currentTimeIndicator}
+                          
+                          {dayAppointments.map((appointment) => {
+                            const colors = getAppointmentStatusColors(appointment.status);
+                            const isPastAppointment = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
+                            
+                            return (
+                              <div
+                                key={appointment.id}
+                                className={`relative p-3 rounded-xl text-xs shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group/appointment cursor-pointer animate-fade-in mb-1 overflow-hidden ${
+                                  isPastAppointment ? "opacity-50 grayscale" : ""
+                                } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow}`}
+                              >
+                                <div className="font-semibold mb-1 transition-colors duration-200">
+                                  {appointment.services?.name}
                                 </div>
-                              )}
-                              <div className="absolute inset-0 bg-white/0 group-hover/appointment:bg-white/10 rounded-xl transition-colors duration-300"></div>
-                            </div>
-                          ))}
-                          {dayAppointments.length === 0 && !isPast && (
+                                <div className="opacity-90 transition-colors duration-200">
+                                  {getClientName(appointment)}
+                                </div>
+                                <div className="text-xs mt-1 opacity-80 capitalize">
+                                  Status: {appointment.status === 'confirmed' ? 'Potwierdzona' : 
+                                           appointment.status === 'cancelled' ? 'Anulowana' :
+                                           appointment.status === 'pending' ? 'Oczekująca' : appointment.status}
+                                </div>
+                                {appointment.is_guest && (
+                                  <div className="opacity-80 mt-1 text-xs transition-colors duration-200">
+                                    📞 {appointment.guest_phone}
+                                  </div>
+                                )}
+                                {isPastAppointment && (
+                                  <div className="absolute top-1 right-1 text-xs opacity-75">
+                                    ✓
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-white/0 group-hover/appointment:bg-white/10 rounded-xl transition-colors duration-300"></div>
+                              </div>
+                            );
+                          })}
+                          
+                          {dayAppointments.length === 0 && !isPastDay && (
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-gray-400 text-center mt-4">
                               Wolny termin
                             </div>
@@ -285,14 +370,27 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
       {/* Legend */}
       <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
         <CardContent className="p-6">
-          <div className="flex items-center justify-center space-x-8">
+          <div className="flex flex-wrap items-center justify-center gap-6">
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-hanami-primary to-hanami-accent shadow-sm"></div>
-              <span className="text-sm text-gray-600 font-medium">Potwierdzona wizyta</span>
+              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-emerald-500 to-green-600 shadow-sm"></div>
+              <span className="text-sm text-gray-600 font-medium">Potwierdzona</span>
             </div>
             <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 rounded-full border-2 border-hanami-primary bg-white shadow-sm"></div>
-              <span className="text-sm text-gray-600 font-medium">Dzisiejszy dzień</span>
+              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 shadow-sm"></div>
+              <span className="text-sm text-gray-600 font-medium">Oczekująca</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-red-500 to-rose-600 shadow-sm"></div>
+              <span className="text-sm text-gray-600 font-medium">Anulowana</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-sm"></div>
+              <div className="w-8 h-0.5 bg-red-500"></div>
+              <span className="text-sm text-gray-600 font-medium">Aktualny czas</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded-full bg-gradient-to-r from-pink-400 to-rose-500 shadow-sm"></div>
+              <span className="text-sm text-gray-600 font-medium">Wiśnia japońska</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded-full bg-gray-200 opacity-60"></div>
