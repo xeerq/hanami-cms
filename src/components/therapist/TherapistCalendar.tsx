@@ -126,22 +126,28 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
     }
   };
 
+  const isTimeSlotBlocked = (day: Date, time: string) => {
+    const currentTimeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+    
+    return appointments.some(apt => {
+      const isSameDate = isSameDay(parseISO(apt.appointment_date), day);
+      if (!isSameDate) return false;
+      
+      const appointmentTime = apt.appointment_time.slice(0, 5); // Remove seconds
+      const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
+      const serviceDurationMinutes = apt.services?.duration || 60; // Default 60 minutes if duration not available
+      
+      // Check if current time slot is within the appointment duration
+      return currentTimeMinutes >= appointmentTimeMinutes && 
+             currentTimeMinutes < appointmentTimeMinutes + serviceDurationMinutes;
+    });
+  };
+
   const getAppointmentForSlot = (day: Date, time: string) => {
+    // Return the main appointment (the one that starts at this time)
     const appointment = appointments.find(apt => {
       const isSameDate = isSameDay(parseISO(apt.appointment_date), day);
       const isSameTime = apt.appointment_time === time + ":00";
-      
-      if (apt.appointment_time.startsWith("08:")) {
-        console.log("Checking appointment:", {
-          appointmentDate: apt.appointment_date,
-          appointmentTime: apt.appointment_time,
-          dayChecking: format(day, "yyyy-MM-dd"),
-          timeChecking: time + ":00",
-          isSameDate,
-          isSameTime,
-          match: isSameDate && isSameTime
-        });
-      }
       
       return isSameDate && isSameTime;
     });
@@ -221,12 +227,18 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                   </div>
                   {weekDays.map((day) => {
                     const appointment = getAppointmentForSlot(day, time);
+                    const isBlocked = isTimeSlotBlocked(day, time);
+                    const isMainAppointment = appointment !== undefined;
+                    
                     return (
                       <div
                         key={`${day.toISOString()}-${time}`}
-                        className="p-1 min-h-[60px] border border-hanami-neutral/20 rounded"
+                        className={`
+                          p-1 min-h-[60px] border border-hanami-neutral/20 rounded
+                          ${isBlocked && !isMainAppointment ? 'bg-hanami-neutral/10' : ''}
+                        `}
                       >
-                        {appointment && (
+                        {isMainAppointment && (
                           <div className={`
                             p-2 rounded text-xs h-full
                             ${appointment.status === 'confirmed' ? 'bg-hanami-primary/20 text-hanami-primary' : ''}
@@ -239,11 +251,19 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                             <div className="text-hanami-neutral">
                               {appointment.services?.name}
                             </div>
+                            <div className="text-xs text-hanami-neutral">
+                              {appointment.services?.duration} min
+                            </div>
                             {appointment.is_guest && appointment.guest_phone && (
                               <div className="text-xs text-hanami-neutral">
                                 Tel: {appointment.guest_phone}
                               </div>
                             )}
+                          </div>
+                        )}
+                        {isBlocked && !isMainAppointment && (
+                          <div className="text-xs text-hanami-neutral/60 p-1">
+                            Zajęte
                           </div>
                         )}
                       </div>

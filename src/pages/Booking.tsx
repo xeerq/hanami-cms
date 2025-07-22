@@ -143,7 +143,12 @@ const Booking = () => {
       
       const { data: bookedAppointments, error } = await supabase
         .from("appointments")
-        .select("appointment_time")
+        .select(`
+          appointment_time,
+          services (
+            duration
+          )
+        `)
         .eq("therapist_id", therapistId)
         .eq("appointment_date", date)
         .in("status", ["confirmed", "pending"]); // Blokuj również wizyty w trakcie przetwarzania
@@ -152,14 +157,51 @@ const Booking = () => {
 
       console.log("Booked appointments:", bookedAppointments);
 
-      const bookedTimes = bookedAppointments?.map(apt => {
-        // Usuń sekundy z czasu (format 08:30:00 -> 08:30)
-        return apt.appointment_time.slice(0, 5);
-      }) || [];
+      // Stwórz listę wszystkich zablokowanych godzin na podstawie czasu trwania usług
+      const blockedTimes = new Set<string>();
       
-      console.log("Booked times formatted:", bookedTimes);
+      bookedAppointments?.forEach(apt => {
+        const appointmentTime = apt.appointment_time.slice(0, 5); // Remove seconds
+        const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
+        const serviceDurationMinutes = apt.services?.duration || 60; // Default 60 minutes
+        
+        // Zablokuj wszystkie sloty w czasie trwania usługi
+        timeSlots.forEach(slot => {
+          const slotTimeMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
+          if (slotTimeMinutes >= appointmentTimeMinutes && 
+              slotTimeMinutes < appointmentTimeMinutes + serviceDurationMinutes) {
+            blockedTimes.add(slot);
+          }
+        });
+      });
       
-      const available = timeSlots.filter(time => !bookedTimes.includes(time));
+      // Dodatkowo, sprawdź czy nowa wizyta nie będzie kolidować z istniejącymi
+      // - blokuj sloty, gdzie nowa usługa rozpoczynałaby się, ale nie skończyłaby przed kolejną wizytą
+      const selectedServiceDuration = selectedService?.duration || 60;
+      const additionalBlockedTimes = new Set<string>();
+      
+      timeSlots.forEach(slot => {
+        const slotTimeMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
+        const slotEndTimeMinutes = slotTimeMinutes + selectedServiceDuration;
+        
+        // Sprawdź czy jakakolwiek część nowej usługi kolidowałaby z istniejącymi wizytami
+        bookedAppointments?.forEach(apt => {
+          const appointmentTime = apt.appointment_time.slice(0, 5);
+          const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
+          
+          // Jeśli nowa usługa kończyłaby się po rozpoczęciu istniejącej wizyty
+          if (slotEndTimeMinutes > appointmentTimeMinutes && slotTimeMinutes <= appointmentTimeMinutes) {
+            additionalBlockedTimes.add(slot);
+          }
+        });
+      });
+      
+      // Połącz oba zestawy zablokowanych godzin
+      additionalBlockedTimes.forEach(time => blockedTimes.add(time));
+      
+      console.log("Blocked times with duration:", Array.from(blockedTimes));
+      
+      const available = timeSlots.filter(time => !blockedTimes.has(time));
       
       console.log("Available times:", available);
       setAvailableTimes(available);
