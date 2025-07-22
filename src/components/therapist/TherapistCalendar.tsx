@@ -368,9 +368,9 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
               </div>
 
               {/* Time slots */}
-              <div className="grid grid-cols-8 gap-px bg-gray-100">
+              <div className="divide-y divide-gray-100">
                 {timeSlots.map((time, timeIndex) => (
-                  <React.Fragment key={time}>
+                  <div key={time} className="grid grid-cols-8 gap-px bg-gray-50">
                     {/* Time label */}
                     <div className="p-4 text-sm font-medium text-gray-600 bg-white flex items-center justify-center border-r border-gray-100">
                       <span className="px-3 py-1 bg-gray-50 rounded-lg">{time}</span>
@@ -379,134 +379,109 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                     {/* Day cells */}
                     {weekDays.map((day, dayIndex) => {
                       const dayString = format(day, "yyyy-MM-dd");
-                      const dayAppointmentsAll = appointments.filter(apt => apt.appointment_date === dayString);
-                      
-                      // Znajdź wizytę która zaczyna się w tym slocie
-                      const appointmentStartingHere = dayAppointmentsAll.find(appointment => 
-                        appointment.appointment_time.slice(0, 5) === time
+                      const dayAppointments = appointments.filter(
+                        apt => apt.appointment_date === dayString && apt.appointment_time.slice(0, 5) === time
                       );
-                      
-                      // Sprawdź czy ten slot jest zajęty przez jakąś trwającą wizytę
-                      const isOccupiedByRunningAppointment = dayAppointmentsAll.some(appointment => {
-                        const appointmentStart = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
-                        const appointmentEnd = new Date(appointmentStart);
-                        appointmentEnd.setMinutes(appointmentEnd.getMinutes() + (appointment.services?.duration || 30));
-                        
-                        const slotTime = new Date(`${dayString}T${time}:00`);
-                        return slotTime >= appointmentStart && slotTime < appointmentEnd && appointment.appointment_time.slice(0, 5) !== time;
-                      });
                       
                       const isTodayDay = dayString === format(new Date(), "yyyy-MM-dd");
                       const isPastDay = day < new Date();
                       const currentTimeIndicator = renderCurrentTimeIndicator(time, day);
                       
-                      // Jeśli slot jest zajęty przez trwającą wizytę, nie renderuj nic
-                      if (isOccupiedByRunningAppointment) {
-                        return null;
-                      }
-                      
                       return (
                         <div
-                          key={`${dayString}-${time}`}
-                          style={{
-                            gridRowEnd: appointmentStartingHere 
-                              ? `span ${getAppointmentSlotSpan(appointmentStartingHere)}` 
-                              : 'span 1'
-                          }}
-                          className={`relative min-h-[60px] bg-white transition-all duration-300 group border-b border-gray-50 ${
+                          key={dayString}
+                          className={`relative p-2 min-h-[60px] bg-white transition-all duration-300 group ${
                             isTodayDay ? "border-l-2 border-pink-400" : ""
-                          } ${isPastDay ? "opacity-60" : ""} ${
-                            appointmentStartingHere 
-                              ? "" 
-                              : "hover:bg-gradient-to-br hover:from-pink-50 hover:to-rose-50"
-                          }`}
+                          } ${isPastDay ? "opacity-60" : ""} hover:bg-gradient-to-br hover:from-pink-50 hover:to-rose-50`}
                         >
                           {/* Wskaźnik aktualnej godziny */}
                           {currentTimeIndicator}
                           
-                          {/* Renderuj wizytę jeśli zaczyna się w tym slocie */}
-                          {appointmentStartingHere && (
-                            (() => {
-                              const appointment = appointmentStartingHere;
-                              const colors = getAppointmentStatusColors(appointment.status);
-                              const isPastAppointment = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
-                              
-                              return (
-                                <div
-                                  className={`absolute inset-2 p-3 rounded-lg text-xs shadow-md hover:shadow-lg transition-all duration-300 group/appointment cursor-pointer animate-fade-in overflow-hidden border border-white/20 ${
-                                    isPastAppointment ? "opacity-50 grayscale" : ""
-                                  } bg-gradient-to-br ${colors.gradient} ${colors.text} ${colors.glow}`}
-                                >
-                                  <div className="font-semibold mb-2 text-sm leading-tight">
-                                    {appointment.services?.name}
+                          {dayAppointments.map((appointment) => {
+                            const colors = getAppointmentStatusColors(appointment.status);
+                            const isPastAppointment = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
+                            const duration = appointment.services?.duration || 30;
+                            const heightMultiplier = Math.max(1, duration / 30);
+                            
+                            return (
+                              <div
+                                key={appointment.id}
+                                style={{
+                                  height: `${heightMultiplier * 56}px`,
+                                  maxHeight: `${heightMultiplier * 56}px`
+                                }}
+                                className={`relative p-3 rounded-xl text-xs shadow-lg hover:shadow-xl transition-all duration-300 group/appointment cursor-pointer animate-fade-in mb-1 overflow-hidden ${
+                                  isPastAppointment ? "opacity-50 grayscale" : ""
+                                } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow}`}
+                              >
+                                <div className="font-semibold mb-1 transition-colors duration-200">
+                                  {appointment.services?.name}
+                                </div>
+                                <div className="opacity-90 transition-colors duration-200">
+                                  {getClientName(appointment)}
+                                </div>
+                                <div className="text-xs mt-1 opacity-80">
+                                  ⏱️ {appointment.services?.duration}min
+                                </div>
+                                <div className="text-xs mt-1 opacity-80 capitalize">
+                                  Status: {appointment.status === 'confirmed' ? 'Potwierdzona' : 
+                                           appointment.status === 'cancelled' ? 'Anulowana' :
+                                           appointment.status === 'pending' ? 'Oczekująca' : appointment.status}
+                                </div>
+                                {appointment.is_guest && (
+                                  <div className="opacity-80 mt-1 text-xs transition-colors duration-200">
+                                    📞 {appointment.guest_phone}
                                   </div>
-                                  <div className="opacity-90 text-xs leading-tight mb-2">
-                                    {getClientName(appointment)}
-                                  </div>
-                                  <div className="text-xs opacity-80 mb-2 font-medium">
-                                    ⏱️ {appointment.services?.duration}min
-                                  </div>
-                                  <div className="text-xs opacity-80 capitalize bg-white/20 px-2 py-1 rounded mb-2">
-                                    {appointment.status === 'confirmed' ? '✅ Potwierdzona' : 
-                                     appointment.status === 'cancelled' ? '❌ Anulowana' :
-                                     appointment.status === 'pending' ? '⏳ Oczekująca' : appointment.status}
-                                  </div>
-                                  {appointment.is_guest && appointment.guest_phone && (
-                                    <div className="opacity-90 text-xs bg-white/20 px-2 py-1 rounded">
-                                      📞 {appointment.guest_phone}
-                                    </div>
+                                )}
+                                
+                                {/* Przyciski akcji - widoczne tylko przy hover */}
+                                <div className="absolute top-1 right-1 opacity-0 group-hover/appointment:opacity-100 transition-opacity duration-200 flex space-x-1">
+                                  {appointment.status === 'confirmed' && !isPastAppointment && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCancelAppointment(appointment.id);
+                                      }}
+                                      className="w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
+                                      title="Anuluj wizytę"
+                                    >
+                                      ×
+                                    </button>
                                   )}
-                                  
-                                  {/* Przyciski akcji - widoczne tylko przy hover */}
-                                  <div className="absolute top-2 right-2 opacity-0 group-hover/appointment:opacity-100 transition-opacity duration-200 flex space-x-1">
-                                    {appointment.status === 'confirmed' && !isPastAppointment && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCancelAppointment(appointment.id);
-                                        }}
-                                        className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-sm font-bold transition-colors duration-200 shadow-lg"
-                                        title="Anuluj wizytę"
-                                      >
-                                        ×
-                                      </button>
-                                    )}
-                                    {appointment.status === 'cancelled' && !isPastAppointment && (
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRestoreAppointment(appointment.id);
-                                        }}
-                                        className="w-6 h-6 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white text-sm font-bold transition-colors duration-200 shadow-lg"
-                                        title="Przywróć wizytę"
-                                      >
-                                        ↺
-                                      </button>
-                                    )}
-                                  </div>
-                                  
-                                  {isPastAppointment && (
-                                    <div className="absolute top-2 right-2 text-sm opacity-75 bg-white/30 rounded-full w-6 h-6 flex items-center justify-center">
-                                      ✓
-                                    </div>
+                                  {appointment.status === 'cancelled' && !isPastAppointment && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRestoreAppointment(appointment.id);
+                                      }}
+                                      className="w-5 h-5 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
+                                      title="Przywróć wizytę"
+                                    >
+                                      ↺
+                                    </button>
                                   )}
                                 </div>
-                              );
-                            })()
-                          )}
-                          
-                          {/* Treść pustego slota */}
-                          {!appointmentStartingHere && (
-                            <div className="p-3 h-full flex items-center justify-center">
-                              <div className="opacity-0 group-hover:opacity-60 transition-opacity duration-300 text-xs text-gray-400 text-center">
-                                Wolny termin
+                                
+                                {isPastAppointment && (
+                                  <div className="absolute top-1 right-1 text-xs opacity-75">
+                                    ✓
+                                  </div>
+                                )}
+                                
+                                <div className="absolute inset-0 bg-white/0 group-hover/appointment:bg-white/10 rounded-xl transition-colors duration-300"></div>
                               </div>
+                            );
+                          })}
+                          
+                          {dayAppointments.length === 0 && !isPastDay && (
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-gray-400 text-center mt-4">
+                              Wolny termin
                             </div>
                           )}
                         </div>
                       );
                     })}
-                  </React.Fragment>
+                  </div>
                 ))}
               </div>
             </div>
