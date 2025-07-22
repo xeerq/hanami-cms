@@ -38,10 +38,20 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const { toast } = useToast();
 
-  const timeSlots = [
-    "08:00", "09:00", "10:00", "11:00", "12:00", 
-    "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"
-  ];
+  // Generowanie godzin co 15 minut - tak samo jak w dialog'u
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 8; hour <= 18; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        if (hour === 18 && minute > 0) break; // Kończymy o 18:00
+        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+        slots.push(timeString);
+      }
+    }
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots();
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -54,6 +64,12 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
     try {
       setLoading(true);
       const weekEnd = addDays(weekStart, 6);
+      
+      console.log("Fetching appointments for week:", {
+        weekStart: format(weekStart, "yyyy-MM-dd"),
+        weekEnd: format(weekEnd, "yyyy-MM-dd"),
+        therapistId
+      });
       
       const { data, error } = await supabase
         .from("appointments")
@@ -76,6 +92,8 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
         .lte("appointment_date", format(weekEnd, "yyyy-MM-dd"))
         .order("appointment_time");
 
+      console.log("Raw appointments data:", data);
+      
       if (error) throw error;
       
       // Po pobraniu wizyt, pobieramy dodatkowe dane o klientach jeśli potrzebne
@@ -94,6 +112,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
         })
       );
       
+      console.log("Final appointments with profiles:", appointmentsWithProfiles);
       setAppointments(appointmentsWithProfiles as Appointment[]);
     } catch (error: any) {
       console.error("Error fetching appointments:", error);
@@ -108,10 +127,26 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   };
 
   const getAppointmentForSlot = (day: Date, time: string) => {
-    return appointments.find(apt => 
-      isSameDay(parseISO(apt.appointment_date), day) && 
-      apt.appointment_time === time + ":00"
-    );
+    const appointment = appointments.find(apt => {
+      const isSameDate = isSameDay(parseISO(apt.appointment_date), day);
+      const isSameTime = apt.appointment_time === time + ":00";
+      
+      if (apt.appointment_time.startsWith("08:")) {
+        console.log("Checking appointment:", {
+          appointmentDate: apt.appointment_date,
+          appointmentTime: apt.appointment_time,
+          dayChecking: format(day, "yyyy-MM-dd"),
+          timeChecking: time + ":00",
+          isSameDate,
+          isSameTime,
+          match: isSameDate && isSameTime
+        });
+      }
+      
+      return isSameDate && isSameTime;
+    });
+    
+    return appointment;
   };
 
   const getClientName = (appointment: Appointment) => {
