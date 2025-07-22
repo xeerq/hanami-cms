@@ -92,6 +92,50 @@ const Dashboard = () => {
     }
   };
 
+  const canCancelAppointment = (appointmentDate: string, appointmentTime: string) => {
+    const appointmentDateTime = new Date(`${appointmentDate}T${appointmentTime}`);
+    const now = new Date();
+    const timeDiff = appointmentDateTime.getTime() - now.getTime();
+    const hoursUntilAppointment = timeDiff / (1000 * 60 * 60);
+    
+    return hoursUntilAppointment > 24;
+  };
+
+  const handleCancelAppointment = async (appointmentId: string, appointmentDate: string, appointmentTime: string) => {
+    if (!canCancelAppointment(appointmentDate, appointmentTime)) {
+      toast({
+        title: "Nie można anulować wizyty",
+        description: "Wizytę można anulować tylko na 24 godziny przed terminem. Aby anulować wizytę, skontaktuj się bezpośrednio z salonem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("id", appointmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Wizyta anulowana",
+        description: "Wizyta została pomyślnie anulowana.",
+      });
+
+      // Odśwież dane
+      loadUserData();
+    } catch (error: any) {
+      console.error("Error cancelling appointment:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się anulować wizyty",
+        variant: "destructive",
+      });
+    }
+  };
+
   const generateMealPlan = () => {
     const meals = {
       1200: {
@@ -208,9 +252,16 @@ const Dashboard = () => {
                             <Badge variant="outline">
                               {appointment.status === 'confirmed' ? 'Potwierdzona' : appointment.status}
                             </Badge>
-                            <Button variant="outline" size="sm">
-                              Anuluj
-                            </Button>
+                            {appointment.status === 'confirmed' && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleCancelAppointment(appointment.id, appointment.appointment_date, appointment.appointment_time)}
+                                className={!canCancelAppointment(appointment.appointment_date, appointment.appointment_time) ? 'opacity-50' : ''}
+                              >
+                                {canCancelAppointment(appointment.appointment_date, appointment.appointment_time) ? 'Anuluj' : 'Skontaktuj się z salonem'}
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
