@@ -3,10 +3,14 @@ import { Button } from "@/components/ui/button";
 import { User, Calendar, ShoppingBag, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useTherapistCheck } from "@/hooks/useTherapistCheck";
 const Header = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdminCheck();
+  const { isTherapist } = useTherapistCheck();
 
   const handleSignOut = async () => {
     await signOut();
@@ -66,6 +70,20 @@ const Header = () => {
                     Panel
                   </Link>
                 </Button>
+                {isAdmin && (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/admin">
+                      Admin
+                    </Link>
+                  </Button>
+                )}
+                {isTherapist && (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link to="/therapist">
+                      Masażysta
+                    </Link>
+                  </Button>
+                )}
                 <Button size="sm" asChild>
                   <Link to="/booking">
                     <Calendar className="h-4 w-4 mr-2" />
