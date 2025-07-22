@@ -1,11 +1,16 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { User, Calendar, ShoppingBag, Menu, X } from "lucide-react";
+import { User, Calendar, ShoppingBag, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
-
+import { useAuth } from "@/contexts/AuthContext";
 const Header = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   const navigation = [
     { name: "Strona główna", href: "/" },
@@ -50,18 +55,44 @@ const Header = () => {
 
           {/* Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/auth">
-                <User className="h-4 w-4 mr-2" />
-                Zaloguj się
-              </Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link to="/booking">
-                <Calendar className="h-4 w-4 mr-2" />
-                Rezerwuj
-              </Link>
-            </Button>
+            {user ? (
+              <>
+                <span className="text-sm text-hanami-neutral">
+                  Witaj, {user.email}
+                </span>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/dashboard">
+                    <User className="h-4 w-4 mr-2" />
+                    Panel
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link to="/booking">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Rezerwuj
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Wyloguj
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to="/auth">
+                    <User className="h-4 w-4 mr-2" />
+                    Zaloguj się
+                  </Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link to="/booking">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Rezerwuj
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -99,18 +130,47 @@ const Header = () => {
                 </Link>
               ))}
               <div className="pt-2 space-y-2">
-                <Button variant="outline" size="sm" className="w-full" asChild>
-                  <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                    <User className="h-4 w-4 mr-2" />
-                    Zaloguj się
-                  </Link>
-                </Button>
-                <Button size="sm" className="w-full" asChild>
-                  <Link to="/booking" onClick={() => setIsMenuOpen(false)}>
-                    <Calendar className="h-4 w-4 mr-2" />
-                    Rezerwuj
-                  </Link>
-                </Button>
+                {user ? (
+                  <>
+                    <div className="px-3 py-2 text-sm text-hanami-neutral">
+                      Zalogowany jako: {user.email}
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                        <User className="h-4 w-4 mr-2" />
+                        Panel użytkownika
+                      </Link>
+                    </Button>
+                    <Button size="sm" className="w-full" asChild>
+                      <Link to="/booking" onClick={() => setIsMenuOpen(false)}>
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Rezerwuj
+                      </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" className="w-full" onClick={() => {
+                      handleSignOut();
+                      setIsMenuOpen(false);
+                    }}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Wyloguj
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                        <User className="h-4 w-4 mr-2" />
+                        Zaloguj się
+                      </Link>
+                    </Button>
+                    <Button size="sm" className="w-full" asChild>
+                      <Link to="/booking" onClick={() => setIsMenuOpen(false)}>
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Rezerwuj
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </nav>
           </div>

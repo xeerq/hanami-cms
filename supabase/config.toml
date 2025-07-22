@@ -1,1 +1,10 @@
 project_id = "mfjfhnwgrbwjovvnlxto"
+
+[functions.get-data]
+verify_jwt = false
+
+[functions.create-booking]
+verify_jwt = true
+
+[functions.get-user-data]
+verify_jwt = true
