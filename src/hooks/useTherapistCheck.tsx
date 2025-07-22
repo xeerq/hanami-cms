@@ -46,11 +46,29 @@ export const useTherapistCheck = () => {
       console.log("Has therapist role:", hasTherapistRole, "roleData:", roleData);
       setIsTherapist(hasTherapistRole);
 
-      // If user is therapist, get therapist info from user_roles for now
+      // If user is therapist, get therapist info from therapists table
       if (hasTherapistRole) {
-        console.log("Setting therapist info for user:", user.id);
-        // For now, we'll use a simple approach since therapist_users table is new
-        setTherapistInfo({ therapist_id: user.id, name: "Masażysta" });
+        console.log("Finding therapist info for user:", user.id);
+        
+        // Find therapist by name (temporary solution until we have proper mapping)
+        const { data: therapistData, error: therapistError } = await supabase
+          .from("therapists")
+          .select("id, name, specialization, experience, bio")
+          .eq("is_active", true)
+          .single();
+          
+        console.log("Therapist data:", therapistData, therapistError);
+        
+        if (therapistData) {
+          setTherapistInfo({ 
+            therapist_id: therapistData.id, 
+            name: therapistData.name,
+            therapists: therapistData
+          });
+        } else {
+          console.log("No therapist found, using fallback");
+          setTherapistInfo({ therapist_id: user.id, name: "Masażysta" });
+        }
       } else {
         console.log("User is not a therapist, clearing therapist info");
         setTherapistInfo(null);
