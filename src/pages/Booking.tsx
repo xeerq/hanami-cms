@@ -1,74 +1,169 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Clock, User, CheckCircle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Calendar, Clock, User, CheckCircle, ArrowLeft } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+
+interface Service {
+  id: string;
+  name: string;
+  duration: number;
+  price: number;
+  description: string;
+  category: string;
+  is_active: boolean;
+}
+
+interface Therapist {
+  id: string;
+  name: string;
+  specialization: string;
+  experience: string;
+  bio: string;
+  is_active: boolean;
+}
 
 const Booking = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  
   const [step, setStep] = useState(1);
-  const [selectedService, setSelectedService] = useState<any>(null);
-  const [selectedTherapist, setSelectedTherapist] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
+  const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
-
-  const services = [
-    {
-      id: 1,
-      name: "Masaż relaksacyjny",
-      duration: 60,
-      price: 200,
-      description: "Tradycyjny masaż inspirowany japońską filozofią zen"
-    },
-    {
-      id: 2,
-      name: "Masaż terapeutyczny", 
-      duration: 90,
-      price: 280,
-      description: "Profesjonalny masaż leczniczy dla zdrowia kręgosłupa"
-    },
-    {
-      id: 3,
-      name: "Masaż hot stone",
-      duration: 75,
-      price: 350,
-      description: "Relaksujący masaż z użyciem rozgrzanych kamieni"
-    }
-  ];
-
-  const therapists = [
-    {
-      id: 1,
-      name: "Anna Kowalska",
-      specialization: "Masaże terapeutyczne",
-      experience: "8 lat doświadczenia",
-      availability: ["2024-01-25", "2024-01-26", "2024-01-27"]
-    },
-    {
-      id: 2, 
-      name: "Maria Nowak",
-      specialization: "Masaże relaksacyjne",
-      experience: "5 lat doświadczenia", 
-      availability: ["2024-01-25", "2024-01-26", "2024-01-28"]
-    }
-  ];
+  const [notes, setNotes] = useState<string>("");
+  const [availableDates, setAvailableDates] = useState<string[]>([]);
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
 
   const timeSlots = [
-    "09:00", "10:30", "12:00", "13:30", "15:00", "16:30", "18:00"
+    "08:00", "09:00", "10:00", "11:00", "12:00", 
+    "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"
   ];
 
-  const handleServiceSelect = (service: any) => {
+  // Redirect if not logged in
+  useEffect(() => {
+    if (!user) {
+      toast({
+        title: "Wymagane logowanie",
+        description: "Musisz być zalogowany, aby dokonać rezerwacji",
+        variant: "destructive",
+      });
+      navigate("/auth");
+    }
+  }, [user, navigate, toast]);
+
+  // Fetch services and therapists
+  useEffect(() => {
+    fetchServices();
+    fetchTherapists();
+  }, []);
+
+  const fetchServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("services")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error: any) {
+      console.error("Error fetching services:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się załadować usług",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const fetchTherapists = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("therapists")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setTherapists(data || []);
+    } catch (error: any) {
+      console.error("Error fetching therapists:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się załadować terapeutów",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const generateAvailableDates = () => {
+    const dates = [];
+    const today = new Date();
+    
+    for (let i = 1; i <= 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      // Skip Sundays (0 = Sunday)
+      if (date.getDay() !== 0) {
+        dates.push(date.toISOString().split('T')[0]);
+      }
+    }
+    
+    return dates;
+  };
+
+  const checkAvailableTimes = async (date: string, therapistId: string) => {
+    try {
+      const { data: bookedAppointments, error } = await supabase
+        .from("appointments")
+        .select("appointment_time")
+        .eq("therapist_id", therapistId)
+        .eq("appointment_date", date)
+        .eq("status", "confirmed");
+
+      if (error) throw error;
+
+      const bookedTimes = bookedAppointments?.map(apt => apt.appointment_time) || [];
+      const available = timeSlots.filter(time => !bookedTimes.includes(time));
+      
+      setAvailableTimes(available);
+    } catch (error: any) {
+      console.error("Error checking availability:", error);
+      setAvailableTimes(timeSlots);
+    }
+  };
+
+  const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
     setStep(2);
   };
 
-  const handleTherapistSelect = (therapist: any) => {
+  const handleTherapistSelect = (therapist: Therapist) => {
     setSelectedTherapist(therapist);
+    setAvailableDates(generateAvailableDates());
     setStep(3);
   };
 
   const handleDateSelect = (date: string) => {
     setSelectedDate(date);
+    if (selectedTherapist) {
+      checkAvailableTimes(date, selectedTherapist.id);
+    }
     setStep(4);
   };
 
@@ -77,15 +172,51 @@ const Booking = () => {
     setStep(5);
   };
 
-  const handleConfirm = () => {
-    // TODO: Implement booking confirmation
-    console.log("Booking confirmed:", {
-      service: selectedService,
-      therapist: selectedTherapist,
-      date: selectedDate,
-      time: selectedTime
-    });
+  const handleConfirm = async () => {
+    if (!user || !selectedService || !selectedTherapist || !selectedDate || !selectedTime) {
+      toast({
+        title: "Błąd",
+        description: "Wszystkie pola muszą być wypełnione",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-booking', {
+        body: {
+          serviceId: selectedService.id,
+          therapistId: selectedTherapist.id,
+          appointmentDate: selectedDate,
+          appointmentTime: selectedTime,
+          notes: notes || null
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sukces!",
+        description: "Wizyta została zarezerwowana pomyślnie",
+      });
+      
+      navigate("/dashboard");
+    } catch (error: any) {
+      console.error("Error creating booking:", error);
+      toast({
+        title: "Błąd rezerwacji",
+        description: error.message || "Nie udało się zarezerwować wizyty",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-warm">
@@ -135,7 +266,7 @@ const Booking = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {services.map((service) => (
                     <Card 
                       key={service.id}
@@ -196,15 +327,21 @@ const Booking = () => {
                             </p>
                           </div>
                         </div>
-                        <p className="text-hanami-neutral">
+                        <p className="text-hanami-neutral mb-2">
                           <strong>Specjalizacja:</strong> {therapist.specialization}
                         </p>
+                        {therapist.bio && (
+                          <p className="text-hanami-neutral text-sm">
+                            {therapist.bio}
+                          </p>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
                 </div>
                 <div className="mt-6">
                   <Button variant="outline" onClick={() => setStep(1)}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
                     Wróć do wyboru usługi
                   </Button>
                 </div>
@@ -213,7 +350,7 @@ const Booking = () => {
           )}
 
           {/* Step 3: Date Selection */}
-          {step === 3 && selectedTherapist && (
+          {step === 3 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl text-hanami-primary">
@@ -222,23 +359,30 @@ const Booking = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 md:grid-cols-7 gap-4">
-                  {selectedTherapist.availability.map((date: string) => (
-                    <Button
-                      key={date}
-                      variant="outline"
-                      className="p-4 h-auto flex flex-col"
-                      onClick={() => handleDateSelect(date)}
-                    >
-                      <Calendar className="h-5 w-5 mb-2" />
-                      <span className="text-sm">{new Date(date).toLocaleDateString('pl-PL', { 
-                        day: 'numeric', 
-                        month: 'short' 
-                      })}</span>
-                    </Button>
-                  ))}
+                  {availableDates.map((date) => {
+                    const dateObj = new Date(date);
+                    const dayName = dateObj.toLocaleDateString('pl-PL', { weekday: 'short' });
+                    const dayNumber = dateObj.getDate();
+                    const monthName = dateObj.toLocaleDateString('pl-PL', { month: 'short' });
+                    
+                    return (
+                      <Button
+                        key={date}
+                        variant="outline"
+                        className="p-4 h-auto flex flex-col hover:bg-hanami-primary hover:text-white"
+                        onClick={() => handleDateSelect(date)}
+                      >
+                        <Calendar className="h-5 w-5 mb-2" />
+                        <span className="text-xs font-medium">{dayName}</span>
+                        <span className="text-lg font-bold">{dayNumber}</span>
+                        <span className="text-xs">{monthName}</span>
+                      </Button>
+                    );
+                  })}
                 </div>
                 <div className="mt-6">
                   <Button variant="outline" onClick={() => setStep(2)}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
                     Wróć do wyboru terapeutki
                   </Button>
                 </div>
@@ -253,23 +397,35 @@ const Booking = () => {
                 <CardTitle className="text-2xl text-hanami-primary">
                   Wybierz godzinę
                 </CardTitle>
+                <p className="text-hanami-neutral">
+                  Dostępne terminy na {new Date(selectedDate).toLocaleDateString('pl-PL')}
+                </p>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
-                  {timeSlots.map((time) => (
-                    <Button
-                      key={time}
-                      variant="outline"
-                      className="p-4"
-                      onClick={() => handleTimeSelect(time)}
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      {time}
-                    </Button>
-                  ))}
-                </div>
+                {availableTimes.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-hanami-neutral">
+                      Brak dostępnych terminów w tym dniu. Wybierz inną datę.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                    {availableTimes.map((time) => (
+                      <Button
+                        key={time}
+                        variant="outline"
+                        className="p-4 hover:bg-hanami-primary hover:text-white"
+                        onClick={() => handleTimeSelect(time)}
+                      >
+                        <Clock className="h-4 w-4 mr-2" />
+                        {time}
+                      </Button>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-6">
                   <Button variant="outline" onClick={() => setStep(3)}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
                     Wróć do wyboru daty
                   </Button>
                 </div>
@@ -303,7 +459,12 @@ const Booking = () => {
                       <div className="flex justify-between">
                         <span className="text-hanami-neutral">Data:</span>
                         <span className="font-medium">
-                          {new Date(selectedDate).toLocaleDateString('pl-PL')}
+                          {new Date(selectedDate).toLocaleDateString('pl-PL', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -323,12 +484,28 @@ const Booking = () => {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Uwagi do wizyty (opcjonalnie)</Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Dodatkowe informacje, preferencje, itp."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
                   <div className="flex space-x-4">
                     <Button variant="outline" onClick={() => setStep(4)}>
+                      <ArrowLeft className="h-4 w-4 mr-2" />
                       Wróć do wyboru godziny
                     </Button>
-                    <Button onClick={handleConfirm} className="flex-1">
-                      Potwierdź rezerwację
+                    <Button 
+                      onClick={handleConfirm} 
+                      className="flex-1"
+                      disabled={loading}
+                    >
+                      {loading ? "Rezerwowanie..." : "Potwierdź rezerwację"}
                     </Button>
                   </div>
                 </div>
