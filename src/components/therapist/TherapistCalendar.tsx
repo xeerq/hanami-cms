@@ -368,9 +368,9 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
               </div>
 
               {/* Time slots */}
-              <div className="divide-y divide-gray-100">
+              <div className="grid grid-cols-8 gap-px bg-gray-100">
                 {timeSlots.map((time, timeIndex) => (
-                  <div key={time} className="grid grid-cols-8 gap-px bg-gray-50">
+                  <React.Fragment key={time}>
                     {/* Time label */}
                     <div className="p-4 text-sm font-medium text-gray-600 bg-white flex items-center justify-center border-r border-gray-100">
                       <span className="px-3 py-1 bg-gray-50 rounded-lg">{time}</span>
@@ -381,78 +381,91 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                       const dayString = format(day, "yyyy-MM-dd");
                       const dayAppointmentsAll = appointments.filter(apt => apt.appointment_date === dayString);
                       
-                      // Sprawdź czy ten slot jest zajęty przez jakąś wizytę
-                      const isOccupied = isSlotOccupied(time, day, dayAppointmentsAll);
-                      
                       // Znajdź wizytę która zaczyna się w tym slocie
-                      const appointmentStartingHere = getAppointmentStartingAtSlot(time, day, dayAppointmentsAll);
+                      const appointmentStartingHere = dayAppointmentsAll.find(appointment => 
+                        appointment.appointment_time.slice(0, 5) === time
+                      );
+                      
+                      // Sprawdź czy ten slot jest zajęty przez jakąś trwającą wizytę
+                      const isOccupiedByRunningAppointment = dayAppointmentsAll.some(appointment => {
+                        const appointmentStart = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
+                        const appointmentEnd = new Date(appointmentStart);
+                        appointmentEnd.setMinutes(appointmentEnd.getMinutes() + (appointment.services?.duration || 30));
+                        
+                        const slotTime = new Date(`${dayString}T${time}:00`);
+                        return slotTime >= appointmentStart && slotTime < appointmentEnd && appointment.appointment_time.slice(0, 5) !== time;
+                      });
                       
                       const isTodayDay = dayString === format(new Date(), "yyyy-MM-dd");
                       const isPastDay = day < new Date();
                       const currentTimeIndicator = renderCurrentTimeIndicator(time, day);
                       
+                      // Jeśli slot jest zajęty przez trwającą wizytę, nie renderuj nic
+                      if (isOccupiedByRunningAppointment) {
+                        return null;
+                      }
+                      
                       return (
                         <div
-                          key={dayString}
-                          className={`relative min-h-[60px] bg-white transition-all duration-300 group ${
+                          key={`${dayString}-${time}`}
+                          style={{
+                            gridRowEnd: appointmentStartingHere 
+                              ? `span ${getAppointmentSlotSpan(appointmentStartingHere)}` 
+                              : 'span 1'
+                          }}
+                          className={`relative min-h-[60px] bg-white transition-all duration-300 group border-b border-gray-50 ${
                             isTodayDay ? "border-l-2 border-pink-400" : ""
                           } ${isPastDay ? "opacity-60" : ""} ${
-                            isOccupied && !appointmentStartingHere 
-                              ? "bg-gradient-to-br from-gray-100 to-gray-50" 
+                            appointmentStartingHere 
+                              ? "" 
                               : "hover:bg-gradient-to-br hover:from-pink-50 hover:to-rose-50"
                           }`}
                         >
                           {/* Wskaźnik aktualnej godziny */}
                           {currentTimeIndicator}
                           
-                          {/* Renderuj wizytę tylko jeśli zaczyna się w tym slocie */}
+                          {/* Renderuj wizytę jeśli zaczyna się w tym slocie */}
                           {appointmentStartingHere && (
                             (() => {
                               const appointment = appointmentStartingHere;
                               const colors = getAppointmentStatusColors(appointment.status);
                               const isPastAppointment = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
-                              const slotSpan = getAppointmentSlotSpan(appointment);
                               
                               return (
                                 <div
-                                  key={appointment.id}
-                                  style={{ 
-                                    height: `${slotSpan * 60}px`,
-                                    zIndex: 20
-                                  }}
-                                  className={`absolute inset-x-1 top-0 p-2 rounded-lg text-xs shadow-md hover:shadow-lg transition-all duration-300 group/appointment cursor-pointer animate-fade-in overflow-hidden border border-white/20 ${
+                                  className={`absolute inset-2 p-3 rounded-lg text-xs shadow-md hover:shadow-lg transition-all duration-300 group/appointment cursor-pointer animate-fade-in overflow-hidden border border-white/20 ${
                                     isPastAppointment ? "opacity-50 grayscale" : ""
                                   } bg-gradient-to-br ${colors.gradient} ${colors.text} ${colors.glow}`}
                                 >
-                                  <div className="font-semibold mb-1 text-xs leading-tight">
+                                  <div className="font-semibold mb-2 text-sm leading-tight">
                                     {appointment.services?.name}
                                   </div>
-                                  <div className="opacity-90 text-xs leading-tight mb-1">
+                                  <div className="opacity-90 text-xs leading-tight mb-2">
                                     {getClientName(appointment)}
                                   </div>
-                                  <div className="text-xs opacity-80 mb-1">
-                                    {appointment.services?.duration}min
+                                  <div className="text-xs opacity-80 mb-2 font-medium">
+                                    ⏱️ {appointment.services?.duration}min
                                   </div>
-                                  <div className="text-xs opacity-80 capitalize">
-                                    {appointment.status === 'confirmed' ? 'Potwierdzona' : 
-                                     appointment.status === 'cancelled' ? 'Anulowana' :
-                                     appointment.status === 'pending' ? 'Oczekująca' : appointment.status}
+                                  <div className="text-xs opacity-80 capitalize bg-white/20 px-2 py-1 rounded mb-2">
+                                    {appointment.status === 'confirmed' ? '✅ Potwierdzona' : 
+                                     appointment.status === 'cancelled' ? '❌ Anulowana' :
+                                     appointment.status === 'pending' ? '⏳ Oczekująca' : appointment.status}
                                   </div>
                                   {appointment.is_guest && appointment.guest_phone && (
-                                    <div className="opacity-80 mt-1 text-xs">
+                                    <div className="opacity-90 text-xs bg-white/20 px-2 py-1 rounded">
                                       📞 {appointment.guest_phone}
                                     </div>
                                   )}
                                   
                                   {/* Przyciski akcji - widoczne tylko przy hover */}
-                                  <div className="absolute top-1 right-1 opacity-0 group-hover/appointment:opacity-100 transition-opacity duration-200 flex space-x-1">
+                                  <div className="absolute top-2 right-2 opacity-0 group-hover/appointment:opacity-100 transition-opacity duration-200 flex space-x-1">
                                     {appointment.status === 'confirmed' && !isPastAppointment && (
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleCancelAppointment(appointment.id);
                                         }}
-                                        className="w-4 h-4 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
+                                        className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-sm font-bold transition-colors duration-200 shadow-lg"
                                         title="Anuluj wizytę"
                                       >
                                         ×
@@ -464,7 +477,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                                           e.stopPropagation();
                                           handleRestoreAppointment(appointment.id);
                                         }}
-                                        className="w-4 h-4 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
+                                        className="w-6 h-6 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white text-sm font-bold transition-colors duration-200 shadow-lg"
                                         title="Przywróć wizytę"
                                       >
                                         ↺
@@ -473,7 +486,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                                   </div>
                                   
                                   {isPastAppointment && (
-                                    <div className="absolute top-1 right-1 text-xs opacity-75">
+                                    <div className="absolute top-2 right-2 text-sm opacity-75 bg-white/30 rounded-full w-6 h-6 flex items-center justify-center">
                                       ✓
                                     </div>
                                   )}
@@ -482,26 +495,18 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                             })()
                           )}
                           
-                          {/* Treść slota gdy nie ma wizyty zaczynającej się tutaj */}
-                          <div className="p-2 h-full flex items-center justify-center">
-                            {/* Pokaż informację o wolnym terminie tylko jeśli slot nie jest zajęty */}
-                            {!isOccupied && !isPastDay && (
+                          {/* Treść pustego slota */}
+                          {!appointmentStartingHere && (
+                            <div className="p-3 h-full flex items-center justify-center">
                               <div className="opacity-0 group-hover:opacity-60 transition-opacity duration-300 text-xs text-gray-400 text-center">
                                 Wolny termin
                               </div>
-                            )}
-                            
-                            {/* Informacja o zajętym slocie (dla kontynuacji wizyty) */}
-                            {isOccupied && !appointmentStartingHere && (
-                              <div className="opacity-30 text-xs text-gray-500 text-center italic">
-                                •••
-                              </div>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
-                  </div>
+                  </React.Fragment>
                 ))}
               </div>
             </div>
