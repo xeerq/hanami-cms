@@ -42,7 +42,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   const generateTimeSlots = () => {
     const slots = [];
     for (let hour = 8; hour <= 18; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
+      for (let minute = 0; minute < 60; minute += 30) {
         if (hour === 18 && minute > 0) break; // Kończymy o 18:00
         const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         slots.push(timeString);
