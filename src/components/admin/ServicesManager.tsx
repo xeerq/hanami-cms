@@ -18,8 +18,14 @@ interface Service {
   is_active: boolean;
 }
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 const ServicesManager = () => {
   const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -28,7 +34,25 @@ const ServicesManager = () => {
 
   useEffect(() => {
     fetchServices();
+    fetchCategories();
   }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name")
+        .eq("type", "service")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error: any) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
 
   const fetchServices = async () => {
     try {
@@ -221,14 +245,22 @@ const ServicesManager = () => {
       <CreateServiceDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
-        onSuccess={fetchServices}
+        categories={categories}
+        onSuccess={() => {
+          fetchServices();
+          fetchCategories();
+        }}
       />
 
       <EditServiceDialog
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         service={selectedService}
-        onSuccess={fetchServices}
+        categories={categories}
+        onSuccess={() => {
+          fetchServices();
+          fetchCategories();
+        }}
       />
     </>
   );

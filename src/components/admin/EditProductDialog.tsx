@@ -36,10 +36,11 @@ interface EditProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: Product | null;
+  categories: Category[];
   onSuccess: () => void;
 }
 
-const EditProductDialog = ({ open, onOpenChange, product, onSuccess }: EditProductDialogProps) => {
+const EditProductDialog = ({ open, onOpenChange, product, categories, onSuccess }: EditProductDialogProps) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -48,29 +49,8 @@ const EditProductDialog = ({ open, onOpenChange, product, onSuccess }: EditProdu
     category: "",
     image_url: "",
   });
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id, name")
-        .eq("type", "product")
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
-      setCategories(data || []);
-    } catch (error: any) {
-      console.error("Error fetching categories:", error);
-    }
-  };
 
   useEffect(() => {
     console.log("EditProductDialog useEffect:", { product, open });

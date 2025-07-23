@@ -20,13 +20,40 @@ interface Product {
   is_active: boolean;
 }
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 const ProductsManager = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name")
+        .eq("type", "product")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error: any) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -225,14 +252,22 @@ const ProductsManager = () => {
       <CreateProductDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
-        onSuccess={fetchProducts}
+        categories={categories}
+        onSuccess={() => {
+          fetchProducts();
+          fetchCategories();
+        }}
       />
 
       <EditProductDialog
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         product={selectedProduct}
-        onSuccess={fetchProducts}
+        categories={categories}
+        onSuccess={() => {
+          fetchProducts();
+          fetchCategories();
+        }}
       />
     </>
   );

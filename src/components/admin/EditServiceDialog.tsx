@@ -15,6 +15,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface Service {
   id: string;
   name: string;
@@ -29,10 +34,11 @@ interface EditServiceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   service: Service | null;
+  categories: Category[];
   onSuccess: () => void;
 }
 
-const EditServiceDialog = ({ open, onOpenChange, service, onSuccess }: EditServiceDialogProps) => {
+const EditServiceDialog = ({ open, onOpenChange, service, categories, onSuccess }: EditServiceDialogProps) => {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -173,12 +179,11 @@ const EditServiceDialog = ({ open, onOpenChange, service, onSuccess }: EditServi
                   <SelectValue placeholder="Wybierz kategorię" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Masaże">Masaże</SelectItem>
-                  <SelectItem value="masaż">Masaż</SelectItem>
-                  <SelectItem value="pielęgnacja twarzy">Pielęgnacja twarzy</SelectItem>
-                  <SelectItem value="pielęgnacja ciała">Pielęgnacja ciała</SelectItem>
-                  <SelectItem value="relaks">Relaks</SelectItem>
-                  <SelectItem value="inne">Inne</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

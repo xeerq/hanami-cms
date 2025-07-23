@@ -16,12 +16,12 @@ interface Category {
 interface CreateProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  categories: Category[];
   onSuccess: () => void;
 }
 
-const CreateProductDialog = ({ open, onOpenChange, onSuccess }: CreateProductDialogProps) => {
+const CreateProductDialog = ({ open, onOpenChange, categories, onSuccess }: CreateProductDialogProps) => {
   const [loading, setLoading] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -31,26 +31,6 @@ const CreateProductDialog = ({ open, onOpenChange, onSuccess }: CreateProductDia
     image_url: ""
   });
   const { toast } = useToast();
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id, name")
-        .eq("type", "product")
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
-      setCategories(data || []);
-    } catch (error: any) {
-      console.error("Error fetching categories:", error);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
