@@ -15,6 +15,7 @@ import UsersManager from "@/components/admin/UsersManager";
 import BlockedSlotsManager from "@/components/admin/BlockedSlotsManager";
 import TherapistServicesManager from "@/components/admin/TherapistServicesManager";
 import TherapistsCalendarsView from "@/pages/TherapistsCalendars";
+import ContentManager from "@/components/admin/ContentManager";
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAdminCheck();
@@ -59,7 +60,7 @@ const AdminPanel = () => {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="appointments" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-9">
+            <TabsList className="grid w-full grid-cols-5 lg:grid-cols-10">
               <TabsTrigger value="appointments" className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline">Wizyty</span>
@@ -95,6 +96,10 @@ const AdminPanel = () => {
               <TabsTrigger value="blocked" className="flex items-center space-x-2">
                 <ShoppingBag className="h-4 w-4" />
                 <span className="hidden sm:inline">Blokady</span>
+              </TabsTrigger>
+              <TabsTrigger value="content" className="flex items-center space-x-2">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Treść</span>
               </TabsTrigger>
             </TabsList>
 
@@ -132,6 +137,10 @@ const AdminPanel = () => {
 
             <TabsContent value="blocked">
               <BlockedSlotsManager />
+            </TabsContent>
+
+            <TabsContent value="content">
+              <ContentManager />
             </TabsContent>
           </Tabs>
         </div>
