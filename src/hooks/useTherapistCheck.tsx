@@ -50,41 +50,58 @@ export const useTherapistCheck = () => {
       if (hasTherapistRole) {
         console.log("Finding therapist info for user:", user.id);
         
-        // Get user profile first
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("first_name, last_name")
+        // Najpierw sprawdź po user_id (nowy sposób po migracji)
+        const { data: therapistData, error: therapistError } = await supabase
+          .from("therapists")
+          .select("id, name, specialization, experience, bio")
           .eq("user_id", user.id)
+          .eq("is_active", true)
           .maybeSingle();
           
-        console.log("Profile data:", profileData);
+        console.log("Therapist data by user_id:", therapistData, therapistError);
         
-        if (profileData) {
-          const fullName = `${profileData.first_name} ${profileData.last_name}`;
-          
-          // Find therapist by matching full name
-          const { data: therapistData, error: therapistError } = await supabase
-            .from("therapists")
-            .select("id, name, specialization, experience, bio")
-            .eq("name", fullName)
-            .eq("is_active", true)
+        if (therapistData) {
+          setTherapistInfo({ 
+            therapist_id: therapistData.id, 
+            name: therapistData.name,
+            therapists: therapistData
+          });
+        } else {
+          // Fallback: sprawdź po nazwie (stary sposób)
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("first_name, last_name")
+            .eq("user_id", user.id)
             .maybeSingle();
             
-          console.log("Therapist data:", therapistData, therapistError);
+          console.log("Profile data:", profileData);
           
-          if (therapistData) {
-            setTherapistInfo({ 
-              therapist_id: therapistData.id, 
-              name: therapistData.name,
-              therapists: therapistData
-            });
+          if (profileData) {
+            const fullName = `${profileData.first_name} ${profileData.last_name}`;
+            
+            const { data: therapistByName } = await supabase
+              .from("therapists")
+              .select("id, name, specialization, experience, bio")
+              .eq("name", fullName)
+              .eq("is_active", true)
+              .maybeSingle();
+              
+            console.log("Therapist data by name:", therapistByName);
+            
+            if (therapistByName) {
+              setTherapistInfo({ 
+                therapist_id: therapistByName.id, 
+                name: therapistByName.name,
+                therapists: therapistByName
+              });
+            } else {
+              console.log("No matching therapist found, using fallback");
+              setTherapistInfo({ therapist_id: user.id, name: fullName || "Masażysta" });
+            }
           } else {
-            console.log("No matching therapist found, using fallback");
-            setTherapistInfo({ therapist_id: user.id, name: fullName || "Masażysta" });
+            console.log("No profile found, using fallback");
+            setTherapistInfo({ therapist_id: user.id, name: "Masażysta" });
           }
-        } else {
-          console.log("No profile found, using fallback");
-          setTherapistInfo({ therapist_id: user.id, name: "Masażysta" });
         }
       } else {
         console.log("User is not a therapist, clearing therapist info");

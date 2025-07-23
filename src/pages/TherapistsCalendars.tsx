@@ -32,7 +32,7 @@ const TherapistsCalendarsView = ({ embedded = false }: TherapistsCalendarsViewPr
     try {
       const { data, error } = await supabase
         .from("therapists")
-        .select("id, name, specialization, bio")
+        .select("id, name, specialization, bio, user_id")
         .eq("is_active", true)
         .order("name");
 
