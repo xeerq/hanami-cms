@@ -16,6 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface Product {
   id: string;
   name: string;
@@ -43,8 +48,29 @@ const EditProductDialog = ({ open, onOpenChange, product, onSuccess }: EditProdu
     category: "",
     image_url: "",
   });
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("id, name")
+        .eq("type", "product")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error: any) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
   useEffect(() => {
     console.log("EditProductDialog useEffect:", { product, open });
@@ -179,12 +205,11 @@ const EditProductDialog = ({ open, onOpenChange, product, onSuccess }: EditProdu
                   <SelectValue placeholder="Wybierz kategorię" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="kosmetyki">Kosmetyki</SelectItem>
-                  <SelectItem value="olejki">Olejki</SelectItem>
-                  <SelectItem value="suplementy">Suplementy</SelectItem>
-                  <SelectItem value="akcesoria">Akcesoria</SelectItem>
-                  <SelectItem value="Akcesoria">Akcesoria</SelectItem>
-                  <SelectItem value="inne">Inne</SelectItem>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.name}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

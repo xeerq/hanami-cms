@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Users, UserCog, Settings, Package, ShoppingBag, Link2 } from "lucide-react";
+import { Calendar, Users, UserCog, Settings, Package, ShoppingBag, Link2, Tag } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/Header";
@@ -10,6 +10,7 @@ import AppointmentsManager from "@/components/admin/AppointmentsManager";
 import TherapistsManager from "@/components/admin/TherapistsManager";
 import ServicesManager from "@/components/admin/ServicesManager";
 import ProductsManager from "@/components/admin/ProductsManager";
+import CategoriesManager from "@/components/admin/CategoriesManager";
 import UsersManager from "@/components/admin/UsersManager";
 import BlockedSlotsManager from "@/components/admin/BlockedSlotsManager";
 import TherapistServicesManager from "@/components/admin/TherapistServicesManager";
@@ -57,7 +58,7 @@ const AdminPanel = () => {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="appointments" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="appointments" className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline">Wizyty</span>
@@ -78,9 +79,13 @@ const AdminPanel = () => {
                 <Package className="h-4 w-4" />
                 <span className="hidden sm:inline">Produkty</span>
               </TabsTrigger>
-              <TabsTrigger value="users" className="flex items-center space-x-2">
+               <TabsTrigger value="users" className="flex items-center space-x-2">
                 <UserCog className="h-4 w-4" />
                 <span className="hidden sm:inline">Użytkownicy</span>
+              </TabsTrigger>
+              <TabsTrigger value="categories" className="flex items-center space-x-2">
+                <Tag className="h-4 w-4" />
+                <span className="hidden sm:inline">Kategorie</span>
               </TabsTrigger>
               <TabsTrigger value="blocked" className="flex items-center space-x-2">
                 <ShoppingBag className="h-4 w-4" />
@@ -110,6 +115,10 @@ const AdminPanel = () => {
 
             <TabsContent value="users">
               <UsersManager />
+            </TabsContent>
+
+            <TabsContent value="categories">
+              <CategoriesManager />
             </TabsContent>
 
             <TabsContent value="blocked">
