@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { Package, Plus, Edit, Trash2, CheckCircle, XCircle, DollarSign } from "l
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import CreateProductDialog from "./CreateProductDialog";
+import EditProductDialog from "./EditProductDialog";
 
 interface Product {
   id: string;
@@ -22,6 +24,8 @@ const ProductsManager = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,6 +52,12 @@ const ProductsManager = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEditProduct = (product: Product) => {
+    console.log("Edit product clicked:", product);
+    setSelectedProduct(product);
+    setShowEditDialog(true);
   };
 
   const toggleProductStatus = async (productId: string, isActive: boolean) => {
@@ -185,6 +195,13 @@ const ProductsManager = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleEditProduct(product)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => toggleProductStatus(product.id, product.is_active)}
                       >
                         {product.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
@@ -208,6 +225,13 @@ const ProductsManager = () => {
       <CreateProductDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+        onSuccess={fetchProducts}
+      />
+
+      <EditProductDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        product={selectedProduct}
         onSuccess={fetchProducts}
       />
     </>
