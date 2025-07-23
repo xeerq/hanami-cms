@@ -44,13 +44,24 @@ const EditServiceDialog = ({ open, onOpenChange, service, onSuccess }: EditServi
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log("EditServiceDialog useEffect:", { service, open });
     if (service && open) {
+      console.log("Setting form data:", service);
       setFormData({
         name: service.name,
         description: service.description || "",
         duration: service.duration.toString(),
         price: service.price.toString(),
         category: service.category || "",
+      });
+    } else if (!open) {
+      // Reset form when dialog closes
+      setFormData({
+        name: "",
+        description: "",
+        duration: "",
+        price: "",
+        category: "",
       });
     }
   }, [service, open]);
