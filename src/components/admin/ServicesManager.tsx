@@ -6,6 +6,7 @@ import { Settings, Plus, Edit, Trash2, CheckCircle, XCircle, Clock, DollarSign }
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import CreateServiceDialog from "./CreateServiceDialog";
+import EditServiceDialog from "./EditServiceDialog";
 
 interface Service {
   id: string;
@@ -21,6 +22,8 @@ const ServicesManager = () => {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -99,6 +102,11 @@ const ServicesManager = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleEditService = (service: Service) => {
+    setSelectedService(service);
+    setShowEditDialog(true);
   };
 
   if (loading) {
@@ -183,6 +191,13 @@ const ServicesManager = () => {
                       <Button
                         variant="outline"
                         size="sm"
+                        onClick={() => handleEditService(service)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => toggleServiceStatus(service.id, service.is_active)}
                       >
                         {service.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
@@ -206,6 +221,13 @@ const ServicesManager = () => {
       <CreateServiceDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
+        onSuccess={fetchServices}
+      />
+
+      <EditServiceDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        service={selectedService}
         onSuccess={fetchServices}
       />
     </>
