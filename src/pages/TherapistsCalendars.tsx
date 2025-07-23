@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Users, Lock } from "lucide-react";
+import { Calendar, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAdminCheck } from "@/hooks/useAdminCheck";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import TherapistCalendar from "@/components/therapist/TherapistCalendar";
@@ -22,23 +20,13 @@ interface TherapistsCalendarsViewProps {
 }
 
 const TherapistsCalendarsView = ({ embedded = false }: TherapistsCalendarsViewProps) => {
-  const { isAdmin, loading: adminLoading } = useAdminCheck();
-  const navigate = useNavigate();
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!embedded && !adminLoading && !isAdmin) {
-      navigate("/");
-    }
-  }, [isAdmin, adminLoading, navigate, embedded]);
-
-  useEffect(() => {
-    if (embedded || isAdmin) {
-      fetchTherapists();
-    }
-  }, [isAdmin, embedded]);
+    fetchTherapists();
+  }, []);
 
   const fetchTherapists = async () => {
     try {
@@ -62,7 +50,7 @@ const TherapistsCalendarsView = ({ embedded = false }: TherapistsCalendarsViewPr
     }
   };
 
-  if (adminLoading || loading) {
+  if (loading) {
     if (embedded) {
       return (
         <div className="flex items-center justify-center py-12">
@@ -82,28 +70,6 @@ const TherapistsCalendarsView = ({ embedded = false }: TherapistsCalendarsViewPr
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-hanami-primary mx-auto"></div>
             <p className="mt-4 text-hanami-neutral">Ładowanie kalendarzy masażystów...</p>
           </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (!embedded && !isAdmin) {
-    return (
-      <div className="min-h-screen bg-gradient-warm">
-        <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <Card className="max-w-md w-full mx-4">
-            <CardContent className="p-8 text-center">
-              <Lock className="h-16 w-16 text-hanami-primary mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-hanami-primary mb-2">
-                Dostęp ograniczony
-              </h3>
-              <p className="text-hanami-neutral">
-                Ta strona jest dostępna tylko dla administratorów. Kalendarze masażystów są prywatne.
-              </p>
-            </CardContent>
-          </Card>
         </div>
         <Footer />
       </div>
@@ -192,10 +158,10 @@ const TherapistsCalendarsView = ({ embedded = false }: TherapistsCalendarsViewPr
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center space-x-3 mb-4">
             <Calendar className="h-10 w-10" />
-            <h1 className="text-4xl font-light">Kalendarze Masażystów (Admin)</h1>
+            <h1 className="text-4xl font-light">Kalendarze Masażystów</h1>
           </div>
           <p className="text-xl text-white/90">
-            Panel administracyjny - przegląd kalendarzy wszystkich masażystów
+            Przegląd dostępności i wizyt wszystkich masażystów
           </p>
         </div>
       </section>

@@ -50,23 +50,40 @@ export const useTherapistCheck = () => {
       if (hasTherapistRole) {
         console.log("Finding therapist info for user:", user.id);
         
-        // Find therapist by name (temporary solution until we have proper mapping)
-        const { data: therapistData, error: therapistError } = await supabase
-          .from("therapists")
-          .select("id, name, specialization, experience, bio")
-          .eq("is_active", true)
-          .single();
+        // Get user profile first
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("user_id", user.id)
+          .maybeSingle();
           
-        console.log("Therapist data:", therapistData, therapistError);
+        console.log("Profile data:", profileData);
         
-        if (therapistData) {
-          setTherapistInfo({ 
-            therapist_id: therapistData.id, 
-            name: therapistData.name,
-            therapists: therapistData
-          });
+        if (profileData) {
+          const fullName = `${profileData.first_name} ${profileData.last_name}`;
+          
+          // Find therapist by matching full name
+          const { data: therapistData, error: therapistError } = await supabase
+            .from("therapists")
+            .select("id, name, specialization, experience, bio")
+            .eq("name", fullName)
+            .eq("is_active", true)
+            .maybeSingle();
+            
+          console.log("Therapist data:", therapistData, therapistError);
+          
+          if (therapistData) {
+            setTherapistInfo({ 
+              therapist_id: therapistData.id, 
+              name: therapistData.name,
+              therapists: therapistData
+            });
+          } else {
+            console.log("No matching therapist found, using fallback");
+            setTherapistInfo({ therapist_id: user.id, name: fullName || "Masażysta" });
+          }
         } else {
-          console.log("No therapist found, using fallback");
+          console.log("No profile found, using fallback");
           setTherapistInfo({ therapist_id: user.id, name: "Masażysta" });
         }
       } else {
