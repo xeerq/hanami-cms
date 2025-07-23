@@ -66,8 +66,8 @@ const Index = () => {
         
         <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
           <h1 className="text-5xl md:text-7xl font-light text-white mb-6 tracking-wide">
-            Dayspa
-            <span className="block text-hanami-accent">Hanami</span>
+            Salon
+            <span className="block text-hanami-accent">Hanami-Spa</span>
           </h1>
           <p className="text-xl md:text-2xl text-white/90 mb-8 font-light">
             Odkryj japońską filozofię relaksu w sercu Ostrowa Wielkopolskiego
