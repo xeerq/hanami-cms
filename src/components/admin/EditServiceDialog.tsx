@@ -47,13 +47,15 @@ const EditServiceDialog = ({ open, onOpenChange, service, onSuccess }: EditServi
     console.log("EditServiceDialog useEffect:", { service, open });
     if (service && open) {
       console.log("Setting form data:", service);
-      setFormData({
+      const formData = {
         name: service.name,
         description: service.description || "",
         duration: service.duration.toString(),
         price: service.price.toString(),
         category: service.category || "",
-      });
+      };
+      console.log("Form data being set:", formData);
+      setFormData(formData);
     } else if (!open) {
       // Reset form when dialog closes
       setFormData({
@@ -171,6 +173,7 @@ const EditServiceDialog = ({ open, onOpenChange, service, onSuccess }: EditServi
                   <SelectValue placeholder="Wybierz kategorię" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="Masaże">Masaże</SelectItem>
                   <SelectItem value="masaż">Masaż</SelectItem>
                   <SelectItem value="pielęgnacja twarzy">Pielęgnacja twarzy</SelectItem>
                   <SelectItem value="pielęgnacja ciała">Pielęgnacja ciała</SelectItem>
