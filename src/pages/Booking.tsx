@@ -124,8 +124,9 @@ const Booking = () => {
           const therapistIds = therapistServices.map(ts => ts.therapist_id);
           query = query.in("id", therapistIds);
         } else {
-          // Jeśli usługa nie ma przypisanych terapeutów, pokaż wszystkich (fallback)
-          console.warn("No therapists assigned to this service, showing all therapists");
+          // Jeśli usługa nie ma przypisanych terapeutów, nie pokazuj żadnych
+          setTherapists([]);
+          return;
         }
       }
       

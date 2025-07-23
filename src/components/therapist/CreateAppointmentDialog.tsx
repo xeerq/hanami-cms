@@ -87,14 +87,29 @@ const CreateAppointmentDialog = ({
   const loadInitialData = async () => {
     setLoadingData(true);
     try {
-      // Load services
-      const { data: servicesData, error: servicesError } = await supabase
-        .from("services")
-        .select("id, name, duration, price")
-        .eq("is_active", true);
+      // Load services - tylko te przypisane do tego terapeuty
+      const { data: therapistServices, error: tsError } = await supabase
+        .from("therapist_services")
+        .select("service_id")
+        .eq("therapist_id", therapistId);
 
-      if (servicesError) throw servicesError;
-      setServices(servicesData || []);
+      if (tsError) throw tsError;
+
+      if (therapistServices && therapistServices.length > 0) {
+        const serviceIds = therapistServices.map(ts => ts.service_id);
+        
+        const { data: servicesData, error: servicesError } = await supabase
+          .from("services")
+          .select("id, name, duration, price")
+          .eq("is_active", true)
+          .in("id", serviceIds);
+
+        if (servicesError) throw servicesError;
+        setServices(servicesData || []);
+      } else {
+        // Jeśli terapeuta nie ma przypisanych usług, nie pokazuj żadnych
+        setServices([]);
+      }
 
       // Load profiles for registered users
       if (!isGuest) {
