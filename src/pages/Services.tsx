@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,74 +6,33 @@ import { Badge } from "@/components/ui/badge";
 import { Sparkles, Heart, Clock, Flower, Droplets, Star } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useServices } from "@/hooks/useServices";
 import treatmentImage from "@/assets/treatment-room.jpg";
-import { supabase } from "@/integrations/supabase/client";
 
 const Services = () => {
-  const services = [
-    {
-      id: 1,
-      title: "Masaż relaksacyjny",
-      description: "Tradycyjny masaż inspirowany japońską filozofią zen. Delikatne ruchy i naturalne olejki przeniosą Cię w stan głębokiego relaksu.",
-      duration: "60 min",
-      price: "200 zł",
-      icon: <Sparkles className="h-6 w-6" />,
-      category: "Masaże",
-      benefits: ["Redukcja stresu", "Poprawa krążenia", "Relaks mięśni"]
-    },
-    {
-      id: 2,
-      title: "Masaż terapeutyczny",
-      description: "Profesjonalny masaż leczniczy dla zdrowia kręgosłupa i stawów. Łączy techniki szwedzkie z metodami orientalnymi.",
-      duration: "90 min",
-      price: "280 zł",
-      icon: <Heart className="h-6 w-6" />,
-      category: "Masaże",
-      benefits: ["Ułatwienie bólu", "Poprawa ruchomości", "Regeneracja mięśni"]
-    },
-    {
-      id: 3,
-      title: "Masaż hot stone",
-      description: "Relaksujący masaż z użyciem rozgrzanych kamieni bazaltowych. Ciepło głęboko penetruje mięśnie.",
-      duration: "75 min",
-      price: "350 zł",
-      icon: <Clock className="h-6 w-6" />,
-      category: "Masaże",
-      benefits: ["Głęboki relaks", "Detoksykacja", "Poprawa krążenia"]
-    },
-    {
-      id: 4,
-      title: "Masaż aromaterapeutyczny",
-      description: "Masaż z użyciem wyselekcjonowanych olejków eterycznych dostosowanych do Twoich potrzeb.",
-      duration: "60 min",
-      price: "220 zł",
-      icon: <Flower className="h-6 w-6" />,
-      category: "Masaże",
-      benefits: ["Aromaterapia", "Redukcja napięć", "Harmonizacja"]
-    },
-    {
-      id: 5,
-      title: "Zabieg nawilżający twarzy",
-      description: "Intensywnie nawilżający zabieg z użyciem japońskich kosmetyków premium.",
-      duration: "45 min",
-      price: "180 zł",
-      icon: <Droplets className="h-6 w-6" />,
-      category: "Pielęgnacja twarzy",
-      benefits: ["Nawilżenie", "Odmłodzenie", "Rozświetlenie"]
-    },
-    {
-      id: 6,
-      title: "Masaż prenatalny",
-      description: "Delikatny masaż dedykowany przyszłym mamom. Bezpieczny i relaksujący podczas ciąży.",
-      duration: "50 min",
-      price: "200 zł",
-      icon: <Star className="h-6 w-6" />,
-      category: "Specjalistyczne",
-      benefits: ["Bezpieczeństwo", "Komfort", "Redukcja obrzęków"]
-    }
-  ];
+  const { services: allServices, categories: serviceCategories, loading } = useServices();
+  const [selectedCategory, setSelectedCategory] = useState("Wszystkie");
 
-  const categories = ["Wszystkie", "Masaże", "Pielęgnacja twarzy", "Specjalistyczne"];
+  // Create icon mapping for services
+  const getServiceIcon = (category: string, index: number) => {
+    const icons = [
+      <Sparkles className="h-6 w-6" />,
+      <Heart className="h-6 w-6" />,
+      <Clock className="h-6 w-6" />,
+      <Flower className="h-6 w-6" />,
+      <Droplets className="h-6 w-6" />,
+      <Star className="h-6 w-6" />
+    ];
+    return icons[index % icons.length];
+  };
+
+  // Filter services based on selected category
+  const filteredServices = selectedCategory === "Wszystkie" 
+    ? allServices 
+    : allServices.filter(service => service.category === selectedCategory);
+
+  // Create categories list with "Wszystkie" option
+  const categories = ["Wszystkie", ...serviceCategories.map(cat => cat.name)];
 
   return (
     <div className="min-h-screen bg-gradient-warm">
@@ -99,8 +58,9 @@ const Services = () => {
               {categories.map((category) => (
                 <Badge 
                   key={category} 
-                  variant="outline" 
+                  variant={selectedCategory === category ? "default" : "outline"}
                   className="cursor-pointer hover:bg-hanami-secondary transition-zen"
+                  onClick={() => setSelectedCategory(category)}
                 >
                   {category}
                 </Badge>
@@ -110,52 +70,77 @@ const Services = () => {
 
           {/* Services Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service) => (
-              <Card key={service.id} className="group hover:shadow-elegant transition-zen border-hanami-accent/20">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="text-hanami-primary">
-                      {service.icon}
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 6 }).map((_, index) => (
+                <Card key={index} className="border-hanami-accent/20">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="w-6 h-6 bg-hanami-secondary rounded animate-pulse"></div>
+                      <div className="w-20 h-6 bg-hanami-secondary rounded animate-pulse"></div>
                     </div>
-                    <Badge variant="secondary">{service.category}</Badge>
-                  </div>
-                  
-                  <h3 className="text-xl font-semibold text-hanami-primary mb-2">
-                    {service.title}
-                  </h3>
-                  
-                  <p className="text-hanami-neutral mb-4 text-sm">
-                    {service.description}
-                  </p>
-
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-hanami-neutral">Czas trwania:</span>
-                      <span className="font-medium">{service.duration}</span>
+                    <div className="w-3/4 h-6 bg-hanami-secondary rounded mb-2 animate-pulse"></div>
+                    <div className="w-full h-16 bg-hanami-secondary rounded mb-4 animate-pulse"></div>
+                    <div className="space-y-3 mb-6">
+                      <div className="w-full h-4 bg-hanami-secondary rounded animate-pulse"></div>
+                      <div className="flex gap-1">
+                        <div className="w-16 h-6 bg-hanami-secondary rounded animate-pulse"></div>
+                        <div className="w-20 h-6 bg-hanami-secondary rounded animate-pulse"></div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="w-20 h-8 bg-hanami-secondary rounded animate-pulse"></div>
+                      <div className="w-20 h-8 bg-hanami-secondary rounded animate-pulse"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : filteredServices.length === 0 ? (
+              <div className="col-span-full text-center py-12">
+                <p className="text-hanami-neutral text-lg">
+                  Brak usług w wybranej kategorii.
+                </p>
+              </div>
+            ) : (
+              filteredServices.map((service, index) => (
+                <Card key={service.id} className="group hover:shadow-elegant transition-zen border-hanami-accent/20">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="text-hanami-primary">
+                        {getServiceIcon(service.category, index)}
+                      </div>
+                      <Badge variant="secondary">{service.category}</Badge>
                     </div>
                     
-                    <div className="flex flex-wrap gap-1">
-                      {service.benefits.map((benefit, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {benefit}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
+                    <h3 className="text-xl font-semibold text-hanami-primary mb-2">
+                      {service.name}
+                    </h3>
+                    
+                    <p className="text-hanami-neutral mb-4 text-sm">
+                      {service.description}
+                    </p>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-hanami-primary">
-                      {service.price}
-                    </span>
-                    <Button size="sm" asChild>
-                      <Link to="/booking">
-                        Zarezerwuj
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-hanami-neutral">Czas trwania:</span>
+                        <span className="font-medium">{service.duration} min</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-hanami-primary">
+                        {service.price} zł
+                      </span>
+                      <Button size="sm" asChild>
+                        <Link to="/booking">
+                          Zarezerwuj
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </div>
       </section>

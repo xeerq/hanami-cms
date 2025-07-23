@@ -4,34 +4,26 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Sparkles, Heart, Clock, Star, Calendar, ShoppingBag, Users, Award } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useServices } from "@/hooks/useServices";
 import heroImage from "@/assets/hero-spa.jpg";
 import zenImage from "@/assets/spa-zen.jpg";
 import treatmentImage from "@/assets/treatment-room.jpg";
 
 const Index = () => {
-  const services = [
-    {
-      title: "Masaż relaksacyjny",
-      description: "Tradycyjny masaż inspirowany japońską filozofią zen",
-      duration: "60 min",
-      price: "200 zł",
-      icon: <Sparkles className="h-6 w-6" />
-    },
-    {
-      title: "Masaż terapeutyczny",
-      description: "Profesjonalny masaż leczniczy dla zdrowia kręgosłupa",
-      duration: "90 min", 
-      price: "280 zł",
-      icon: <Heart className="h-6 w-6" />
-    },
-    {
-      title: "Masaż hot stone",
-      description: "Relaksujący masaż z użyciem rozgrzanych kamieni",
-      duration: "75 min",
-      price: "350 zł",
-      icon: <Clock className="h-6 w-6" />
-    }
-  ];
+  const { services: allServices, loading } = useServices();
+  
+  // Take first 3 services for homepage display
+  const services = allServices.slice(0, 3).map((service, index) => ({
+    title: service.name,
+    description: service.description || '',
+    duration: `${service.duration} min`,
+    price: `${service.price} zł`,
+    icon: [
+      <Sparkles className="h-6 w-6" />,
+      <Heart className="h-6 w-6" />,
+      <Clock className="h-6 w-6" />
+    ][index] || <Star className="h-6 w-6" />
+  }));
 
   const features = [
     {
@@ -101,34 +93,56 @@ const Index = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {services.map((service, index) => (
-              <Card key={index} className="group hover:shadow-elegant transition-zen border-hanami-accent/20">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="text-hanami-primary">
-                      {service.icon}
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 3 }).map((_, index) => (
+                <Card key={index} className="border-hanami-accent/20">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-6 h-6 bg-hanami-secondary rounded animate-pulse"></div>
+                      <div className="w-16 h-6 bg-hanami-secondary rounded-full animate-pulse"></div>
                     </div>
-                    <span className="text-sm text-hanami-neutral bg-hanami-secondary px-3 py-1 rounded-full">
-                      {service.duration}
-                    </span>
-                  </div>
-                  <h3 className="text-xl font-semibold text-hanami-primary mb-2">
-                    {service.title}
-                  </h3>
-                  <p className="text-hanami-neutral mb-4">
-                    {service.description}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-hanami-primary">
-                      {service.price}
-                    </span>
-                    <Button size="sm" variant="outline">
-                      Zarezerwuj
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="w-3/4 h-6 bg-hanami-secondary rounded mb-2 animate-pulse"></div>
+                    <div className="w-full h-4 bg-hanami-secondary rounded mb-4 animate-pulse"></div>
+                    <div className="flex items-center justify-between">
+                      <div className="w-20 h-8 bg-hanami-secondary rounded animate-pulse"></div>
+                      <div className="w-20 h-8 bg-hanami-secondary rounded animate-pulse"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              services.map((service, index) => (
+                <Card key={index} className="group hover:shadow-elegant transition-zen border-hanami-accent/20">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="text-hanami-primary">
+                        {service.icon}
+                      </div>
+                      <span className="text-sm text-hanami-neutral bg-hanami-secondary px-3 py-1 rounded-full">
+                        {service.duration}
+                      </span>
+                    </div>
+                    <h3 className="text-xl font-semibold text-hanami-primary mb-2">
+                      {service.title}
+                    </h3>
+                    <p className="text-hanami-neutral mb-4">
+                      {service.description}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-hanami-primary">
+                        {service.price}
+                      </span>
+                      <Button size="sm" variant="outline" asChild>
+                        <Link to="/booking">
+                          Zarezerwuj
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
 
           <div className="text-center mt-12">
