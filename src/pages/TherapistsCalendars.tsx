@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +14,7 @@ interface Therapist {
   name: string;
   specialization?: string;
   bio?: string;
+  avatar_url?: string;
 }
 
 interface TherapistsCalendarsViewProps {
@@ -32,7 +34,7 @@ const TherapistsCalendarsView = ({ embedded = false }: TherapistsCalendarsViewPr
     try {
       const { data, error } = await supabase
         .from("therapists")
-        .select("id, name, specialization, bio, user_id")
+        .select("id, name, specialization, bio, avatar_url, user_id")
         .eq("is_active", true)
         .order("name");
 
@@ -48,6 +50,10 @@ const TherapistsCalendarsView = ({ embedded = false }: TherapistsCalendarsViewPr
     } finally {
       setLoading(false);
     }
+  };
+
+  const getAvatarFallback = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
   };
 
   if (loading) {
@@ -115,9 +121,12 @@ const TherapistsCalendarsView = ({ embedded = false }: TherapistsCalendarsViewPr
               <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-sm">
                 <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
                   <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-hanami-primary to-hanami-accent rounded-full flex items-center justify-center">
-                      <Users className="h-6 w-6 text-white" />
-                    </div>
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={therapist.avatar_url} alt={therapist.name} />
+                      <AvatarFallback className="bg-gradient-to-r from-hanami-primary to-hanami-accent text-white">
+                        {getAvatarFallback(therapist.name)}
+                      </AvatarFallback>
+                    </Avatar>
                     <div>
                       <CardTitle className="text-2xl font-light text-hanami-primary">
                         {therapist.name}
