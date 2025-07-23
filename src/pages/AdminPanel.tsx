@@ -14,6 +14,7 @@ import CategoriesManager from "@/components/admin/CategoriesManager";
 import UsersManager from "@/components/admin/UsersManager";
 import BlockedSlotsManager from "@/components/admin/BlockedSlotsManager";
 import TherapistServicesManager from "@/components/admin/TherapistServicesManager";
+import TherapistsCalendarsView from "@/pages/TherapistsCalendars";
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAdminCheck();
@@ -58,7 +59,7 @@ const AdminPanel = () => {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="appointments" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-8">
+            <TabsList className="grid w-full grid-cols-9">
               <TabsTrigger value="appointments" className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline">Wizyty</span>
@@ -79,13 +80,17 @@ const AdminPanel = () => {
                 <Package className="h-4 w-4" />
                 <span className="hidden sm:inline">Produkty</span>
               </TabsTrigger>
-               <TabsTrigger value="users" className="flex items-center space-x-2">
+              <TabsTrigger value="users" className="flex items-center space-x-2">
                 <UserCog className="h-4 w-4" />
                 <span className="hidden sm:inline">Użytkownicy</span>
               </TabsTrigger>
               <TabsTrigger value="categories" className="flex items-center space-x-2">
                 <Tag className="h-4 w-4" />
                 <span className="hidden sm:inline">Kategorie</span>
+              </TabsTrigger>
+              <TabsTrigger value="calendars" className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4" />
+                <span className="hidden sm:inline">Kalendarze</span>
               </TabsTrigger>
               <TabsTrigger value="blocked" className="flex items-center space-x-2">
                 <ShoppingBag className="h-4 w-4" />
@@ -119,6 +124,10 @@ const AdminPanel = () => {
 
             <TabsContent value="categories">
               <CategoriesManager />
+            </TabsContent>
+
+            <TabsContent value="calendars">
+              <TherapistsCalendarsView embedded={true} />
             </TabsContent>
 
             <TabsContent value="blocked">
