@@ -183,6 +183,7 @@ const EditProductDialog = ({ open, onOpenChange, product, onSuccess }: EditProdu
                   <SelectItem value="olejki">Olejki</SelectItem>
                   <SelectItem value="suplementy">Suplementy</SelectItem>
                   <SelectItem value="akcesoria">Akcesoria</SelectItem>
+                  <SelectItem value="Akcesoria">Akcesoria</SelectItem>
                   <SelectItem value="inne">Inne</SelectItem>
                 </SelectContent>
               </Select>
