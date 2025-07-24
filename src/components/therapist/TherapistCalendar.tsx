@@ -413,26 +413,39 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                                 className={`relative p-3 rounded-xl text-xs shadow-lg hover:shadow-xl transition-all duration-300 group/appointment cursor-pointer animate-fade-in mb-1 overflow-hidden ${
                                   isPastAppointment ? "opacity-50 grayscale" : ""
                                 } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow}`}
-                              >
-                                <div className="font-semibold mb-1 transition-colors duration-200">
-                                  {appointment.services?.name}
-                                </div>
-                                <div className="opacity-90 transition-colors duration-200">
-                                  {getClientName(appointment)}
-                                </div>
-                                <div className="text-xs mt-1 opacity-80">
-                                  ⏱️ {appointment.services?.duration}min
-                                </div>
-                                <div className="text-xs mt-1 opacity-80 capitalize">
-                                  Status: {appointment.status === 'confirmed' ? 'Potwierdzona' : 
-                                           appointment.status === 'cancelled' ? 'Anulowana' :
-                                           appointment.status === 'pending' ? 'Oczekująca' : appointment.status}
-                                </div>
-                                {appointment.is_guest && (
-                                  <div className="opacity-80 mt-1 text-xs transition-colors duration-200">
-                                    📞 {appointment.guest_phone}
-                                  </div>
-                                )}
+                               >
+                                 <div className="font-semibold mb-1 transition-colors duration-200">
+                                   {appointment.services?.name}
+                                 </div>
+                                 <div className="opacity-90 transition-colors duration-200">
+                                   {getClientName(appointment)}
+                                 </div>
+                                 <div className="text-xs mt-1 opacity-80">
+                                   🕐 {appointment.appointment_time.slice(0, 5)} - {
+                                     (() => {
+                                       const startTime = appointment.appointment_time.slice(0, 5);
+                                       const [hours, minutes] = startTime.split(':').map(Number);
+                                       const duration = appointment.services?.duration || 30;
+                                       const endTimeMinutes = hours * 60 + minutes + duration;
+                                       const endHours = Math.floor(endTimeMinutes / 60);
+                                       const endMins = endTimeMinutes % 60;
+                                       return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+                                     })()
+                                   }
+                                 </div>
+                                 <div className="text-xs mt-1 opacity-80">
+                                   ⏱️ {appointment.services?.duration}min
+                                 </div>
+                                 <div className="text-xs mt-1 opacity-80 capitalize">
+                                   Status: {appointment.status === 'confirmed' ? 'Potwierdzona' : 
+                                            appointment.status === 'cancelled' ? 'Anulowana' :
+                                            appointment.status === 'pending' ? 'Oczekująca' : appointment.status}
+                                 </div>
+                                 {appointment.is_guest && (
+                                   <div className="opacity-80 mt-1 text-xs transition-colors duration-200">
+                                     📞 {appointment.guest_phone}
+                                   </div>
+                                 )}
                                 
                                 {/* Przyciski akcji - widoczne tylko przy hover */}
                                 <div className="absolute top-1 right-1 opacity-0 group-hover/appointment:opacity-100 transition-opacity duration-200 flex space-x-1">
