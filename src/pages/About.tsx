@@ -3,25 +3,46 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Award, Heart, Star, Users } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import zenImage from "@/assets/spa-zen.jpg";
 
+interface Therapist {
+  id: string;
+  name: string;
+  specialization: string;
+  experience: string;
+  bio: string;
+  avatar_url: string;
+  is_active: boolean;
+}
+
 const About = () => {
-  const team = [
-    {
-      name: "Anna Kowalska",
-      role: "Główna masażystka",
-      experience: "8 lat doświadczenia",
-      specialization: "Masaże terapeutyczne, hot stone",
-      description: "Specjalistka z wieloletnim doświadczeniem w masażach terapeutycznych."
-    },
-    {
-      name: "Maria Nowak", 
-      role: "Masażystka & Kosmetyczka",
-      experience: "5 lat doświadczenia",
-      specialization: "Masaże relaksacyjne, pielęgnacja twarzy",
-      description: "Ekspertka w dziedzinie masaży relaksacyjnych i zabiegów kosmetycznych."
-    }
-  ];
+  const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTherapists = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('therapists')
+          .select('*')
+          .eq('is_active', true)
+          .order('name');
+
+        if (error) throw error;
+        setTherapists(data || []);
+      } catch (error) {
+        console.error('Error fetching therapists:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTherapists();
+  }, []);
 
   const values = [
     {
@@ -146,30 +167,58 @@ const About = () => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {team.map((member, index) => (
-              <Card key={index} className="hover:shadow-elegant transition-zen border-hanami-accent/20">
-                <CardContent className="p-6 text-center">
-                  <div className="w-24 h-24 bg-hanami-secondary rounded-full mx-auto mb-4 flex items-center justify-center">
-                    <Users className="h-12 w-12 text-hanami-primary" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-hanami-primary mb-2">
-                    {member.name}
-                  </h3>
-                  <p className="text-hanami-primary font-medium mb-2">
-                    {member.role}
-                  </p>
-                  <p className="text-sm text-hanami-neutral mb-3">
-                    {member.experience}
-                  </p>
-                  <p className="text-sm text-hanami-neutral mb-4">
-                    <strong>Specjalizacja:</strong> {member.specialization}
-                  </p>
-                  <p className="text-sm text-hanami-neutral">
-                    {member.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+            {loading ? (
+              // Loading skeletons
+              Array.from({ length: 2 }).map((_, index) => (
+                <Card key={index} className="border-hanami-accent/20">
+                  <CardContent className="p-6 text-center">
+                    <Skeleton className="w-24 h-24 rounded-full mx-auto mb-4" />
+                    <Skeleton className="h-6 w-32 mx-auto mb-2" />
+                    <Skeleton className="h-5 w-40 mx-auto mb-2" />
+                    <Skeleton className="h-4 w-28 mx-auto mb-3" />
+                    <Skeleton className="h-4 w-full mb-4" />
+                    <Skeleton className="h-16 w-full" />
+                  </CardContent>
+                </Card>
+              ))
+            ) : therapists.length > 0 ? (
+              therapists.map((therapist) => (
+                <Card key={therapist.id} className="hover:shadow-elegant transition-zen border-hanami-accent/20">
+                  <CardContent className="p-6 text-center">
+                    <Avatar className="w-24 h-24 mx-auto mb-4">
+                      <AvatarImage 
+                        src={therapist.avatar_url} 
+                        alt={therapist.name}
+                      />
+                      <AvatarFallback className="bg-hanami-secondary text-hanami-primary text-lg">
+                        {therapist.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <h3 className="text-xl font-semibold text-hanami-primary mb-2">
+                      {therapist.name}
+                    </h3>
+                    <p className="text-hanami-primary font-medium mb-2">
+                      Terapeuta
+                    </p>
+                    <p className="text-sm text-hanami-neutral mb-3">
+                      {therapist.experience}
+                    </p>
+                    <p className="text-sm text-hanami-neutral mb-4">
+                      <strong>Specjalizacja:</strong> {therapist.specialization}
+                    </p>
+                    <p className="text-sm text-hanami-neutral">
+                      {therapist.bio}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="col-span-2 text-center py-8">
+                <p className="text-hanami-neutral">
+                  Brak aktywnych terapeutów do wyświetlenia.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>
