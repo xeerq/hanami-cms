@@ -379,9 +379,8 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                     {/* Day cells */}
                     {weekDays.map((day, dayIndex) => {
                       const dayString = format(day, "yyyy-MM-dd");
-                      const dayAppointments = appointments.filter(
-                        apt => apt.appointment_date === dayString && apt.appointment_time.slice(0, 5) === time
-                      );
+                      const appointmentStartingAtSlot = getAppointmentStartingAtSlot(time, day, appointments);
+                      const isSlotOccupiedByRunningAppointment = isSlotOccupied(time, day, appointments) && !appointmentStartingAtSlot;
                       
                       const isTodayDay = dayString === format(new Date(), "yyyy-MM-dd");
                       const isPastDay = day < new Date();
@@ -390,37 +389,52 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                       return (
                         <div
                           key={dayString}
-                          className={`relative p-2 min-h-[60px] bg-white transition-all duration-300 group ${
+                          className={`relative p-0 min-h-[60px] bg-white transition-all duration-300 group ${
                             isTodayDay ? "border-l-2 border-pink-400" : ""
                           } ${isPastDay ? "opacity-60" : ""} hover:bg-gradient-to-br hover:from-pink-50 hover:to-rose-50`}
                         >
                           {/* Wskaźnik aktualnej godziny */}
                           {currentTimeIndicator}
                           
-                          {dayAppointments.map((appointment) => {
+                          {/* Renderuj tylko wizytę rozpoczynającą się w tym slocie */}
+                          {appointmentStartingAtSlot && (() => {
+                            const appointment = appointmentStartingAtSlot;
                             const colors = getAppointmentStatusColors(appointment.status);
                             const isPastAppointment = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
                             const duration = appointment.services?.duration || 30;
-                            const heightMultiplier = Math.max(1, duration / 30);
+                            const slotSpan = getAppointmentSlotSpan(appointment);
+                            
+                            // Oblicz pozycję wewnątrz slotu na podstawie minut
+                            const [startHour, startMinute] = appointment.appointment_time.split(':').map(Number);
+                            const slotStartMinute = parseInt(time.split(':')[1]);
+                            const minuteOffset = startMinute - slotStartMinute;
+                            const topOffset = (minuteOffset / 30) * 100; // procent wysokości slotu
+                            
+                            // Wysokość bloku na podstawie rzeczywistego czasu trwania
+                            const heightInPixels = (duration / 30) * 60; // 60px na 30min slot
                             
                             return (
                               <div
                                 key={appointment.id}
                                 style={{
-                                  height: `${heightMultiplier * 56}px`,
-                                  maxHeight: `${heightMultiplier * 56}px`
+                                  position: 'absolute',
+                                  top: `${topOffset}%`,
+                                  left: '2px',
+                                  right: '2px',
+                                  height: `${heightInPixels}px`,
+                                  zIndex: 10
                                 }}
-                                className={`relative p-3 rounded-xl text-xs shadow-lg hover:shadow-xl transition-all duration-300 group/appointment cursor-pointer animate-fade-in mb-1 overflow-hidden ${
+                                className={`p-2 rounded-lg text-xs shadow-lg hover:shadow-xl transition-all duration-300 group/appointment cursor-pointer animate-fade-in overflow-hidden ${
                                   isPastAppointment ? "opacity-50 grayscale" : ""
                                 } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow}`}
                                >
-                                 <div className="font-semibold mb-1 transition-colors duration-200">
+                                 <div className="font-semibold mb-1 transition-colors duration-200 text-xs leading-tight">
                                    {appointment.services?.name}
                                  </div>
-                                 <div className="opacity-90 transition-colors duration-200">
+                                 <div className="opacity-90 transition-colors duration-200 text-xs leading-tight">
                                    {getClientName(appointment)}
                                  </div>
-                                 <div className="text-xs mt-1 opacity-80">
+                                 <div className="text-xs mt-1 opacity-80 leading-tight">
                                    🕐 {appointment.appointment_time.slice(0, 5)} - {
                                      (() => {
                                        const startTime = appointment.appointment_time.slice(0, 5);
@@ -433,16 +447,16 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                                      })()
                                    }
                                  </div>
-                                 <div className="text-xs mt-1 opacity-80">
+                                 <div className="text-xs mt-1 opacity-80 leading-tight">
                                    ⏱️ {appointment.services?.duration}min
                                  </div>
-                                 <div className="text-xs mt-1 opacity-80 capitalize">
+                                 <div className="text-xs mt-1 opacity-80 capitalize leading-tight">
                                    Status: {appointment.status === 'confirmed' ? 'Potwierdzona' : 
                                             appointment.status === 'cancelled' ? 'Anulowana' :
                                             appointment.status === 'pending' ? 'Oczekująca' : appointment.status}
                                  </div>
                                  {appointment.is_guest && (
-                                   <div className="opacity-80 mt-1 text-xs transition-colors duration-200">
+                                   <div className="opacity-80 mt-1 text-xs transition-colors duration-200 leading-tight">
                                      📞 {appointment.guest_phone}
                                    </div>
                                  )}
@@ -484,9 +498,9 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                                 <div className="absolute inset-0 bg-white/0 group-hover/appointment:bg-white/10 rounded-xl transition-colors duration-300"></div>
                               </div>
                             );
-                          })}
+                          })()}
                           
-                          {dayAppointments.length === 0 && !isPastDay && (
+                          {!appointmentStartingAtSlot && !isSlotOccupiedByRunningAppointment && !isPastDay && (
                             <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-gray-400 text-center mt-4">
                               Wolny termin
                             </div>
