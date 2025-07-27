@@ -460,58 +460,59 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                   );
                 })}
 
-                {/* Time Labels and Appointment Cells */}
-                {timeSlots.map((time, timeIndex) => (
-                  <React.Fragment key={`row-${time}`}>
-                    {/* Time Label */}
-                    <div 
-                      className="grid-time-label bg-white border-r border-gray-200 p-4 text-sm font-medium text-gray-600 flex items-center justify-center"
-                      style={{ 
-                        gridRow: timeIndex + 2,
-                        gridColumn: 1,
-                        borderBottom: timeIndex < timeSlots.length - 1 ? '1px solid rgb(229 231 235)' : 'none'
-                      }}
-                    >
-                      <span className="px-3 py-1 bg-gray-50 rounded-lg font-mono">{time}</span>
-                    </div>
+                {timeSlots.map((time, timeIndex) => {
+                  return (
+                    <React.Fragment key={`row-${time}`}>
+                      {/* Time Label */}
+                      <div 
+                        className="grid-time-label bg-white border-r border-gray-200 p-4 text-sm font-medium text-gray-600 flex items-center justify-center"
+                        style={{ 
+                          gridRow: timeIndex + 2,
+                          gridColumn: 1,
+                          borderBottom: timeIndex < timeSlots.length - 1 ? '1px solid rgb(229 231 235)' : 'none'
+                        }}
+                      >
+                        <span className="px-3 py-1 bg-gray-50 rounded-lg font-mono">{time}</span>
+                      </div>
 
-                    {/* Day Cells */}
-                    {weekDays.map((day, dayIndex) => {
-                      const dayString = format(day, "yyyy-MM-dd");
-                      const dayAppointments = appointments.filter(apt => apt.appointment_date === dayString);
-                      const conflicts = getTimeConflicts(dayAppointments);
-                      
-                      const isTodayDay = dayString === format(new Date(), "yyyy-MM-dd");
-                      const isPastDay = day < new Date();
-                      const currentTimeIndicator = renderCurrentTimeIndicator(time, day);
-                      
-                      return (
-                        <div
-                          key={`cell-${dayString}-${time}`}
-                          className={`grid-cell relative bg-white transition-all duration-300 group ${
-                            isTodayDay ? "bg-hanami-primary/5" : ""
-                          } ${isPastDay ? "opacity-60" : ""} hover:bg-gradient-to-br hover:from-pink-50 hover:to-rose-50`}
-                          style={{ 
-                            gridRow: timeIndex + 2,
-                            gridColumn: dayIndex + 2,
-                            borderRight: dayIndex < weekDays.length - 1 ? '1px solid rgb(229 231 235)' : 'none',
-                            borderBottom: timeIndex < timeSlots.length - 1 ? '1px solid rgb(229 231 235)' : 'none'
-                          }}
-                        >
-                          {/* Current Time Indicator */}
-                          {currentTimeIndicator}
-                          
-                          {/* Empty slot indicator */}
-                          {!isPastDay && (
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-gray-400 text-center absolute inset-0 flex items-center justify-center">
-                              Wolny termin
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
+                      {/* Day Cells */}
+                      {weekDays.map((day, dayIndex) => {
+                        const dayString = format(day, "yyyy-MM-dd");
+                        const dayAppointments = appointments.filter(apt => apt.appointment_date === dayString);
+                        const conflicts = getTimeConflicts(dayAppointments);
+                        
+                        const isTodayDay = dayString === format(new Date(), "yyyy-MM-dd");
+                        const isPastDay = day < new Date();
+                        const currentTimeIndicator = renderCurrentTimeIndicator(time, day);
+                        
+                        return (
+                          <div
+                            key={`cell-${dayString}-${time}`}
+                            className={`grid-cell relative bg-white transition-all duration-300 group ${
+                              isTodayDay ? "bg-hanami-primary/5" : ""
+                            } ${isPastDay ? "opacity-60" : ""} hover:bg-gradient-to-br hover:from-pink-50 hover:to-rose-50`}
+                            style={{ 
+                              gridRow: timeIndex + 2,
+                              gridColumn: dayIndex + 2,
+                              borderRight: dayIndex < weekDays.length - 1 ? '1px solid rgb(229 231 235)' : 'none',
+                              borderBottom: timeIndex < timeSlots.length - 1 ? '1px solid rgb(229 231 235)' : 'none'
+                            }}
+                          >
+                            {/* Current Time Indicator */}
+                            {currentTimeIndicator}
+                            
+                            {/* Empty slot indicator */}
+                            {!isPastDay && (
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-gray-400 text-center absolute inset-0 flex items-center justify-center">
+                                Wolny termin
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  );
+                })}
 
                 {/* Appointment Blocks - Positioned over the grid */}
                 {weekDays.map((day, dayIndex) => {

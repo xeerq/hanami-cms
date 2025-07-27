@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +20,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -134,6 +136,10 @@ const Dashboard = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleBookNewAppointment = () => {
+    navigate('/booking');
   };
 
   const generateMealPlan = () => {
@@ -268,7 +274,7 @@ const Dashboard = () => {
                     </div>
                   )}
                   <div className="mt-6">
-                    <Button>Zarezerwuj nową wizytę</Button>
+                    <Button onClick={handleBookNewAppointment}>Zarezerwuj nową wizytę</Button>
                   </div>
                 </CardContent>
               </Card>
