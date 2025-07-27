@@ -238,33 +238,72 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
     }
   };
 
-  // Sprawdź czy slot jest zajęty przez jakąś wizytę
-  const isSlotOccupied = (time: string, day: Date, appointments: Appointment[]) => {
-    const dayString = format(day, "yyyy-MM-dd");
-    const slotTime = new Date(`${dayString}T${time}:00`);
-    
-    return appointments.some(appointment => {
-      const appointmentStart = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
-      const appointmentEnd = new Date(appointmentStart);
-      appointmentEnd.setMinutes(appointmentEnd.getMinutes() + (appointment.services?.duration || 30));
-      
-      return slotTime >= appointmentStart && slotTime < appointmentEnd;
-    });
-  };
-
-  // Znajdź wizytę która zaczyna się w tym slocie
-  const getAppointmentStartingAtSlot = (time: string, day: Date, appointments: Appointment[]) => {
-    const dayString = format(day, "yyyy-MM-dd");
-    return appointments.find(appointment => 
-      appointment.appointment_date === dayString && 
-      appointment.appointment_time.slice(0, 5) === time
-    );
-  };
-
-  // Oblicz ile slotów powinna zajmować wizyta
-  const getAppointmentSlotSpan = (appointment: Appointment) => {
+  // Oblicz pozycję i rozmiar wizyty w CSS Grid
+  const getAppointmentGridPosition = (appointment: Appointment) => {
+    const [startHour, startMinute] = appointment.appointment_time.split(':').map(Number);
     const duration = appointment.services?.duration || 30;
-    return Math.ceil(duration / 30);
+    
+    // Znajdź pozycję startową w gridzie (8:00 = row 1, 8:30 = row 2, itd.)
+    const startRow = ((startHour - 8) * 2) + (startMinute / 30) + 2; // +2 dla headera
+    const durationInSlots = Math.ceil(duration / 30);
+    
+    return {
+      gridRowStart: startRow,
+      gridRowEnd: startRow + durationInSlots,
+    };
+  };
+
+  // Znajdź konflikty czasowe dla danego dnia
+  const getTimeConflicts = (dayAppointments: Appointment[]) => {
+    const conflicts: { [key: string]: Appointment[] } = {};
+    
+    dayAppointments.forEach(appointment => {
+      const startTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
+      const endTime = new Date(startTime);
+      endTime.setMinutes(endTime.getMinutes() + (appointment.services?.duration || 30));
+      
+      // Sprawdź nakładanie z innymi wizytami
+      const overlapping = dayAppointments.filter(other => {
+        if (other.id === appointment.id) return false;
+        
+        const otherStart = new Date(`${other.appointment_date}T${other.appointment_time}`);
+        const otherEnd = new Date(otherStart);
+        otherEnd.setMinutes(otherEnd.getMinutes() + (other.services?.duration || 30));
+        
+        return (startTime < otherEnd && endTime > otherStart);
+      });
+      
+      if (overlapping.length > 0) {
+        const conflictKey = [appointment, ...overlapping]
+          .sort((a, b) => a.appointment_time.localeCompare(b.appointment_time))
+          .map(a => a.id)
+          .join('-');
+        
+        if (!conflicts[conflictKey]) {
+          conflicts[conflictKey] = [appointment, ...overlapping];
+        }
+      }
+    });
+    
+    return conflicts;
+  };
+
+  // Oblicz szerokość i pozycję poziomą dla konfliktujących wizyt
+  const getConflictLayout = (appointment: Appointment, conflicts: { [key: string]: Appointment[] }) => {
+    for (const [key, conflictGroup] of Object.entries(conflicts)) {
+      if (conflictGroup.some(a => a.id === appointment.id)) {
+        const sortedGroup = conflictGroup.sort((a, b) => a.appointment_time.localeCompare(b.appointment_time));
+        const index = sortedGroup.findIndex(a => a.id === appointment.id);
+        const totalCount = sortedGroup.length;
+        
+        return {
+          width: `${100 / totalCount}%`,
+          left: `${(index * 100) / totalCount}%`,
+        };
+      }
+    }
+    
+    return { width: '100%', left: '0%' };
   };
 
   // Renderuj wskaźnik aktualnej godziny
@@ -333,24 +372,31 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
             </Button>
           </div>
 
-          {/* Calendar Grid */}
+          {/* Calendar Grid with CSS Grid */}
           <div className="overflow-x-auto">
             <div className="min-w-[900px] bg-white rounded-2xl shadow-lg border border-gray-100">
-              {/* Header with days */}
-              <div className="grid grid-cols-8 gap-px bg-gray-100 rounded-t-2xl overflow-hidden">
-                <div className="p-4 text-sm font-semibold text-gray-600 bg-gradient-to-br from-gray-50 to-white flex items-center justify-center">
+              {/* CSS Grid Container */}
+              <div 
+                className="grid gap-0 rounded-2xl overflow-hidden border border-gray-200"
+                style={{
+                  gridTemplateColumns: 'minmax(120px, 1fr) repeat(7, minmax(120px, 1fr))',
+                  gridTemplateRows: `60px repeat(${timeSlots.length}, 60px)`,
+                }}
+              >
+                {/* Header Row */}
+                <div className="grid-header bg-gradient-to-br from-gray-50 to-white border-b border-r border-gray-200 p-4 text-sm font-semibold text-gray-600 flex items-center justify-center">
                   Godzina
                 </div>
-                {weekDays.map((day, index) => {
+                {weekDays.map((day) => {
                   const isToday = format(day, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
                   return (
                     <div 
-                      key={day.toISOString()} 
-                      className={`p-4 text-center text-sm font-semibold transition-all duration-300 ${
+                      key={`header-${day.toISOString()}`}
+                      className={`grid-header border-b border-gray-200 p-4 text-center text-sm font-semibold transition-all duration-300 ${
                         isToday 
                           ? "bg-gradient-to-br from-hanami-primary/10 to-hanami-accent/10 text-hanami-primary" 
-                          : "bg-gradient-to-br from-gray-50 to-white text-gray-700 hover:from-hanami-primary/5 hover:to-hanami-accent/5"
-                      }`}
+                          : "bg-gradient-to-br from-gray-50 to-white text-gray-700"
+                      } ${day !== weekDays[weekDays.length - 1] ? "border-r border-gray-200" : ""}`}
                     >
                       <div className={`transition-all duration-300 ${isToday ? "font-bold" : ""}`}>
                         {format(day, "EEEE", { locale: pl })}
@@ -365,22 +411,27 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                     </div>
                   );
                 })}
-              </div>
 
-              {/* Time slots */}
-              <div className="divide-y divide-gray-100">
+                {/* Time Labels and Appointment Cells */}
                 {timeSlots.map((time, timeIndex) => (
-                  <div key={time} className="grid grid-cols-8 gap-px bg-gray-50">
-                    {/* Time label */}
-                    <div className="p-4 text-sm font-medium text-gray-600 bg-white flex items-center justify-center border-r border-gray-100">
-                      <span className="px-3 py-1 bg-gray-50 rounded-lg">{time}</span>
+                  <React.Fragment key={`row-${time}`}>
+                    {/* Time Label */}
+                    <div 
+                      className="grid-time-label bg-white border-r border-gray-200 p-4 text-sm font-medium text-gray-600 flex items-center justify-center"
+                      style={{ 
+                        gridRow: timeIndex + 2,
+                        gridColumn: 1,
+                        borderBottom: timeIndex < timeSlots.length - 1 ? '1px solid rgb(229 231 235)' : 'none'
+                      }}
+                    >
+                      <span className="px-3 py-1 bg-gray-50 rounded-lg font-mono">{time}</span>
                     </div>
-                    
-                    {/* Day cells */}
+
+                    {/* Day Cells */}
                     {weekDays.map((day, dayIndex) => {
                       const dayString = format(day, "yyyy-MM-dd");
-                      const appointmentStartingAtSlot = getAppointmentStartingAtSlot(time, day, appointments);
-                      const isSlotOccupiedByRunningAppointment = isSlotOccupied(time, day, appointments) && !appointmentStartingAtSlot;
+                      const dayAppointments = appointments.filter(apt => apt.appointment_date === dayString);
+                      const conflicts = getTimeConflicts(dayAppointments);
                       
                       const isTodayDay = dayString === format(new Date(), "yyyy-MM-dd");
                       const isPastDay = day < new Date();
@@ -388,128 +439,131 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                       
                       return (
                         <div
-                          key={dayString}
-                          className={`relative p-0 min-h-[60px] bg-white transition-all duration-300 group ${
-                            isTodayDay ? "border-l-2 border-pink-400" : ""
+                          key={`cell-${dayString}-${time}`}
+                          className={`grid-cell relative bg-white transition-all duration-300 group ${
+                            isTodayDay ? "bg-hanami-primary/5" : ""
                           } ${isPastDay ? "opacity-60" : ""} hover:bg-gradient-to-br hover:from-pink-50 hover:to-rose-50`}
+                          style={{ 
+                            gridRow: timeIndex + 2,
+                            gridColumn: dayIndex + 2,
+                            borderRight: dayIndex < weekDays.length - 1 ? '1px solid rgb(229 231 235)' : 'none',
+                            borderBottom: timeIndex < timeSlots.length - 1 ? '1px solid rgb(229 231 235)' : 'none'
+                          }}
                         >
-                          {/* Wskaźnik aktualnej godziny */}
+                          {/* Current Time Indicator */}
                           {currentTimeIndicator}
                           
-                          {/* Renderuj tylko wizytę rozpoczynającą się w tym slocie */}
-                          {appointmentStartingAtSlot && (() => {
-                            const appointment = appointmentStartingAtSlot;
-                            const colors = getAppointmentStatusColors(appointment.status);
-                            const isPastAppointment = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
-                            const duration = appointment.services?.duration || 30;
-                            const slotSpan = getAppointmentSlotSpan(appointment);
-                            
-                            // Oblicz pozycję wewnątrz slotu na podstawie minut
-                            const [startHour, startMinute] = appointment.appointment_time.split(':').map(Number);
-                            const slotStartMinute = parseInt(time.split(':')[1]);
-                            const minuteOffset = startMinute - slotStartMinute;
-                            const topOffset = (minuteOffset / 30) * 100; // procent wysokości slotu
-                            
-                            // Wysokość bloku na podstawie rzeczywistego czasu trwania
-                            const heightInPixels = (duration / 30) * 60; // 60px na 30min slot
-                            
-                            return (
-                              <div
-                                key={appointment.id}
-                                style={{
-                                  position: 'absolute',
-                                  top: `${topOffset}%`,
-                                  left: '2px',
-                                  right: '2px',
-                                  height: `${heightInPixels}px`,
-                                  zIndex: 10
-                                }}
-                                className={`p-2 rounded-lg text-xs shadow-lg hover:shadow-xl transition-all duration-300 group/appointment cursor-pointer animate-fade-in overflow-hidden ${
-                                  isPastAppointment ? "opacity-50 grayscale" : ""
-                                } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow}`}
-                               >
-                                 <div className="font-semibold mb-1 transition-colors duration-200 text-xs leading-tight">
-                                   {appointment.services?.name}
-                                 </div>
-                                 <div className="opacity-90 transition-colors duration-200 text-xs leading-tight">
-                                   {getClientName(appointment)}
-                                 </div>
-                                 <div className="text-xs mt-1 opacity-80 leading-tight">
-                                   🕐 {appointment.appointment_time.slice(0, 5)} - {
-                                     (() => {
-                                       const startTime = appointment.appointment_time.slice(0, 5);
-                                       const [hours, minutes] = startTime.split(':').map(Number);
-                                       const duration = appointment.services?.duration || 30;
-                                       const endTimeMinutes = hours * 60 + minutes + duration;
-                                       const endHours = Math.floor(endTimeMinutes / 60);
-                                       const endMins = endTimeMinutes % 60;
-                                       return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-                                     })()
-                                   }
-                                 </div>
-                                 <div className="text-xs mt-1 opacity-80 leading-tight">
-                                   ⏱️ {appointment.services?.duration}min
-                                 </div>
-                                 <div className="text-xs mt-1 opacity-80 capitalize leading-tight">
-                                   Status: {appointment.status === 'confirmed' ? 'Potwierdzona' : 
-                                            appointment.status === 'cancelled' ? 'Anulowana' :
-                                            appointment.status === 'pending' ? 'Oczekująca' : appointment.status}
-                                 </div>
-                                 {appointment.is_guest && (
-                                   <div className="opacity-80 mt-1 text-xs transition-colors duration-200 leading-tight">
-                                     📞 {appointment.guest_phone}
-                                   </div>
-                                 )}
-                                
-                                {/* Przyciski akcji - widoczne tylko przy hover */}
-                                <div className="absolute top-1 right-1 opacity-0 group-hover/appointment:opacity-100 transition-opacity duration-200 flex space-x-1">
-                                  {appointment.status === 'confirmed' && !isPastAppointment && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleCancelAppointment(appointment.id);
-                                      }}
-                                      className="w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
-                                      title="Anuluj wizytę"
-                                    >
-                                      ×
-                                    </button>
-                                  )}
-                                  {appointment.status === 'cancelled' && !isPastAppointment && (
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRestoreAppointment(appointment.id);
-                                      }}
-                                      className="w-5 h-5 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
-                                      title="Przywróć wizytę"
-                                    >
-                                      ↺
-                                    </button>
-                                  )}
-                                </div>
-                                
-                                {isPastAppointment && (
-                                  <div className="absolute top-1 right-1 text-xs opacity-75">
-                                    ✓
-                                  </div>
-                                )}
-                                
-                                <div className="absolute inset-0 bg-white/0 group-hover/appointment:bg-white/10 rounded-xl transition-colors duration-300"></div>
-                              </div>
-                            );
-                          })()}
-                          
-                          {!appointmentStartingAtSlot && !isSlotOccupiedByRunningAppointment && !isPastDay && (
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-gray-400 text-center mt-4">
+                          {/* Empty slot indicator */}
+                          {!isPastDay && (
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-gray-400 text-center absolute inset-0 flex items-center justify-center">
                               Wolny termin
                             </div>
                           )}
                         </div>
                       );
                     })}
-                  </div>
+                  </React.Fragment>
                 ))}
+
+                {/* Appointment Blocks - Positioned over the grid */}
+                {weekDays.map((day, dayIndex) => {
+                  const dayString = format(day, "yyyy-MM-dd");
+                  const dayAppointments = appointments.filter(apt => apt.appointment_date === dayString);
+                  const conflicts = getTimeConflicts(dayAppointments);
+                  
+                  return dayAppointments.map((appointment) => {
+                    const gridPosition = getAppointmentGridPosition(appointment);
+                    const conflictLayout = getConflictLayout(appointment, conflicts);
+                    const colors = getAppointmentStatusColors(appointment.status);
+                    const isPastAppointment = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
+                    
+                    return (
+                      <div
+                        key={`appointment-${appointment.id}`}
+                        className={`grid-appointment p-2 rounded-lg text-xs shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer z-10 relative overflow-hidden ${
+                          isPastAppointment ? "opacity-50 grayscale" : ""
+                        } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow}`}
+                        style={{
+                          gridRowStart: gridPosition.gridRowStart,
+                          gridRowEnd: gridPosition.gridRowEnd,
+                          gridColumn: dayIndex + 2,
+                          width: conflictLayout.width,
+                          marginLeft: conflictLayout.left,
+                          margin: '2px',
+                        }}
+                      >
+                        <div className="font-semibold mb-1 text-xs leading-tight">
+                          {appointment.services?.name}
+                        </div>
+                        <div className="opacity-90 text-xs leading-tight">
+                          {getClientName(appointment)}
+                        </div>
+                        <div className="text-xs mt-1 opacity-80 leading-tight">
+                          🕐 {appointment.appointment_time.slice(0, 5)} - {
+                            (() => {
+                              const startTime = appointment.appointment_time.slice(0, 5);
+                              const [hours, minutes] = startTime.split(':').map(Number);
+                              const duration = appointment.services?.duration || 30;
+                              const endTimeMinutes = hours * 60 + minutes + duration;
+                              const endHours = Math.floor(endTimeMinutes / 60);
+                              const endMins = endTimeMinutes % 60;
+                              return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+                            })()
+                          }
+                        </div>
+                        <div className="text-xs mt-1 opacity-80 leading-tight">
+                          ⏱️ {appointment.services?.duration}min
+                        </div>
+                        <div className="text-xs mt-1 opacity-80 capitalize leading-tight">
+                          {appointment.status === 'confirmed' ? '✅ Potwierdzona' : 
+                           appointment.status === 'cancelled' ? '❌ Anulowana' :
+                           appointment.status === 'pending' ? '⏳ Oczekująca' : appointment.status}
+                        </div>
+                        {appointment.is_guest && (
+                          <div className="opacity-80 mt-1 text-xs leading-tight">
+                            📞 {appointment.guest_phone}
+                          </div>
+                        )}
+                       
+                       {/* Action Buttons */}
+                       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
+                         {appointment.status === 'confirmed' && !isPastAppointment && (
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               handleCancelAppointment(appointment.id);
+                             }}
+                             className="w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
+                             title="Anuluj wizytę"
+                           >
+                             ×
+                           </button>
+                         )}
+                         {appointment.status === 'cancelled' && !isPastAppointment && (
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               handleRestoreAppointment(appointment.id);
+                             }}
+                             className="w-5 h-5 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
+                             title="Przywróć wizytę"
+                           >
+                             ↺
+                           </button>
+                         )}
+                       </div>
+                       
+                       {isPastAppointment && (
+                         <div className="absolute top-1 right-1 text-xs opacity-75">
+                           ✓
+                         </div>
+                       )}
+                       
+                       <div className="absolute inset-0 bg-white/0 hover:bg-white/10 rounded-lg transition-colors duration-300"></div>
+                      </div>
+                    );
+                  });
+                })}
               </div>
             </div>
           </div>
