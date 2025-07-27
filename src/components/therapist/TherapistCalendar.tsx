@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import CreateAppointmentDialog from "./CreateAppointmentDialog";
+import AppointmentDetailsDialog from "./AppointmentDetailsDialog";
 
 interface Appointment {
   id: string;
@@ -17,13 +18,17 @@ interface Appointment {
   guest_phone: string | null;
   is_guest: boolean;
   status: string;
+  notes?: string;
   services?: {
     name: string;
     duration: number;
+    price: number;
+    description?: string;
   };
   profiles?: {
     first_name: string;
     last_name: string;
+    phone?: string;
   };
 }
 
@@ -36,6 +41,8 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const { toast } = useToast();
 
   // Generowanie godzin co 30 minut
@@ -82,9 +89,12 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
           guest_phone,
           is_guest,
           status,
+          notes,
           services (
             name,
-            duration
+            duration,
+            price,
+            description
           )
         `)
         .eq("therapist_id", therapistId)
@@ -102,7 +112,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
           if (!appointment.is_guest && appointment.user_id) {
             const { data: profile } = await supabase
               .from("profiles")
-              .select("first_name, last_name")
+              .select("first_name, last_name, phone")
               .eq("user_id", appointment.user_id)
               .single();
             
@@ -236,6 +246,44 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
         variant: "destructive",
       });
     }
+  };
+
+  // Obsługa zmiany statusu wizyty
+  const handleStatusChange = async (appointmentId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: newStatus })
+        .eq("id", appointmentId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status zmieniony",
+        description: `Status wizyty został zmieniony na ${
+          newStatus === 'confirmed' ? 'potwierdzona' :
+          newStatus === 'cancelled' ? 'anulowana' :
+          newStatus === 'pending' ? 'oczekująca' : newStatus
+        }.`,
+      });
+
+      // Odśwież dane
+      fetchAppointments();
+      setShowDetailsDialog(false);
+    } catch (error: any) {
+      console.error("Error updating appointment status:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się zmienić statusu wizyty",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Obsługa kliknięcia w wizytę
+  const handleAppointmentClick = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setShowDetailsDialog(true);
   };
 
   // Oblicz pozycję i rozmiar wizyty w CSS Grid
@@ -480,9 +528,10 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                     return (
                       <div
                         key={`appointment-${appointment.id}`}
+                        onClick={() => handleAppointmentClick(appointment)}
                         className={`grid-appointment p-2 rounded-lg text-xs shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer z-10 relative overflow-hidden ${
                           isPastAppointment ? "opacity-50 grayscale" : ""
-                        } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow}`}
+                        } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow} hover:scale-105`}
                         style={{
                           gridRowStart: gridPosition.gridRowStart,
                           gridRowEnd: gridPosition.gridRowEnd,
@@ -608,6 +657,13 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
         onOpenChange={setShowCreateDialog}
         onSuccess={fetchAppointments}
         therapistId={therapistId}
+      />
+
+      <AppointmentDetailsDialog
+        appointment={selectedAppointment}
+        open={showDetailsDialog}
+        onOpenChange={setShowDetailsDialog}
+        onStatusChange={handleStatusChange}
       />
     </div>
   );
