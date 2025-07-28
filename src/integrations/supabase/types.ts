@@ -30,6 +30,7 @@ export type Database = {
           therapist_id: string
           updated_at: string
           user_id: string | null
+          voucher_code: string | null
         }
         Insert: {
           appointment_date: string
@@ -46,6 +47,7 @@ export type Database = {
           therapist_id: string
           updated_at?: string
           user_id?: string | null
+          voucher_code?: string | null
         }
         Update: {
           appointment_date?: string
@@ -62,6 +64,7 @@ export type Database = {
           therapist_id?: string
           updated_at?: string
           user_id?: string | null
+          voucher_code?: string | null
         }
         Relationships: [
           {
@@ -538,11 +541,129 @@ export type Database = {
         }
         Relationships: []
       }
+      voucher_redemptions: {
+        Row: {
+          appointment_id: string | null
+          created_by: string | null
+          id: string
+          notes: string | null
+          redeemed_by: string | null
+          redeemed_sessions: number | null
+          redeemed_value: number | null
+          redemption_date: string
+          voucher_id: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          redeemed_by?: string | null
+          redeemed_sessions?: number | null
+          redeemed_value?: number | null
+          redemption_date?: string
+          voucher_id: string
+        }
+        Update: {
+          appointment_id?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          redeemed_by?: string | null
+          redeemed_sessions?: number | null
+          redeemed_value?: number | null
+          redemption_date?: string
+          voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voucher_redemptions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_redemptions_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vouchers: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          notes: string | null
+          original_sessions: number | null
+          original_value: number | null
+          purchaser_email: string | null
+          purchaser_name: string | null
+          purchaser_phone: string | null
+          remaining_sessions: number | null
+          remaining_value: number | null
+          service_id: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+          voucher_type: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          original_sessions?: number | null
+          original_value?: number | null
+          purchaser_email?: string | null
+          purchaser_name?: string | null
+          purchaser_phone?: string | null
+          remaining_sessions?: number | null
+          remaining_value?: number | null
+          service_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          voucher_type: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          original_sessions?: number | null
+          original_value?: number | null
+          purchaser_email?: string | null
+          purchaser_name?: string | null
+          purchaser_phone?: string | null
+          remaining_sessions?: number | null
+          remaining_value?: number | null
+          service_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          voucher_type?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      generate_voucher_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       has_role: {
         Args: {
           _user_id: string
