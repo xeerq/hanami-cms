@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Calendar, Clock, User, CheckCircle, ArrowLeft } from "lucide-react";
+import { Calendar, Clock, User, CheckCircle, ArrowLeft, Gift } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,6 +45,9 @@ const Booking = () => {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [voucherCode, setVoucherCode] = useState<string>("");
+  const [voucherData, setVoucherData] = useState<any>(null);
+  const [voucherError, setVoucherError] = useState<string>("");
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
 
@@ -266,6 +270,81 @@ const Booking = () => {
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
     setStep(5);
+  };
+
+  const verifyVoucher = async () => {
+    if (!voucherCode.trim()) {
+      setVoucherError("Wprowadź kod bonu");
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('vouchers')
+        .select(`
+          *,
+          services(id, name, price)
+        `)
+        .eq('code', voucherCode.toUpperCase())
+        .eq('status', 'active')
+        .single();
+
+      if (error || !data) {
+        setVoucherError("Nieprawidłowy kod bonu lub bon nieaktywny");
+        setVoucherData(null);
+        return;
+      }
+
+      // Check if voucher is expired
+      if (data.expires_at && new Date(data.expires_at) < new Date()) {
+        setVoucherError("Bon wygasł");
+        setVoucherData(null);
+        return;
+      }
+
+      // Check if voucher has remaining value/sessions
+      if (data.voucher_type === 'single' && data.remaining_value <= 0) {
+        setVoucherError("Bon został już wykorzystany");
+        setVoucherData(null);
+        return;
+      }
+
+      if (data.voucher_type === 'package' && data.remaining_sessions <= 0) {
+        setVoucherError("Wszystkie sesje z pakietu zostały wykorzystane");
+        setVoucherData(null);
+        return;
+      }
+
+      // Check if voucher is valid for selected service
+      if (data.service_id && selectedService && data.service_id !== selectedService.id) {
+        setVoucherError(`Ten bon jest ważny tylko dla określonej usługi`);
+        setVoucherData(null);
+        return;
+      }
+
+      setVoucherData(data);
+      setVoucherError("");
+      toast({
+        title: "Sukces",
+        description: "Bon został pomyślnie zweryfikowany!",
+      });
+    } catch (error) {
+      console.error('Error verifying voucher:', error);
+      setVoucherError("Błąd podczas weryfikacji bonu");
+      setVoucherData(null);
+    }
+  };
+
+  const calculateFinalPrice = () => {
+    if (!selectedService || !voucherData) return selectedService?.price || 0;
+
+    if (voucherData.voucher_type === 'single') {
+      const discount = Math.min(voucherData.remaining_value, selectedService.price);
+      return Math.max(0, selectedService.price - discount);
+    }
+
+    // For package vouchers, the session is free if there are remaining sessions
+    return voucherData.remaining_sessions > 0 ? 0 : selectedService?.price || 0;
   };
 
   const handleConfirm = async () => {
@@ -573,11 +652,60 @@ const Booking = () => {
                       </div>
                       <div className="flex justify-between border-t pt-3">
                         <span className="text-lg font-semibold">Cena:</span>
-                        <span className="text-lg font-bold text-hanami-primary">
-                          {selectedService?.price} zł
-                        </span>
+                        <div className="text-right">
+                          {voucherData ? (
+                            <>
+                              <div className="text-sm text-gray-500 line-through">
+                                {selectedService?.price} zł
+                              </div>
+                              <div className="text-lg font-bold text-hanami-primary">
+                                {calculateFinalPrice()} zł
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-lg font-bold text-hanami-primary">
+                              {selectedService?.price} zł
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Voucher Section */}
+                  <div className="bg-hanami-secondary/20 p-6 rounded-lg space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Gift className="h-5 w-5 text-hanami-primary" />
+                      <h3 className="text-lg font-semibold text-hanami-primary">
+                        Masz bon podarunkowy?
+                      </h3>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="Wprowadź kod bonu"
+                        value={voucherCode}
+                        onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                      />
+                      <Button variant="outline" onClick={verifyVoucher}>
+                        Sprawdź
+                      </Button>
+                    </div>
+                    {voucherError && (
+                      <p className="text-red-500 text-sm">{voucherError}</p>
+                    )}
+                    {voucherData && (
+                      <div className="bg-green-50 p-4 rounded border border-green-200">
+                        <p className="text-green-700 font-medium">
+                          ✓ Bon {voucherData.code} został zweryfikowany!
+                        </p>
+                        <p className="text-sm text-green-600">
+                          {voucherData.voucher_type === 'single' 
+                            ? `Rabat: ${Math.min(voucherData.remaining_value, selectedService?.price || 0)} zł`
+                            : `Darmowa sesja z pakietu (pozostało: ${voucherData.remaining_sessions})`
+                          }
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
