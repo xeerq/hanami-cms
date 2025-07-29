@@ -94,7 +94,7 @@ export function CreateVoucherDialog({ open, onOpenChange, onSuccess }: CreateVou
       const voucherData = {
         code: codeData,
         voucher_type: voucherType,
-        service_id: serviceId || null,
+        service_id: serviceId && serviceId !== 'all' ? serviceId : null,
         user_id: purchaserType === 'registered' ? selectedUserId : null,
         purchaser_name: purchaserType === 'guest' ? purchaserName : null,
         purchaser_email: purchaserType === 'guest' ? purchaserEmail : null,
@@ -170,7 +170,7 @@ export function CreateVoucherDialog({ open, onOpenChange, onSuccess }: CreateVou
                   <SelectValue placeholder="Wybierz usługę lub zostaw puste" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Wszystkie usługi</SelectItem>
+                  <SelectItem value="all">Wszystkie usługi</SelectItem>
                   {services.map((service) => (
                     <SelectItem key={service.id} value={service.id}>
                       {service.name} - {service.price} zł
