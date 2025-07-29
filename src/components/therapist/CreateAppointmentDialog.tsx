@@ -56,6 +56,7 @@ const CreateAppointmentDialog = ({
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [voucherCode, setVoucherCode] = useState("");
   const [services, setServices] = useState<Service[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
@@ -212,6 +213,7 @@ const CreateAppointmentDialog = ({
         notes: notes || null,
         status: "confirmed",
         is_guest: isGuest,
+        voucher_code: voucherCode || null,
         ...(isGuest 
           ? { 
               guest_name: guestName,
@@ -247,6 +249,7 @@ const CreateAppointmentDialog = ({
       setGuestName("");
       setGuestPhone("");
       setNotes("");
+      setVoucherCode("");
       setIsGuest(false);
       
       onSuccess();
@@ -385,6 +388,16 @@ const CreateAppointmentDialog = ({
               </Select>
             </div>
           )}
+
+          {/* Voucher Code */}
+          <div className="space-y-2">
+            <Label>Kod bonu (opcjonalne)</Label>
+            <Input
+              value={voucherCode}
+              onChange={(e) => setVoucherCode(e.target.value)}
+              placeholder="np. VOC123456"
+            />
+          </div>
 
           {/* Notes */}
           <div className="space-y-2">

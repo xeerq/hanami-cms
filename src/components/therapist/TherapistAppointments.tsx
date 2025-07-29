@@ -16,6 +16,10 @@ interface Appointment {
   user_id?: string;
   status: string;
   notes?: string;
+  voucher_code?: string;
+  guest_name?: string;
+  guest_phone?: string;
+  is_guest?: boolean;
   services: {
     name: string;
     duration: number;
@@ -48,6 +52,10 @@ const TherapistAppointments = ({ therapistId }: TherapistAppointmentsProps) => {
           user_id,
           status,
           notes,
+          voucher_code,
+          guest_name,
+          guest_phone,
+          is_guest,
           services (
             name,
             duration,
@@ -198,7 +206,13 @@ const TherapistAppointments = ({ therapistId }: TherapistAppointmentsProps) => {
                     
                     <div className="flex items-center space-x-2 mb-2">
                       <User className="h-4 w-4 text-hanami-neutral" />
-                      <span>Klient</span>
+                      <span>{appointment.is_guest ? appointment.guest_name : "Zarejestrowany klient"}</span>
+                      {appointment.guest_phone && (
+                        <>
+                          <Phone className="h-4 w-4 text-hanami-neutral ml-4" />
+                          <span>{appointment.guest_phone}</span>
+                        </>
+                      )}
                     </div>
 
                     <div className="text-sm text-hanami-neutral mb-2">
@@ -211,6 +225,9 @@ const TherapistAppointments = ({ therapistId }: TherapistAppointmentsProps) => {
 
                     <div className="text-sm text-hanami-neutral mb-2">
                       <strong>Cena:</strong> {appointment.services?.price} zł
+                      {appointment.voucher_code && (
+                        <span className="ml-2 text-green-600">(Bon: {appointment.voucher_code})</span>
+                      )}
                     </div>
 
                     {appointment.notes && (
