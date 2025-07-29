@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RedeemVoucherDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ export function RedeemVoucherDialog({ open, onOpenChange, voucher, onSuccess }: 
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user: auth } = useAuth();
 
   useEffect(() => {
     if (open) {
@@ -107,13 +109,14 @@ export function RedeemVoucherDialog({ open, onOpenChange, voucher, onSuccess }: 
         }
       }
 
-      // Create redemption record
+      // Create redemption record first
       const redemptionData = {
         voucher_id: voucher.id,
         redeemed_by: redemptionType === 'user' ? selectedUserId : null,
         redeemed_value: redemptionValue,
         redeemed_sessions: redemptionSessions,
-        notes: notes || null
+        notes: notes || null,
+        created_by: auth?.id
       };
 
       const { error: redemptionError } = await supabase

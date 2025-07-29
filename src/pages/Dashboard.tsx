@@ -17,6 +17,7 @@ const Dashboard = () => {
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
   const [appointmentHistory, setAppointmentHistory] = useState<any[]>([]);
   const [orderHistory, setOrderHistory] = useState<any[]>([]);
+  const [userVouchers, setUserVouchers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -78,9 +79,22 @@ const Dashboard = () => {
 
       if (ordersError) throw ordersError;
 
+      // Załaduj bony użytkownika
+      const { data: vouchers, error: vouchersError } = await supabase
+        .from("vouchers")
+        .select(`
+          *,
+          services(name)
+        `)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (vouchersError) throw vouchersError;
+
       setUpcomingAppointments(appointments || []);
       setAppointmentHistory(history || []);
       setOrderHistory(orders || []);
+      setUserVouchers(vouchers || []);
 
     } catch (error: any) {
       console.error("Error loading user data:", error);
@@ -193,10 +207,14 @@ const Dashboard = () => {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="appointments" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="appointments" className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline">Wizyty</span>
+              </TabsTrigger>
+              <TabsTrigger value="vouchers" className="flex items-center space-x-2">
+                <Heart className="h-4 w-4" />
+                <span className="hidden sm:inline">Bony</span>
               </TabsTrigger>
               <TabsTrigger value="history" className="flex items-center space-x-2">
                 <Clock className="h-4 w-4" />
@@ -276,6 +294,68 @@ const Dashboard = () => {
                   <div className="mt-6">
                     <Button onClick={handleBookNewAppointment}>Zarezerwuj nową wizytę</Button>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* User Vouchers */}
+            <TabsContent value="vouchers">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-hanami-primary">Moje bony</CardTitle>
+                  <CardDescription>
+                    Zarządzaj swoimi bonami podarunkowymi
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loading ? (
+                    <div className="text-center py-8">
+                      <p>Ładowanie bonów...</p>
+                    </div>
+                  ) : userVouchers.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-hanami-neutral">Nie masz żadnych bonów</p>
+                      <Button className="mt-4" onClick={() => navigate('/shop')}>
+                        Kup bon w sklepie
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {userVouchers.map((voucher) => (
+                        <div key={voucher.id} className="flex items-center justify-between p-4 border border-hanami-accent/20 rounded-lg">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                              <Heart className="h-6 w-6 text-yellow-600" />
+                            </div>
+                            <div>
+                              <h3 className="font-semibold text-hanami-primary font-mono">
+                                {voucher.code}
+                              </h3>
+                              <p className="text-sm text-hanami-neutral">
+                                {voucher.voucher_type === 'single' ? 'Pojedynczy bon' : 'Pakiet masaży'}
+                              </p>
+                              <p className="text-sm text-hanami-neutral">
+                                {voucher.services?.name || 'Wszystkie usługi'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center space-x-2">
+                              <Badge variant={voucher.status === 'active' ? 'default' : 'secondary'}>
+                                {voucher.status === 'active' ? 'Aktywny' : 'Zrealizowany'}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-hanami-neutral mt-1">
+                              {voucher.voucher_type === 'single' 
+                                ? `${voucher.remaining_value}/${voucher.original_value} zł`
+                                : `${voucher.remaining_sessions}/${voucher.original_sessions} sesji`
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

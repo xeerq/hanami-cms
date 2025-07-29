@@ -1,13 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingBag, Heart, Plus, Minus } from "lucide-react";
+import { ShoppingBag, Heart, Plus, Minus, Gift } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Shop = () => {
   const [cart, setCart] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const products = [
     {
@@ -66,15 +73,125 @@ const Shop = () => {
     }
   ];
 
-  const categories = ["Wszystkie", "Olejki", "Kosmetyki", "Akcesoria", "Aromaterapia"];
+  const categories = ["Wszystkie", "Olejki", "Kosmetyki", "Akcesoria", "Aromaterapia", "Bony"];
   const [selectedCategory, setSelectedCategory] = useState("Wszystkie");
 
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  const loadServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error('Error loading services:', error);
+    }
+  };
+
+  const vouchers = [
+    {
+      id: 'voucher-1',
+      name: "Bon na masaż relaksacyjny",
+      description: "Voucher na jeden masaż relaksacyjny w naszym spa",
+      price: 200,
+      category: "Bony",
+      image: "/lovable-uploads/6abfd03e-faab-45ef-8c3f-8eb2cf6b0ea7.png",
+      inStock: true,
+      type: 'single',
+      service_id: services.find(s => s.name.toLowerCase().includes('relaksacyjny'))?.id
+    },
+    {
+      id: 'voucher-2',
+      name: "Pakiet 3 masaży",
+      description: "Pakiet 3 masaży do wykorzystania w ciągu 6 miesięcy",
+      price: 500,
+      category: "Bony",
+      image: "/lovable-uploads/3140ba04-33e9-4565-bb1c-d1c585d11e13.png",
+      inStock: true,
+      type: 'package',
+      sessions: 3
+    },
+    {
+      id: 'voucher-3',
+      name: "Bon podarunkowy 300zł",
+      description: "Bon podarunkowy o wartości 300zł na dowolne usługi",
+      price: 300,
+      category: "Bony",
+      image: "/lovable-uploads/36929f8b-ac5b-4aed-9ac9-ad38a48028a6.png",
+      inStock: true,
+      type: 'single',
+      value: 300
+    }
+  ];
+
+  const allProducts = [...products, ...vouchers];
+
   const filteredProducts = selectedCategory === "Wszystkie" 
-    ? products 
-    : products.filter(product => product.category === selectedCategory);
+    ? allProducts 
+    : allProducts.filter(product => product.category === selectedCategory);
 
   const addToCart = (product: any) => {
     setCart([...cart, product]);
+  };
+
+  const purchaseVoucher = async (voucher: any) => {
+    if (!user) {
+      toast({
+        title: "Wymagane logowanie",
+        description: "Musisz być zalogowany, aby kupić bon",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Generuj kod bonu
+      const { data: codeData, error: codeError } = await supabase
+        .rpc('generate_voucher_code');
+
+      if (codeError) throw codeError;
+
+      const voucherData = {
+        code: codeData,
+        voucher_type: voucher.type,
+        user_id: user.id,
+        service_id: voucher.service_id || null,
+        original_value: voucher.type === 'single' && voucher.value ? voucher.value : null,
+        remaining_value: voucher.type === 'single' && voucher.value ? voucher.value : null,
+        original_sessions: voucher.type === 'package' ? voucher.sessions : 1,
+        remaining_sessions: voucher.type === 'package' ? voucher.sessions : 1,
+        status: 'active',
+        created_by: user.id
+      };
+
+      const { error } = await supabase
+        .from('vouchers')
+        .insert(voucherData);
+
+      if (error) throw error;
+
+      toast({
+        title: "Bon zakupiony!",
+        description: `Bon został dodany do Twojego konta. Kod: ${codeData}`,
+      });
+
+    } catch (error: any) {
+      console.error('Error purchasing voucher:', error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się zakupić bonu",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getCartItemCount = () => {
@@ -139,13 +256,20 @@ const Shop = () => {
                       {product.inStock ? "Dostępny" : "Wyprzedany"}
                     </Badge>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="absolute top-4 right-4 bg-white/90 hover:bg-white"
-                  >
-                    <Heart className="h-4 w-4" />
-                  </Button>
+                  {product.category === "Bony" && (
+                    <div className="absolute top-4 right-4 bg-yellow-500 rounded-full p-2">
+                      <Gift className="h-4 w-4 text-white" />
+                    </div>
+                  )}
+                  {product.category !== "Bony" && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="absolute top-4 right-4 bg-white/90 hover:bg-white"
+                    >
+                      <Heart className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 
                 <CardContent className="p-6">
@@ -167,14 +291,26 @@ const Shop = () => {
                     <span className="text-2xl font-bold text-hanami-primary">
                       {product.price} zł
                     </span>
-                    <Button 
-                      size="sm" 
-                      disabled={!product.inStock}
-                      onClick={() => addToCart(product)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {product.inStock ? "Dodaj" : "Niedostępny"}
-                    </Button>
+                    {product.category === "Bony" ? (
+                      <Button 
+                        size="sm" 
+                        disabled={!product.inStock || loading}
+                        onClick={() => purchaseVoucher(product)}
+                        className="bg-yellow-500 hover:bg-yellow-600"
+                      >
+                        <Gift className="h-4 w-4 mr-2" />
+                        {loading ? "Kupowanie..." : "Kup bon"}
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        disabled={!product.inStock}
+                        onClick={() => addToCart(product)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        {product.inStock ? "Dodaj" : "Niedostępny"}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
