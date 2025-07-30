@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FileDown, Search } from "lucide-react";
+import { Plus, FileDown, Search, Edit } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateVoucherDialog } from "./CreateVoucherDialog";
 import { RedeemVoucherDialog } from "./RedeemVoucherDialog";
+import { EditVoucherDialog } from "./EditVoucherDialog";
 
 interface Voucher {
   id: string;
@@ -45,6 +46,7 @@ export function VouchersManager() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showRedeemDialog, setShowRedeemDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const { toast } = useToast();
 
@@ -79,6 +81,11 @@ export function VouchersManager() {
   const handleRedeemVoucher = (voucher: Voucher) => {
     setSelectedVoucher(voucher);
     setShowRedeemDialog(true);
+  };
+
+  const handleEditVoucher = (voucher: Voucher) => {
+    setSelectedVoucher(voucher);
+    setShowEditDialog(true);
   };
 
   const exportVouchersReport = async () => {
@@ -274,14 +281,24 @@ export function VouchersManager() {
                       {new Date(voucher.created_at).toLocaleDateString('pl-PL')}
                     </TableCell>
                     <TableCell>
-                      {voucher.status === 'active' && voucher.remaining_sessions > 0 && (
+                      <div className="flex gap-2">
                         <Button
                           size="sm"
-                          onClick={() => handleRedeemVoucher(voucher)}
+                          variant="outline"
+                          onClick={() => handleEditVoucher(voucher)}
                         >
-                          Realizuj
+                          <Edit className="w-3 h-3 mr-1" />
+                          Edytuj
                         </Button>
-                      )}
+                        {voucher.status === 'active' && voucher.remaining_sessions > 0 && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleRedeemVoucher(voucher)}
+                          >
+                            Realizuj
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -309,6 +326,15 @@ export function VouchersManager() {
           open={showRedeemDialog}
           onOpenChange={setShowRedeemDialog}
           voucher={selectedVoucher as any}
+          onSuccess={loadVouchers}
+        />
+      )}
+
+      {selectedVoucher && (
+        <EditVoucherDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          voucher={selectedVoucher}
           onSuccess={loadVouchers}
         />
       )}
