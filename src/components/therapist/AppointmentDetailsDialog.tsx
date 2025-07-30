@@ -1,7 +1,7 @@
 import React from "react";
 import { format } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Calendar, Clock, User, Phone, FileText, Activity, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { Calendar, Clock, User, Phone, FileText, Activity, CheckCircle, XCircle, AlertCircle, Ticket } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +23,12 @@ interface Appointment {
   is_guest: boolean;
   status: string;
   notes?: string;
+  voucher_code?: string;
+  voucher_info?: {
+    display: string;
+    is_voucher: boolean;
+    type: string;
+  };
   services?: {
     name: string;
     duration: number;
@@ -89,6 +95,13 @@ const AppointmentDetailsDialog = ({
           icon: AlertCircle,
           color: 'bg-amber-100 text-amber-800 border-amber-200',
           gradient: 'from-amber-400 to-yellow-500'
+        };
+      case 'completed':
+        return {
+          label: 'Zakończona',
+          icon: CheckCircle,
+          color: 'bg-blue-100 text-blue-800 border-blue-200',
+          gradient: 'from-blue-500 to-blue-600'
         };
       default:
         return {
@@ -227,6 +240,30 @@ const AppointmentDetailsDialog = ({
             </CardContent>
           </Card>
 
+          {/* Informacje o bonie */}
+          {appointment.voucher_code && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-2">
+                  <Ticket className="h-5 w-5 text-hanami-primary mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg text-gray-800 mb-2">Bon rabatowy</h3>
+                    <div className="space-y-2">
+                      <p className="text-gray-600">
+                        <strong>Kod bonu:</strong> {appointment.voucher_code}
+                      </p>
+                      {appointment.voucher_info && appointment.voucher_info.is_voucher && (
+                        <p className="text-gray-600">
+                          <strong>Status wykorzystania:</strong> {appointment.voucher_info.display}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Notatki */}
           {appointment.notes && (
             <Card>
@@ -255,6 +292,16 @@ const AppointmentDetailsDialog = ({
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Potwierdź
+                </Button>
+              )}
+              
+              {appointment.status !== 'completed' && (
+                <Button
+                  onClick={() => onStatusChange(appointment.id, 'completed')}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Zakończ wizytę
                 </Button>
               )}
               

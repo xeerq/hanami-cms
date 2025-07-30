@@ -672,12 +672,24 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_voucher_usage_info: {
+        Args: { p_voucher_code: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      process_voucher_redemption: {
+        Args: {
+          p_voucher_code: string
+          p_appointment_id: string
+          p_service_price?: number
+        }
+        Returns: Json
       }
     }
     Enums: {

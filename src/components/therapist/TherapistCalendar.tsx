@@ -19,6 +19,12 @@ interface Appointment {
   is_guest: boolean;
   status: string;
   notes?: string;
+  voucher_code?: string;
+  voucher_info?: {
+    display: string;
+    is_voucher: boolean;
+    type: string;
+  };
   services?: {
     name: string;
     duration: number;
@@ -90,6 +96,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
           is_guest,
           status,
           notes,
+          voucher_code,
           services (
             name,
             duration,
@@ -106,9 +113,12 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
       
       if (error) throw error;
       
-      // Po pobraniu wizyt, pobieramy dodatkowe dane o klientach jeśli potrzebne
+      // Po pobraniu wizyt, pobieramy dodatkowe dane o klientach i bonach
       const appointmentsWithProfiles = await Promise.all(
         (data || []).map(async (appointment) => {
+          let updatedAppointment: any = { ...appointment };
+          
+          // Pobierz profil użytkownika jeśli potrzebne
           if (!appointment.is_guest && appointment.user_id) {
             const { data: profile } = await supabase
               .from("profiles")
@@ -116,9 +126,24 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
               .eq("user_id", appointment.user_id)
               .single();
             
-            return { ...appointment, profiles: profile };
+            updatedAppointment.profiles = profile;
           }
-          return appointment;
+          
+          // Pobierz informacje o bonie jeśli istnieje
+          if (appointment.voucher_code) {
+            try {
+              const { data: voucherInfo } = await supabase
+                .rpc('get_voucher_usage_info', { p_voucher_code: appointment.voucher_code });
+              
+              if (voucherInfo && typeof voucherInfo === 'object' && 'success' in voucherInfo && voucherInfo.success) {
+                updatedAppointment.voucher_info = voucherInfo;
+              }
+            } catch (error) {
+              console.error("Error fetching voucher info:", error);
+            }
+          }
+          
+          return updatedAppointment;
         })
       );
       
@@ -251,6 +276,34 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   // Obsługa zmiany statusu wizyty
   const handleStatusChange = async (appointmentId: string, newStatus: string) => {
     try {
+      // Jeśli wizyta ma status "completed" i ma voucher_code, przetwórz bon
+      if (newStatus === 'completed') {
+        const appointment = appointments.find(app => app.id === appointmentId);
+        if (appointment && appointment.voucher_code) {
+          // Przetwórz rozliczenie bonu
+          const { data: voucherResult } = await supabase
+            .rpc('process_voucher_redemption', {
+              p_voucher_code: appointment.voucher_code,
+              p_appointment_id: appointmentId,
+              p_service_price: appointment.services?.price
+            });
+
+          if (voucherResult && typeof voucherResult === 'object' && 'success' in voucherResult && !voucherResult.success) {
+            toast({
+              title: "Problem z bonem",
+              description: `Nie udało się przetworzyć bonu: ${voucherResult.error}`,
+              variant: "destructive",
+            });
+            return;
+          } else if (voucherResult && typeof voucherResult === 'object' && 'success' in voucherResult && voucherResult.success) {
+            toast({
+              title: "Bon rozliczony",
+              description: "Bon został pomyślnie rozliczony za tę wizytę.",
+            });
+          }
+        }
+      }
+
       const { error } = await supabase
         .from("appointments")
         .update({ status: newStatus })
@@ -263,7 +316,8 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
         description: `Status wizyty został zmieniony na ${
           newStatus === 'confirmed' ? 'potwierdzona' :
           newStatus === 'cancelled' ? 'anulowana' :
-          newStatus === 'pending' ? 'oczekująca' : newStatus
+          newStatus === 'pending' ? 'oczekująca' :
+          newStatus === 'completed' ? 'zakończona' : newStatus
         }.`,
       });
 
@@ -522,94 +576,63 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                   
                   return dayAppointments.map((appointment) => {
                     const gridPosition = getAppointmentGridPosition(appointment);
+                    const statusColors = getAppointmentStatusColors(appointment.status);
                     const conflictLayout = getConflictLayout(appointment, conflicts);
-                    const colors = getAppointmentStatusColors(appointment.status);
-                    const isPastAppointment = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
+                    const isPast = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
                     
                     return (
                       <div
-                        key={`appointment-${appointment.id}`}
-                        onClick={() => handleAppointmentClick(appointment)}
-                        className={`grid-appointment p-2 rounded-lg text-xs shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer z-10 relative overflow-hidden ${
-                          isPastAppointment ? "opacity-50 grayscale" : ""
-                        } bg-gradient-to-r ${colors.gradient} ${colors.text} ${colors.glow} hover:scale-105`}
+                        key={appointment.id}
+                        className={`absolute p-2 rounded-lg border-2 border-white/20 shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-30 ${isPast ? 'opacity-75' : ''} bg-gradient-to-br ${statusColors.gradient} ${statusColors.text} ${statusColors.glow} backdrop-blur-sm`}
                         style={{
-                          gridRowStart: gridPosition.gridRowStart,
-                          gridRowEnd: gridPosition.gridRowEnd,
+                          ...gridPosition,
                           gridColumn: dayIndex + 2,
                           width: conflictLayout.width,
-                          marginLeft: conflictLayout.left,
-                          margin: '2px',
+                          left: conflictLayout.left,
+                          minHeight: '50px',
+                          fontSize: '12px',
+                          zIndex: 20
                         }}
+                        onClick={() => handleAppointmentClick(appointment)}
                       >
-                        <div className="font-semibold mb-1 text-xs leading-tight">
-                          {appointment.services?.name}
-                        </div>
-                        <div className="opacity-90 text-xs leading-tight">
-                          {getClientName(appointment)}
-                        </div>
-                        <div className="text-xs mt-1 opacity-80 leading-tight">
-                          🕐 {appointment.appointment_time.slice(0, 5)} - {
-                            (() => {
-                              const startTime = appointment.appointment_time.slice(0, 5);
-                              const [hours, minutes] = startTime.split(':').map(Number);
-                              const duration = appointment.services?.duration || 30;
-                              const endTimeMinutes = hours * 60 + minutes + duration;
-                              const endHours = Math.floor(endTimeMinutes / 60);
-                              const endMins = endTimeMinutes % 60;
-                              return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-                            })()
-                          }
-                        </div>
-                        <div className="text-xs mt-1 opacity-80 leading-tight">
-                          ⏱️ {appointment.services?.duration}min
-                        </div>
-                        <div className="text-xs mt-1 opacity-80 capitalize leading-tight">
-                          {appointment.status === 'confirmed' ? '✅ Potwierdzona' : 
-                           appointment.status === 'cancelled' ? '❌ Anulowana' :
-                           appointment.status === 'pending' ? '⏳ Oczekująca' : appointment.status}
-                        </div>
-                        {appointment.is_guest && (
-                          <div className="opacity-80 mt-1 text-xs leading-tight">
-                            📞 {appointment.guest_phone}
+                        <div className="space-y-1">
+                          {/* Nazwa usługi */}
+                          <div className="font-semibold truncate text-xs">
+                            {appointment.services?.name || "Nieznana usługa"}
                           </div>
-                        )}
-                       
-                       {/* Action Buttons */}
-                       <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
-                         {appointment.status === 'confirmed' && !isPastAppointment && (
-                           <button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               handleCancelAppointment(appointment.id);
-                             }}
-                             className="w-5 h-5 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
-                             title="Anuluj wizytę"
-                           >
-                             ×
-                           </button>
-                         )}
-                         {appointment.status === 'cancelled' && !isPastAppointment && (
-                           <button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               handleRestoreAppointment(appointment.id);
-                             }}
-                             className="w-5 h-5 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white text-xs font-bold transition-colors duration-200"
-                             title="Przywróć wizytę"
-                           >
-                             ↺
-                           </button>
-                         )}
-                       </div>
-                       
-                       {isPastAppointment && (
-                         <div className="absolute top-1 right-1 text-xs opacity-75">
-                           ✓
-                         </div>
-                       )}
-                       
-                       <div className="absolute inset-0 bg-white/0 hover:bg-white/10 rounded-lg transition-colors duration-300"></div>
+                          
+                          {/* Informacja o bonie */}
+                          {appointment.voucher_info && appointment.voucher_info.is_voucher && (
+                            <div className="text-xs bg-white/20 rounded px-1 py-0.5 backdrop-blur-sm">
+                              BON: {appointment.voucher_info.display}
+                            </div>
+                          )}
+                          
+                          {/* Klient */}
+                          <div className="text-xs opacity-90 truncate">
+                            {getClientName(appointment)}
+                          </div>
+                          
+                          {/* Czas trwania */}
+                          <div className="text-xs opacity-75">
+                            {appointment.services?.duration || 30} min
+                          </div>
+                          
+                          {/* Status badge */}
+                          <div className="flex justify-between items-center">
+                            <span className="text-xs bg-black/20 rounded px-1 py-0.5">
+                              {appointment.status === 'confirmed' ? 'Potw.' :
+                               appointment.status === 'cancelled' ? 'Anul.' :
+                               appointment.status === 'pending' ? 'Oczek.' :
+                               appointment.status === 'completed' ? 'Zak.' : appointment.status}
+                            </span>
+                            {appointment.voucher_code && !appointment.voucher_info && (
+                              <span className="text-xs bg-yellow-400/80 text-yellow-900 rounded px-1 py-0.5">
+                                BON
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     );
                   });
