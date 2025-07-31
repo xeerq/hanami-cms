@@ -60,7 +60,8 @@ export function VouchersManager() {
         .from('vouchers')
         .select(`
           *,
-          services(name)
+          services(name),
+          profiles(first_name, last_name)
         `)
         .order('created_at', { ascending: false });
 

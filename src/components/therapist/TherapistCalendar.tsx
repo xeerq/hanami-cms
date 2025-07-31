@@ -132,10 +132,12 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
           // Pobierz informacje o bonie jeśli istnieje
           if (appointment.voucher_code) {
             try {
-              const { data: voucherInfo } = await supabase
+              const { data: voucherInfo, error: voucherError } = await supabase
                 .rpc('get_voucher_usage_info', { p_voucher_code: appointment.voucher_code });
               
-              if (voucherInfo && typeof voucherInfo === 'object' && 'success' in voucherInfo && voucherInfo.success) {
+              if (voucherError) {
+                console.error("Error fetching voucher info:", voucherError);
+              } else if (voucherInfo && typeof voucherInfo === 'object' && 'success' in voucherInfo && voucherInfo.success) {
                 updatedAppointment.voucher_info = voucherInfo;
               }
             } catch (error) {
@@ -281,25 +283,35 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
         const appointment = appointments.find(app => app.id === appointmentId);
         if (appointment && appointment.voucher_code) {
           // Przetwórz rozliczenie bonu
-          const { data: voucherResult } = await supabase
+          const { data: voucherResult, error: voucherError } = await supabase
             .rpc('process_voucher_redemption', {
               p_voucher_code: appointment.voucher_code,
               p_appointment_id: appointmentId,
-              p_service_price: appointment.services?.price
+              p_service_price: appointment.services?.price || 0
             });
 
-          if (voucherResult && typeof voucherResult === 'object' && 'success' in voucherResult && !voucherResult.success) {
+          if (voucherError) {
+            console.error("Voucher redemption error:", voucherError);
             toast({
               title: "Problem z bonem",
-              description: `Nie udało się przetworzyć bonu: ${voucherResult.error}`,
+              description: `Błąd przy przetwarzaniu bonu: ${voucherError.message}`,
               variant: "destructive",
             });
             return;
-          } else if (voucherResult && typeof voucherResult === 'object' && 'success' in voucherResult && voucherResult.success) {
-            toast({
-              title: "Bon rozliczony",
-              description: "Bon został pomyślnie rozliczony za tę wizytę.",
-            });
+          } else if (voucherResult && typeof voucherResult === 'object' && 'success' in voucherResult) {
+            if (!voucherResult.success) {
+              toast({
+                title: "Problem z bonem",
+                description: `Nie udało się przetworzyć bonu: ${voucherResult.error}`,
+                variant: "destructive",
+              });
+              return;
+            } else {
+              toast({
+                title: "Bon rozliczony",
+                description: "Bon został pomyślnie rozliczony za tę wizytę.",
+              });
+            }
           }
         }
       }
