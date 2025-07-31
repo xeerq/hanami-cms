@@ -56,6 +56,7 @@ export function VouchersManager() {
 
   const loadVouchers = async () => {
     try {
+      console.log("Loading vouchers as admin...");
       const { data, error } = await supabase
         .from('vouchers')
         .select(`
@@ -65,13 +66,16 @@ export function VouchersManager() {
         `)
         .order('created_at', { ascending: false });
 
+      console.log("Vouchers data:", data);
+      console.log("Vouchers error:", error);
+
       if (error) throw error;
       setVouchers(data as any || []);
     } catch (error) {
       console.error('Error loading vouchers:', error);
       toast({
         title: "Błąd",
-        description: "Nie udało się załadować bonów",
+        description: "Nie udało się załadować bonów. Sprawdź uprawnienia administratora.",
         variant: "destructive",
       });
     } finally {

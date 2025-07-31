@@ -586,7 +586,9 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                   const dayAppointments = appointments.filter(apt => apt.appointment_date === dayString);
                   const conflicts = getTimeConflicts(dayAppointments);
                   
-                  return dayAppointments.map((appointment) => {
+                  return (
+                    <React.Fragment key={`day-appointments-${dayString}`}>
+                      {dayAppointments.map((appointment) => {
                     const gridPosition = getAppointmentGridPosition(appointment);
                     const statusColors = getAppointmentStatusColors(appointment.status);
                     const conflictLayout = getConflictLayout(appointment, conflicts);
@@ -646,8 +648,10 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                           </div>
                         </div>
                       </div>
-                    );
-                  });
+                     );
+                      })}
+                    </React.Fragment>
+                  );
                 })}
               </div>
             </div>
