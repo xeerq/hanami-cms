@@ -580,35 +580,40 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                   );
                 })}
 
-                {/* Appointment Blocks - Positioned over the grid */}
-                {weekDays.map((day, dayIndex) => {
-                  const dayString = format(day, "yyyy-MM-dd");
-                  const dayAppointments = appointments.filter(apt => apt.appointment_date === dayString);
-                  const conflicts = getTimeConflicts(dayAppointments);
-                  
-                  return (
-                    <React.Fragment key={`day-appointments-${dayString}`}>
-                      {dayAppointments.map((appointment) => {
-                        const gridPosition = getAppointmentGridPosition(appointment);
-                        const statusColors = getAppointmentStatusColors(appointment.status);
-                        const conflictLayout = getConflictLayout(appointment, conflicts);
-                        const isPast = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
-                        
-                        return (
-                          <div
-                            key={appointment.id}
-                            className={`absolute p-2 rounded-lg border-2 border-white/20 shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-30 ${isPast ? 'opacity-75' : ''} bg-gradient-to-br ${statusColors.gradient} ${statusColors.text} ${statusColors.glow} backdrop-blur-sm`}
-                            style={{
-                              ...gridPosition,
-                              gridColumn: dayIndex + 2,
-                              width: conflictLayout.width,
-                              left: conflictLayout.left,
-                              minHeight: '50px',
-                              fontSize: '12px',
-                              zIndex: 20
-                            }}
-                            onClick={() => handleAppointmentClick(appointment)}
-                          >
+               {/* Appointment Blocks - Pozycjonowane jako grid items */}
+{weekDays.map((day, dayIndex) => {
+  const dayString = format(day, "yyyy-MM-dd");
+  const dayAppointments = appointments.filter(apt => apt.appointment_date === dayString);
+  const conflicts = getTimeConflicts(dayAppointments);
+  
+  return (
+    <React.Fragment key={`day-appointments-${dayString}`}>
+      {dayAppointments.map((appointment) => {
+        const gridPosition = getAppointmentGridPosition(appointment);
+        const statusColors = getAppointmentStatusColors(appointment.status);
+        const conflictLayout = getConflictLayout(appointment, conflicts);
+        const isPast = isAppointmentPast(appointment.appointment_date, appointment.appointment_time);
+        
+        return (
+          <div
+            key={appointment.id}
+            className={`p-2 rounded-lg border-2 border-white/20 shadow-lg cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl hover:z-30 ${isPast ? 'opacity-75' : ''} bg-gradient-to-br ${statusColors.gradient} ${statusColors.text} ${statusColors.glow} backdrop-blur-sm`}
+            style={{
+              // KLUCZ: Użyj grid positioning zamiast absolute
+              gridRow: `${gridPosition.gridRowStart} / ${gridPosition.gridRowEnd}`,
+              gridColumn: dayIndex + 2,
+              zIndex: 20,
+              position: 'relative', // Zmiana z 'absolute' na 'relative'
+              minHeight: '50px',
+              fontSize: '12px',
+              // Obsługa konfliktów - możesz użyć CSS transforms lub nested grid
+              ...(conflictLayout.width !== '100%' && {
+                transform: `translateX(${parseFloat(conflictLayout.left)}%)`,
+                width: conflictLayout.width,
+              })
+            }}
+            onClick={() => handleAppointmentClick(appointment)}
+          >
                             <div className="space-y-1">
                               {/* Nazwa usługi */}
                               <div className="font-semibold truncate text-xs">
