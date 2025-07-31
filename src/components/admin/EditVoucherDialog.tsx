@@ -58,7 +58,7 @@ export function EditVoucherDialog({ voucher, open, onOpenChange, onSuccess }: Ed
   
   // Form states
   const [voucherType, setVoucherType] = useState<'single' | 'package'>('single');
-  const [serviceId, setServiceId] = useState<string>('');
+  const [serviceId, setServiceId] = useState<string>('none');
   const [status, setStatus] = useState<string>('active');
   const [originalValue, setOriginalValue] = useState<string>('');
   const [remainingValue, setRemainingValue] = useState<string>('');
@@ -107,7 +107,7 @@ export function EditVoucherDialog({ voucher, open, onOpenChange, onSuccess }: Ed
     if (!voucher) return;
 
     setVoucherType(voucher.voucher_type as 'single' | 'package');
-    setServiceId(voucher.service_id || '');
+    setServiceId(voucher.service_id || 'none');
     setStatus(voucher.status);
     setOriginalValue(voucher.original_value?.toString() || '');
     setRemainingValue(voucher.remaining_value?.toString() || '');
@@ -129,7 +129,7 @@ export function EditVoucherDialog({ voucher, open, onOpenChange, onSuccess }: Ed
 
   const resetForm = () => {
     setVoucherType('single');
-    setServiceId('');
+    setServiceId('none');
     setStatus('active');
     setOriginalValue('');
     setRemainingValue('');
@@ -153,7 +153,7 @@ export function EditVoucherDialog({ voucher, open, onOpenChange, onSuccess }: Ed
     try {
       const updateData: any = {
         voucher_type: voucherType,
-        service_id: serviceId || null,
+        service_id: serviceId === "none" ? null : serviceId || null,
         status: status,
         original_sessions: parseInt(originalSessions),
         remaining_sessions: parseInt(remainingSessions),
@@ -238,12 +238,15 @@ export function EditVoucherDialog({ voucher, open, onOpenChange, onSuccess }: Ed
                 <SelectValue placeholder="Wybierz usługę lub zostaw puste dla dowolnej" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Dowolna usługa</SelectItem>
-                {services.map((service) => (
-                  <SelectItem key={service.id} value={service.id}>
-                    {service.name} - {service.price} zł
-                  </SelectItem>
-                ))}
+                <SelectItem value="none">Dowolna usługa</SelectItem>
+                {services
+                  .filter(service => service.id && service.id.trim() !== '')
+                  .map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name} - {service.price} zł
+                    </SelectItem>
+                  ))
+                }
               </SelectContent>
             </Select>
           </div>
@@ -370,11 +373,14 @@ export function EditVoucherDialog({ voucher, open, onOpenChange, onSuccess }: Ed
                     <SelectValue placeholder="Wybierz użytkownika" />
                   </SelectTrigger>
                   <SelectContent>
-                    {profiles.map((profile) => (
-                      <SelectItem key={profile.user_id} value={profile.user_id}>
-                        {profile.first_name} {profile.last_name}
-                      </SelectItem>
-                    ))}
+                    {profiles
+                      .filter(profile => profile.user_id && profile.user_id.trim() !== '')
+                      .map((profile) => (
+                        <SelectItem key={profile.user_id} value={profile.user_id}>
+                          {profile.first_name} {profile.last_name}
+                        </SelectItem>
+                      ))
+                    }
                   </SelectContent>
                 </Select>
               </div>
