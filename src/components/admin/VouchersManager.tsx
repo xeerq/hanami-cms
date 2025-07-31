@@ -61,8 +61,7 @@ export function VouchersManager() {
         .from('vouchers')
         .select(`
           *,
-          services(name),
-          profiles(first_name, last_name)
+          services(name)
         `)
         .order('created_at', { ascending: false });
 
@@ -70,7 +69,27 @@ export function VouchersManager() {
       console.log("Vouchers error:", error);
 
       if (error) throw error;
-      setVouchers(data as any || []);
+      
+      // Manually fetch user profiles for vouchers that have user_id
+      const vouchersWithProfiles = await Promise.all(
+        (data || []).map(async (voucher: any) => {
+          if (voucher.user_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('first_name, last_name')
+              .eq('user_id', voucher.user_id)
+              .single();
+            
+            return {
+              ...voucher,
+              profiles: profile
+            };
+          }
+          return voucher;
+        })
+      );
+      
+      setVouchers(vouchersWithProfiles);
     } catch (error) {
       console.error('Error loading vouchers:', error);
       toast({
