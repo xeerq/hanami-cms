@@ -298,28 +298,8 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
               variant: "destructive",
             });
             return;
-          } else console.log('Full voucher result:', voucherResult, typeof voucherResult);
-
-if (voucherResult) {
-  // Sprawdź czy to tablica czy obiekt
-  const result = Array.isArray(voucherResult) ? voucherResult[0] : voucherResult;
-  
-  if (result && typeof result === 'object' && 'success' in result) {
-    if (result.success) {
-      toast({
-        title: "Bon rozliczony",
-        description: "Bon został pomyślnie rozliczony za tę wizytę.",
-      });
-    } else {
-      toast({
-        title: "Problem z bonem", 
-        description: `Nie udało się przetworzyć bonu: ${result.error || 'Nieznany błąd'}`,
-        variant: "destructive",
-      });
-      return;
-    }
-  }
-} {
+          } else if (voucherResult && typeof voucherResult === 'object' && 'success' in voucherResult) {
+            if (!voucherResult.success) {
               toast({
                 title: "Problem z bonem",
                 description: `Nie udało się przetworzyć bonu: ${voucherResult.error}`,
