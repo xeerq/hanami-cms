@@ -359,17 +359,75 @@ const Booking = () => {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-booking', {
-        body: {
-          serviceId: selectedService.id,
-          therapistId: selectedTherapist.id,
-          appointmentDate: selectedDate,
-          appointmentTime: selectedTime,
-          notes: notes || null
-        }
-      });
+      // Check if time slot is still available
+      const { data: existingAppointment } = await supabase
+        .from("appointments")
+        .select("id")
+        .eq("therapist_id", selectedTherapist.id)
+        .eq("appointment_date", selectedDate)
+        .eq("appointment_time", selectedTime)
+        .eq("status", "confirmed")
+        .single();
 
-      if (error) throw error;
+      if (existingAppointment) {
+        toast({
+          title: "Błąd",
+          description: "Ten termin już nie jest dostępny",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Prepare appointment data
+      const appointmentData = {
+        service_id: selectedService.id,
+        therapist_id: selectedTherapist.id,
+        appointment_date: selectedDate,
+        appointment_time: selectedTime,
+        status: "confirmed",
+        notes: notes || null,
+        user_id: user.id,
+        is_guest: false,
+        voucher_code: voucherData ? voucherData.code : null,
+      };
+
+      // Create the appointment
+      const { data: appointment, error: insertError } = await supabase
+        .from("appointments")
+        .insert(appointmentData)
+        .select(`
+          *,
+          services(name, duration, price),
+          therapists(name)
+        `)
+        .single();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      // Process voucher redemption if voucher was used
+      if (voucherData && appointment) {
+        const servicePrice = selectedService.price;
+        
+        const { data: voucherResult, error: voucherError } = await supabase
+          .rpc('process_voucher_redemption', {
+            p_voucher_code: voucherData.code,
+            p_appointment_id: appointment.id,
+            ...(servicePrice && { p_service_price: servicePrice })
+          });
+
+        if (voucherError) {
+          console.error("Voucher redemption error:", voucherError);
+          // Don't fail the appointment creation, just log the error
+          toast({
+            title: "Uwaga",
+            description: "Wizyta została zarezerwowana, ale wystąpił problem z bonem. Skontaktuj się z recepcją.",
+            variant: "destructive",
+          });
+        }
+      }
 
       toast({
         title: "Sukces!",
