@@ -283,11 +283,12 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
         const appointment = appointments.find(app => app.id === appointmentId);
         if (appointment && appointment.voucher_code) {
           // Przetwórz rozliczenie bonu
+          const servicePrice = appointment.services?.price;
           const { data: voucherResult, error: voucherError } = await supabase
             .rpc('process_voucher_redemption', {
               p_voucher_code: appointment.voucher_code,
               p_appointment_id: appointmentId,
-              p_service_price: appointment.services?.price || 0
+              ...(servicePrice && { p_service_price: servicePrice })
             });
 
           if (voucherError) {
