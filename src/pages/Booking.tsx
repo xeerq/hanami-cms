@@ -279,6 +279,8 @@ const Booking = () => {
     }
 
     try {
+      console.log('Checking voucher code:', voucherCode.toUpperCase());
+      
       const { data, error } = await supabase
         .from('vouchers')
         .select(`
@@ -289,7 +291,16 @@ const Booking = () => {
         .eq('status', 'active')
         .maybeSingle();
 
-      if (error || !data) {
+      console.log('Voucher query result:', { data, error });
+
+      if (error) {
+        console.error('Voucher query error:', error);
+        setVoucherError("Błąd podczas sprawdzania bonu");
+        setVoucherData(null);
+        return;
+      }
+
+      if (!data) {
         setVoucherError("Nieprawidłowy kod bonu lub bon nieaktywny");
         setVoucherData(null);
         return;
@@ -385,8 +396,8 @@ const Booking = () => {
         .eq("therapist_id", selectedTherapist.id)
         .eq("appointment_date", selectedDate)
         .eq("appointment_time", selectedTime)
-        .eq("status", "confirmed")
-        .single();
+        .in("status", ["confirmed", "pending"])
+        .maybeSingle();
 
       if (existingAppointment) {
         toast({
