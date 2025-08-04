@@ -287,7 +287,7 @@ const Booking = () => {
         `)
         .eq('code', voucherCode.toUpperCase())
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         setVoucherError("Nieprawidłowy kod bonu lub bon nieaktywny");
