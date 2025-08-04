@@ -322,11 +322,30 @@ const Booking = () => {
         return;
       }
 
+      // For guest vouchers (purchaser_email/phone), automatically assign to current user
+      if (data.user_id === null && user && (data.purchaser_email || data.purchaser_phone)) {
+        try {
+          const { error: updateError } = await supabase
+            .from('vouchers')
+            .update({ user_id: user.id })
+            .eq('id', data.id);
+
+          if (updateError) {
+            console.error('Error assigning voucher to user:', updateError);
+          } else {
+            // Update local data to reflect the assignment
+            data.user_id = user.id;
+          }
+        } catch (assignError) {
+          console.error('Error assigning voucher:', assignError);
+        }
+      }
+
       setVoucherData(data);
       setVoucherError("");
       toast({
         title: "Sukces",
-        description: "Bon został pomyślnie zweryfikowany!",
+        description: "Bon został pomyślnie zweryfikowany i przypisany do Twojego konta!",
       });
     } catch (error) {
       console.error('Error verifying voucher:', error);
