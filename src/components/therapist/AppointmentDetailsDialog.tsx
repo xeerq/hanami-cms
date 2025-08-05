@@ -28,6 +28,9 @@ interface Appointment {
     display: string;
     is_voucher: boolean;
     type: string;
+    current?: number;
+    total?: number;
+    success?: boolean;
   };
   services?: {
     name: string;
@@ -120,6 +123,53 @@ const AppointmentDetailsDialog = ({
     const endHours = Math.floor(endTimeMinutes / 60);
     const endMins = endTimeMinutes % 60;
     return `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+  };
+
+  const calculatePaymentInfo = () => {
+    const servicePrice = appointment.services?.price || 0;
+    
+    if (!appointment.voucher_code || !appointment.voucher_info) {
+      return {
+        totalPrice: servicePrice,
+        voucherDiscount: 0,
+        amountToPay: servicePrice
+      };
+    }
+
+    // Dla bonów wartościowych (single) - sprawdzamy ile zostało do wykorzystania
+    if (appointment.voucher_info.type === 'value') {
+      const totalVoucher = appointment.voucher_info.total || 0;
+      const usedAmount = appointment.voucher_info.current || 0;
+      const remainingValue = totalVoucher - usedAmount;
+      const voucherDiscount = Math.min(remainingValue, servicePrice);
+      
+      return {
+        totalPrice: servicePrice,
+        voucherDiscount,
+        amountToPay: Math.max(0, servicePrice - voucherDiscount)
+      };
+    }
+    
+    // Dla bonów pakietowych (sessions) - jeśli zostały sesje, cały koszt jest pokryty
+    if (appointment.voucher_info.type === 'sessions') {
+      const totalSessions = appointment.voucher_info.total || 0;
+      const usedSessions = appointment.voucher_info.current || 0;
+      const remainingSessions = totalSessions - usedSessions;
+      
+      if (remainingSessions > 0) {
+        return {
+          totalPrice: servicePrice,
+          voucherDiscount: servicePrice,
+          amountToPay: 0
+        };
+      }
+    }
+
+    return {
+      totalPrice: servicePrice,
+      voucherDiscount: 0,
+      amountToPay: servicePrice
+    };
   };
 
   const statusInfo = getStatusInfo(appointment.status);
@@ -257,6 +307,51 @@ const AppointmentDetailsDialog = ({
                           <strong>Status wykorzystania:</strong> {appointment.voucher_info.display}
                         </p>
                       )}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Informacje o płatności */}
+          {appointment.services?.price && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-start space-x-2">
+                  <Activity className="h-5 w-5 text-hanami-primary mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg text-gray-800 mb-2">Płatność</h3>
+                    <div className="space-y-2">
+                      {(() => {
+                        const paymentInfo = calculatePaymentInfo();
+                        return (
+                          <div className="bg-gray-50 p-3 rounded-lg space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600">Cena usługi:</span>
+                              <span className="font-medium">{paymentInfo.totalPrice} zł</span>
+                            </div>
+                            {paymentInfo.voucherDiscount > 0 && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-600">Rabat z bonu:</span>
+                                <span className="font-medium text-green-600">-{paymentInfo.voucherDiscount} zł</span>
+                              </div>
+                            )}
+                            <Separator />
+                            <div className="flex justify-between items-center text-lg">
+                              <span className="font-semibold text-gray-800">Do zapłaty:</span>
+                              <span className={`font-bold ${paymentInfo.amountToPay > 0 ? 'text-hanami-primary' : 'text-green-600'}`}>
+                                {paymentInfo.amountToPay} zł
+                              </span>
+                            </div>
+                            {paymentInfo.amountToPay === 0 && (
+                              <p className="text-sm text-green-600 font-medium">
+                                ✓ Wizyta w pełni opłacona bonem
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
