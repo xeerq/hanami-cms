@@ -289,6 +289,7 @@ const Booking = () => {
         `)
         .eq('code', voucherCode.toUpperCase())
         .eq('status', 'active')
+        .or(`service_id.is.null,service_id.eq.${selectedService?.id}`)
         .maybeSingle();
 
       console.log('Voucher query result:', { data, error });
