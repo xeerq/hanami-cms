@@ -390,22 +390,45 @@ const Booking = () => {
 
     setLoading(true);
     try {
-      // Check if time slot is still available
-      const { data: existingAppointment } = await supabase
+      // Check if time slot is still available with overlapping appointments
+      const serviceDuration = selectedService.duration;
+      const selectedTimeMinutes = parseInt(selectedTime.split(':')[0]) * 60 + parseInt(selectedTime.split(':')[1]);
+      const selectedEndTimeMinutes = selectedTimeMinutes + serviceDuration;
+      
+      const { data: conflictingAppointments } = await supabase
         .from("appointments")
-        .select("id")
+        .select(`
+          id, 
+          appointment_time,
+          services(duration)
+        `)
         .eq("therapist_id", selectedTherapist.id)
         .eq("appointment_date", selectedDate)
-        .eq("appointment_time", selectedTime)
-        .in("status", ["confirmed", "pending"])
-        .maybeSingle();
+        .in("status", ["confirmed", "pending"]);
 
-      if (existingAppointment) {
+      // Check for time conflicts more accurately
+      const hasConflict = conflictingAppointments?.some(apt => {
+        const appointmentTime = apt.appointment_time.slice(0, 5);
+        const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
+        const appointmentEndTimeMinutes = appointmentTimeMinutes + (apt.services?.duration || 60);
+
+        // Check if appointments overlap
+        const newStartsBeforeExistingEnds = selectedTimeMinutes < appointmentEndTimeMinutes;
+        const newEndsAfterExistingStarts = selectedEndTimeMinutes > appointmentTimeMinutes;
+        
+        return newStartsBeforeExistingEnds && newEndsAfterExistingStarts;
+      });
+
+      if (hasConflict) {
         toast({
           title: "Błąd",
-          description: "Ten termin już nie jest dostępny",
+          description: "Ten termin już nie jest dostępny. Proszę wybrać inną godzinę.",
           variant: "destructive",
         });
+        // Refresh available times for selected date
+        if (selectedDate && selectedTherapist) {
+          checkAvailableTimes(selectedDate, selectedTherapist.id);
+        }
         setLoading(false);
         return;
       }
@@ -435,6 +458,20 @@ const Booking = () => {
         .single();
 
       if (insertError) {
+        // Handle duplicate key constraint specifically
+        if (insertError.code === '23505') {
+          toast({
+            title: "Błąd",
+            description: "Ten termin został właśnie zarezerwowany przez kogoś innego. Proszę wybrać inną godzinę.",
+            variant: "destructive",
+          });
+          // Refresh available times
+          if (selectedDate && selectedTherapist) {
+            checkAvailableTimes(selectedDate, selectedTherapist.id);
+          }
+          setLoading(false);
+          return;
+        }
         throw insertError;
       }
 
