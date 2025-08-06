@@ -136,12 +136,11 @@ const AppointmentDetailsDialog = ({
       };
     }
 
-    // Dla bonów wartościowych (single) - sprawdzamy ile zostało do wykorzystania
+    // Dla bonów wartościowych (single) - obliczamy zniżkę na podstawie wartości bonu
     if (appointment.voucher_info.type === 'value') {
       const totalVoucher = appointment.voucher_info.total || 0;
-      const usedAmount = appointment.voucher_info.current || 0;
-      const remainingValue = totalVoucher - usedAmount;
-      const voucherDiscount = Math.min(remainingValue, servicePrice);
+      // Dla bonów wartościowych, zniżka to maksymalnie cała wartość bonu lub cena usługi
+      const voucherDiscount = Math.min(totalVoucher, servicePrice);
       
       return {
         totalPrice: servicePrice,
@@ -150,19 +149,13 @@ const AppointmentDetailsDialog = ({
       };
     }
     
-    // Dla bonów pakietowych (sessions) - jeśli zostały sesje, cały koszt jest pokryty
+    // Dla bonów pakietowych (sessions) - jeśli jest to wizyta z bonem, cały koszt jest pokryty
     if (appointment.voucher_info.type === 'sessions') {
-      const totalSessions = appointment.voucher_info.total || 0;
-      const usedSessions = appointment.voucher_info.current || 0;
-      const remainingSessions = totalSessions - usedSessions;
-      
-      if (remainingSessions > 0) {
-        return {
-          totalPrice: servicePrice,
-          voucherDiscount: servicePrice,
-          amountToPay: 0
-        };
-      }
+      return {
+        totalPrice: servicePrice,
+        voucherDiscount: servicePrice,
+        amountToPay: 0
+      };
     }
 
     return {
