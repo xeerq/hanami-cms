@@ -278,44 +278,60 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   // Obsługa zmiany statusu wizyty
   const handleStatusChange = async (appointmentId: string, newStatus: string) => {
     try {
-      // Jeśli wizyta ma status "completed" i ma voucher_code, przetwórz bon
+      // Jeśli wizyta ma status "completed" i ma voucher_code, sprawdź czy bon został już przetworzony
       if (newStatus === 'completed') {
         const appointment = appointments.find(app => app.id === appointmentId);
         if (appointment && appointment.voucher_code) {
-          // Przetwórz rozliczenie bonu
-          const servicePrice = appointment.services?.price;
-          const { data: voucherResult, error: voucherError } = await supabase
-            .rpc('process_voucher_redemption', {
-              p_voucher_code: appointment.voucher_code,
-              p_appointment_id: appointmentId,
-              ...(servicePrice && { p_service_price: servicePrice })
-            });
+          // Sprawdź czy bon został już przetworzony dla tej wizyty
+          const { data: existingRedemption, error: checkError } = await supabase
+            .from('voucher_redemptions')
+            .select('id')
+            .eq('appointment_id', appointmentId)
+            .maybeSingle();
 
-          if (voucherError) {
-            console.error("Voucher redemption error:", voucherError);
-            toast({
-              title: "Problem z bonem",
-              description: `Błąd przy przetwarzaniu bonu: ${voucherError.message}`,
-              variant: "destructive",
-            });
-            return;
-          } else if (voucherResult && typeof voucherResult === 'object' && 'success' in voucherResult) {
-            if (!voucherResult.success) {
+          if (checkError) {
+            console.error("Error checking existing voucher redemption:", checkError);
+          }
+
+          // Jeśli bon nie został jeszcze przetworzony, zrób to teraz
+          if (!existingRedemption) {
+            const servicePrice = appointment.services?.price;
+            const { data: voucherResult, error: voucherError } = await supabase
+              .rpc('process_voucher_redemption', {
+                p_voucher_code: appointment.voucher_code,
+                p_appointment_id: appointmentId,
+                ...(servicePrice && { p_service_price: servicePrice })
+              });
+
+            if (voucherError) {
+              console.error("Voucher redemption error:", voucherError);
               toast({
                 title: "Problem z bonem",
-                description: `Nie udało się przetworzyć bonu: ${voucherResult.error}`,
+                description: `Błąd przy przetwarzaniu bonu: ${voucherError.message}`,
                 variant: "destructive",
               });
               return;
-            } else {
-              toast({
-                title: "Bon rozliczony",
-                description: "Bon został pomyślnie rozliczony za tę wizytę.",
-              });
+            } else if (voucherResult && typeof voucherResult === 'object' && 'success' in voucherResult) {
+              if (!voucherResult.success) {
+                toast({
+                  title: "Problem z bonem",
+                  description: `Nie udało się przetworzyć bonu: ${voucherResult.error}`,
+                  variant: "destructive",
+                });
+                return;
+              } else {
+                toast({
+                  title: "Bon przetworzony",
+                  description: "Bon został pomyślnie zrealizowany za wizytę",
+                  variant: "default",
+                });
+              }
             }
           }
         }
       }
+
+      // Aktualizuj status wizyty w bazie danych
 
       const { error } = await supabase
         .from("appointments")
