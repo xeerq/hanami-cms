@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { BarChart3, Calendar, Clock, Users, Plus } from "lucide-react";
+import { BarChart3, Calendar, Clock, Users, History, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/Header";
@@ -9,6 +9,7 @@ import { useTherapistCheck } from "@/hooks/useTherapistCheck";
 import TherapistCalendar from "@/components/therapist/TherapistCalendar";
 import TherapistAppointments from "@/components/therapist/TherapistAppointments";
 import TherapistDashboard from "@/components/therapist/TherapistDashboard";
+import TherapistHistory from "@/components/therapist/TherapistHistory";
 import { VouchersManager } from "@/components/admin/VouchersManager";
 
 const TherapistPanel = () => {
@@ -54,7 +55,7 @@ const TherapistPanel = () => {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="dashboard" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="dashboard" className="flex items-center space-x-2">
                 <BarChart3 className="h-4 w-4" />
                 <span>Dashboard</span>
@@ -66,6 +67,10 @@ const TherapistPanel = () => {
               <TabsTrigger value="appointments" className="flex items-center space-x-2">
                 <Clock className="h-4 w-4" />
                 <span>Wizyty</span>
+              </TabsTrigger>
+              <TabsTrigger value="history" className="flex items-center space-x-2">
+                <History className="h-4 w-4" />
+                <span>Historia</span>
               </TabsTrigger>
               <TabsTrigger value="vouchers" className="flex items-center space-x-2">
                 <Users className="h-4 w-4" />
@@ -86,6 +91,10 @@ const TherapistPanel = () => {
 
             <TabsContent value="appointments">
               <TherapistAppointments therapistId={therapistInfo?.therapist_id} />
+            </TabsContent>
+
+            <TabsContent value="history">
+              <TherapistHistory therapistId={therapistInfo?.therapist_id} />
             </TabsContent>
 
             <TabsContent value="vouchers">
