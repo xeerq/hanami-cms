@@ -475,6 +475,19 @@ const Booking = () => {
         throw insertError;
       }
 
+      // Assign voucher to user if voucher was used and not already assigned
+      if (voucherData && user) {
+        const { error: assignError } = await supabase
+          .from('vouchers')
+          .update({ user_id: user.id })
+          .eq('code', voucherData.code)
+          .is('user_id', null);
+
+        if (assignError) {
+          console.error("Error assigning voucher to user:", assignError);
+        }
+      }
+
       // Process voucher redemption if voucher was used
       if (voucherData && appointment) {
         const servicePrice = selectedService.price;
