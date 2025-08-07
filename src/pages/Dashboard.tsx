@@ -79,14 +79,14 @@ const Dashboard = () => {
 
       if (ordersError) throw ordersError;
 
-      // Załaduj bony użytkownika
+      // Załaduj bony użytkownika - szukaj zarówno po user_id jak i po email kupującego
       const { data: vouchers, error: vouchersError } = await supabase
         .from("vouchers")
         .select(`
           *,
           services(name)
         `)
-        .eq("user_id", user.id)
+        .or(`user_id.eq.${user.id},purchaser_email.eq.${user.email}`)
         .order("created_at", { ascending: false });
 
       if (vouchersError) throw vouchersError;
