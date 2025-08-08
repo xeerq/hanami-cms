@@ -85,16 +85,55 @@ const CreateAppointmentDialog = ({ open, onOpenChange, onSuccess }: CreateAppoin
     setLoading(true);
 
     try {
+      // Resolve selected service duration
+      const selectedService = services.find(s => s.id === formData.service_id);
+      const serviceDuration = selectedService?.duration;
+      if (!serviceDuration) {
+        throw new Error('Nie wybrano usługi lub brak czasu trwania usługi');
+      }
+
+      // Pre-check conflicts for the therapist/day
+      const { data: existing, error: checkError } = await supabase
+        .from('appointments')
+        .select('appointment_time, duration')
+        .eq('therapist_id', formData.therapist_id)
+        .eq('appointment_date', formData.appointment_date)
+        .in('status', ['confirmed','pending']);
+
+      if (checkError) throw checkError;
+
+      const [h, m] = formData.appointment_time.split(':').map(Number);
+      const newStart = h * 60 + m;
+      const newEnd = newStart + serviceDuration;
+
+      const overlapping = existing?.some(apt => {
+        const [eh, em] = apt.appointment_time.slice(0,5).split(':').map(Number);
+        const exStart = eh * 60 + em;
+        const exEnd = exStart + (apt.duration || 60);
+        return newStart < exEnd && newEnd > exStart;
+      });
+
+      if (overlapping) {
+        toast({
+          title: 'Konflikt terminów',
+          description: 'Ten termin nakłada się z istniejącą wizytą. Wybierz inny czas.',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("appointments")
         .insert({
-          user_id: formData.user_id,
+          user_id: formData.user_id || null,
           service_id: formData.service_id,
           therapist_id: formData.therapist_id,
           appointment_date: formData.appointment_date,
           appointment_time: formData.appointment_time,
           notes: formData.notes || null,
-          status: formData.status
+          status: formData.status,
+          duration: serviceDuration,
         });
 
       if (error) throw error;
@@ -117,9 +156,12 @@ const CreateAppointmentDialog = ({ open, onOpenChange, onSuccess }: CreateAppoin
       });
     } catch (error: any) {
       console.error("Error creating appointment:", error);
+      const message = error?.code === '23P01'
+        ? 'Wybrany termin nakłada się z inną wizytą terapeuty. Wybierz inny czas.'
+        : 'Nie udało się utworzyć wizyty';
       toast({
         title: "Błąd",
-        description: "Nie udało się utworzyć wizyty",
+        description: message,
         variant: "destructive",
       });
     } finally {

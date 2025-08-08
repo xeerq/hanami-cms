@@ -36,7 +36,9 @@ interface Appointment {
     last_name: string;
     phone?: string;
   };
+  duration?: number;
 }
+
 
 interface TherapistCalendarProps {
   therapistId: string;
@@ -97,6 +99,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
           status,
           notes,
           voucher_code,
+          duration,
           services (
             name,
             duration,
@@ -372,7 +375,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   // Oblicz pozycję i rozmiar wizyty w CSS Grid
   const getAppointmentGridPosition = (appointment: Appointment) => {
     const [startHour, startMinute] = appointment.appointment_time.split(':').map(Number);
-    const duration = appointment.services?.duration || 30;
+    const duration = appointment.duration ?? appointment.services?.duration ?? 30;
     
     // Znajdź pozycję startową w gridzie (8:00 = row 1, 8:30 = row 2, itd.)
     const startRow = ((startHour - 8) * 2) + (startMinute / 30) + 2; // +2 dla headera
@@ -391,7 +394,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
     dayAppointments.forEach(appointment => {
       const startTime = new Date(`${appointment.appointment_date}T${appointment.appointment_time}`);
       const endTime = new Date(startTime);
-      endTime.setMinutes(endTime.getMinutes() + (appointment.services?.duration || 30));
+      endTime.setMinutes(endTime.getMinutes() + (appointment.duration ?? appointment.services?.duration ?? 30));
       
       // Sprawdź nakładanie z innymi wizytami
       const overlapping = dayAppointments.filter(other => {
@@ -399,7 +402,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
         
         const otherStart = new Date(`${other.appointment_date}T${other.appointment_time}`);
         const otherEnd = new Date(otherStart);
-        otherEnd.setMinutes(otherEnd.getMinutes() + (other.services?.duration || 30));
+        otherEnd.setMinutes(otherEnd.getMinutes() + (other.duration ?? other.services?.duration ?? 30));
         
         return (startTime < otherEnd && endTime > otherStart);
       });
@@ -650,9 +653,9 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                               </div>
                               
                               {/* Czas trwania */}
-                              <div className="text-xs opacity-75">
-                                {appointment.services?.duration || 30} min
-                              </div>
+              <div className="text-xs opacity-75">
+                {(appointment.duration ?? appointment.services?.duration ?? 30)} min
+              </div>
                               
                               {/* Status badge */}
                               <div className="flex justify-between items-center">

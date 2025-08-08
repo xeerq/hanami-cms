@@ -173,9 +173,7 @@ const Booking = () => {
         .from("appointments")
         .select(`
           appointment_time,
-          services (
-            duration
-          )
+          duration
         `)
         .eq("therapist_id", therapistId)
         .eq("appointment_date", date)
@@ -205,7 +203,7 @@ const Booking = () => {
         bookedAppointments?.forEach(apt => {
           const appointmentTime = apt.appointment_time.slice(0, 5);
           const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
-          const appointmentEndTimeMinutes = appointmentTimeMinutes + (apt.services?.duration || 60);
+          const appointmentEndTimeMinutes = appointmentTimeMinutes + (apt.duration || 60);
 
           // Sprawdź czy nowa wizyta koliduje z istniejącą
           // Kolizja występuje gdy:
@@ -400,7 +398,7 @@ const Booking = () => {
         .select(`
           id, 
           appointment_time,
-          services(duration)
+          duration
         `)
         .eq("therapist_id", selectedTherapist.id)
         .eq("appointment_date", selectedDate)
@@ -410,7 +408,7 @@ const Booking = () => {
       const hasConflict = conflictingAppointments?.some(apt => {
         const appointmentTime = apt.appointment_time.slice(0, 5);
         const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
-        const appointmentEndTimeMinutes = appointmentTimeMinutes + (apt.services?.duration || 60);
+        const appointmentEndTimeMinutes = appointmentTimeMinutes + (apt.duration || 60);
 
         // Check if appointments overlap
         const newStartsBeforeExistingEnds = selectedTimeMinutes < appointmentEndTimeMinutes;
@@ -440,6 +438,7 @@ const Booking = () => {
         appointment_date: selectedDate,
         appointment_time: selectedTime,
         status: "confirmed",
+        duration: selectedService.duration,
         notes: notes || null,
         user_id: user.id,
         is_guest: false,
@@ -458,11 +457,13 @@ const Booking = () => {
         .single();
 
       if (insertError) {
-        // Handle duplicate key constraint specifically
-        if (insertError.code === '23505') {
+        // Handle duplicate key or overlap constraint specifically
+        if (insertError.code === '23505' || insertError.code === '23P01') {
           toast({
             title: "Błąd",
-            description: "Ten termin został właśnie zarezerwowany przez kogoś innego. Proszę wybrać inną godzinę.",
+            description: insertError.code === '23P01' 
+              ? "Ten termin koliduje z inną wizytą. Proszę wybrać inną godzinę."
+              : "Ten termin został właśnie zarezerwowany przez kogoś innego. Proszę wybrać inną godzinę.",
             variant: "destructive",
           });
           // Refresh available times

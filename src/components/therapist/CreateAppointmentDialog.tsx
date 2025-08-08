@@ -214,6 +214,7 @@ const CreateAppointmentDialog = ({
         status: "confirmed",
         is_guest: isGuest,
         voucher_code: voucherCode || null,
+        duration: serviceDuration,
         ...(isGuest 
           ? { 
               guest_name: guestName,
@@ -256,9 +257,12 @@ const CreateAppointmentDialog = ({
       onOpenChange(false);
     } catch (error: any) {
       console.error("Error creating appointment:", error);
+      const message = error?.code === '23P01'
+        ? 'Wybrany termin nakłada się z inną wizytą terapeuty. Wybierz inny czas.'
+        : (error.message || 'Nie udało się dodać wizyty');
       toast({
         title: "Błąd",
-        description: error.message || "Nie udało się dodać wizyty",
+        description: message,
         variant: "destructive",
       });
     } finally {
