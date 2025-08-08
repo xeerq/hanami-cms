@@ -545,7 +545,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
 
                 {timeSlots.map((time, timeIndex) => {
                   return (
-                    <React.Fragment key={`row-${time}`}>
+                    <div className="contents" key={`row-${time}`}>
                       {/* Time Label */}
                       <div 
                         className="grid-time-label bg-white border-r border-gray-200 p-4 text-sm font-medium text-gray-600 flex items-center justify-center"
@@ -593,7 +593,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                           </div>
                         );
                       })}
-                    </React.Fragment>
+                    </div>
                   );
                 })}
 
@@ -604,7 +604,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   const conflicts = getTimeConflicts(dayAppointments);
   
   return (
-    <React.Fragment key={`day-appointments-${dayString}`}>
+    <div className="contents" key={`day-appointments-${dayString}`}>
       {dayAppointments.map((appointment) => {
         const gridPosition = getAppointmentGridPosition(appointment);
         const statusColors = getAppointmentStatusColors(appointment.status);
@@ -625,7 +625,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
               fontSize: '12px',
               // Obsługa konfliktów - możesz użyć CSS transforms lub nested grid
               ...(conflictLayout.width !== '100%' && {
-                transform: `translateX(${parseFloat(conflictLayout.left)}%)`,
+                left: conflictLayout.left,
                 width: conflictLayout.width,
               })
             }}
@@ -672,7 +672,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                           </div>
                         );
                       })}
-                    </React.Fragment>
+                    </div>
                   );
                 })}
               </div>
