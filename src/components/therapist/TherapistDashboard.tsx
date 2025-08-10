@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { format, isToday, isTomorrow, startOfDay, endOfDay } from "date-fns";
 import { pl } from "date-fns/locale";
-import { Calendar, Clock, CheckCircle, Star, Users, TrendingUp } from "lucide-react";
+import { Calendar, Clock, CheckCircle, Users, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +15,6 @@ interface DashboardStats {
   todayAppointments: number;
   upcomingAppointments: number;
   completedAppointments: number;
-  averageRating: number;
   totalClients: number;
   thisWeekRevenue: number;
 }
@@ -25,7 +24,6 @@ const TherapistDashboard = ({ therapistId, therapistName }: TherapistDashboardPr
     todayAppointments: 0,
     upcomingAppointments: 0,
     completedAppointments: 0,
-    averageRating: 4.9,
     totalClients: 0,
     thisWeekRevenue: 0
   });
@@ -115,7 +113,6 @@ const TherapistDashboard = ({ therapistId, therapistName }: TherapistDashboardPr
         todayAppointments: todayData?.filter(app => app.status !== "cancelled").length || 0,
         upcomingAppointments: upcomingData?.length || 0,
         completedAppointments: completedData?.length || 0,
-        averageRating: 4.9, // Placeholder - would need rating system
         totalClients: uniqueClients.size,
         thisWeekRevenue: weekRevenue
       });
@@ -135,8 +132,8 @@ const TherapistDashboard = ({ therapistId, therapistName }: TherapistDashboardPr
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
             <Card key={i} className="border-0 shadow-lg bg-white/95 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="animate-pulse">
@@ -161,7 +158,7 @@ const TherapistDashboard = ({ therapistId, therapistName }: TherapistDashboardPr
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Today's Appointments */}
         <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group">
           <CardContent className="p-6">
@@ -219,24 +216,6 @@ const TherapistDashboard = ({ therapistId, therapistName }: TherapistDashboardPr
           </CardContent>
         </Card>
 
-        {/* Average Rating */}
-        <Card className="border-0 shadow-lg bg-white/95 backdrop-blur-sm hover:shadow-xl transition-all duration-300 group">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-hanami-neutral/70 mb-1">
-                  Średnia ocena
-                </p>
-                <p className="text-3xl font-light text-hanami-neutral">
-                  {stats.averageRating}
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-pink-100 flex items-center justify-center group-hover:bg-pink-200 transition-colors">
-                <Star className="h-6 w-6 text-pink-600 fill-current" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Additional Metrics Row */}
