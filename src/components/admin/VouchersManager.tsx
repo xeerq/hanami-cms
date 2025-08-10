@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FileDown, Search, Edit } from "lucide-react";
+import { Plus, FileDown, Search, Edit, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateVoucherDialog } from "./CreateVoucherDialog";
@@ -110,6 +110,35 @@ export function VouchersManager() {
   const handleEditVoucher = (voucher: Voucher) => {
     setSelectedVoucher(voucher);
     setShowEditDialog(true);
+  };
+
+  const handleDeleteVoucher = async (voucher: Voucher) => {
+    if (!confirm(`Czy na pewno chcesz usunąć bon ${voucher.code}? Ta operacja jest nieodwracalna.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('vouchers')
+        .delete()
+        .eq('id', voucher.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sukces",
+        description: "Bon został usunięty",
+      });
+
+      loadVouchers();
+    } catch (error) {
+      console.error('Error deleting voucher:', error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się usunąć bonu",
+        variant: "destructive",
+      });
+    }
   };
 
   const exportVouchersReport = async () => {
@@ -322,6 +351,14 @@ export function VouchersManager() {
                             Realizuj
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteVoucher(voucher)}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" />
+                          Usuń
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
