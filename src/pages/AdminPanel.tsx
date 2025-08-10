@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Users, UserCog, Settings, Package, ShoppingBag, Link2, Tag, Ticket } from "lucide-react";
+import { Calendar, Users, UserCog, Settings, Package, ShoppingBag, Link2, Tag, Ticket, Mail } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/Header";
@@ -17,6 +17,7 @@ import TherapistServicesManager from "@/components/admin/TherapistServicesManage
 import TherapistsCalendarsView from "@/pages/TherapistsCalendars";
 import ContentManager from "@/components/admin/ContentManager";
 import { VouchersManager } from "@/components/admin/VouchersManager";
+import { NotificationManager } from "@/components/admin/NotificationManager";
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAdminCheck();
@@ -61,7 +62,7 @@ const AdminPanel = () => {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="appointments" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-5 lg:grid-cols-11">
+            <TabsList className="grid w-full grid-cols-5 lg:grid-cols-12">
               <TabsTrigger value="appointments" className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline">Wizyty</span>
@@ -105,6 +106,10 @@ const AdminPanel = () => {
               <TabsTrigger value="content" className="flex items-center space-x-2">
                 <Settings className="h-4 w-4" />
                 <span className="hidden sm:inline">Treść</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="flex items-center space-x-2">
+                <Mail className="h-4 w-4" />
+                <span className="hidden sm:inline">Email</span>
               </TabsTrigger>
             </TabsList>
 
@@ -150,6 +155,10 @@ const AdminPanel = () => {
 
             <TabsContent value="content">
               <ContentManager />
+            </TabsContent>
+
+            <TabsContent value="notifications">
+              <NotificationManager />
             </TabsContent>
           </Tabs>
         </div>

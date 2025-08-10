@@ -9,6 +9,8 @@ import { ArrowLeft } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -18,8 +20,10 @@ const Auth = () => {
   const [lastName, setLastName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phone, setPhone] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Redirect if already logged in
   useEffect(() => {
@@ -56,6 +60,45 @@ const Auth = () => {
     setIsLoading(false);
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email) {
+      toast({
+        title: "Błąd",
+        description: "Wprowadź adres email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email wysłany",
+        description: "Sprawdź swoją skrzynkę pocztową i kliknij link do zresetowania hasła",
+      });
+
+      setShowForgotPassword(false);
+    } catch (error: any) {
+      console.error('Forgot password error:', error);
+      toast({
+        title: "Błąd",
+        description: error.message || "Nie udało się wysłać emaila",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-warm">
       <Header />
@@ -70,9 +113,10 @@ const Auth = () => {
           </Button>
 
           <Tabs defaultValue="login" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="login">Logowanie</TabsTrigger>
               <TabsTrigger value="register">Rejestracja</TabsTrigger>
+              <TabsTrigger value="forgot">Resetuj hasło</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
@@ -114,17 +158,40 @@ const Auth = () => {
                     <button 
                       type="button"
                       className="text-sm text-hanami-primary hover:underline"
-                      onClick={() => {
-                        if (email) {
-                          alert('Funkcja resetowania hasła będzie dostępna wkrótce');
-                        } else {
-                          alert('Proszę wprowadzić email');
-                        }
-                      }}
+                      onClick={() => setShowForgotPassword(true)}
                     >
                       Zapomniałeś hasła?
                     </button>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="forgot">
+              <Card>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl text-hanami-primary">Resetuj hasło</CardTitle>
+                  <CardDescription>
+                    Wprowadź swój email, a wyślemy Ci link do resetowania hasła
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleForgotPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="forgotEmail">Email</Label>
+                      <Input
+                        id="forgotEmail"
+                        type="email"
+                        placeholder="twoj@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? "Wysyłanie..." : "Wyślij link resetujący"}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
             </TabsContent>

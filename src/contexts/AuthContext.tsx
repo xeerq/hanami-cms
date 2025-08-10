@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } else {
         toast({
           title: "Sukces!",
-          description: "Konto zostało utworzone. Możesz się teraz zalogować.",
+          description: "Konto zostało utworzone. Sprawdź swoją skrzynkę pocztową i potwierdź adres email.",
         });
       }
 

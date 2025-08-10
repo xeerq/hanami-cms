@@ -8,3 +8,12 @@ verify_jwt = true
 
 [functions.get-user-data]
 verify_jwt = true
+
+[functions.send-email]
+verify_jwt = false
+
+[functions.auth-email]
+verify_jwt = false
+
+[functions.send-notification]
+verify_jwt = true
