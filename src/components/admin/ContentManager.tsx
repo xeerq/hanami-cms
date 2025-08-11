@@ -81,7 +81,7 @@ const ContentManager = () => {
 
       if (settingsError) throw settingsError;
 
-      // Fetch team members
+      // Fetch team members (admin can see all data)
       const { data: teamData, error: teamError } = await supabase
         .from("team_members")
         .select("*")
