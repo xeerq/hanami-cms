@@ -74,6 +74,28 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Verify JWT and require admin role
+    const authHeader = req.headers.get('authorization') || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    const { data: isAdmin, error: roleError } = await supabase.rpc('has_role', {
+      _user_id: userData.user.id,
+      _role: 'admin'
+    });
+    if (roleError || !isAdmin) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Forbidden' }),
+        { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
     const { 
       type, 
       recipients, 
@@ -147,6 +169,9 @@ const handler = async (req: Request): Promise<Response> => {
             subject,
             html,
             type: 'notification'
+          },
+          headers: {
+            'X-Function-Secret': Deno.env.get('FUNCTION_SHARED_SECRET') || ''
           }
         });
 

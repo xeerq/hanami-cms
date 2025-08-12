@@ -104,6 +104,16 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Verify shared secret to restrict access
+    const sharedSecret = Deno.env.get('FUNCTION_SHARED_SECRET');
+    const headerSecret = req.headers.get('x-function-secret');
+    if (!sharedSecret || headerSecret !== sharedSecret) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
     const payload = await req.json();
     console.log('Auth email webhook payload:', payload);
 
@@ -150,13 +160,16 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`Unsupported email action type: ${email_action_type}`);
     }
 
-    // Send email using our SMTP function
+    // Send email using our SMTP function with shared-secret header
     const emailResponse = await supabase.functions.invoke('send-email', {
       body: {
         to: user.email,
         subject,
         html,
         type: email_action_type === 'signup' ? 'confirmation' : 'recovery'
+      },
+      headers: {
+        'X-Function-Secret': Deno.env.get('FUNCTION_SHARED_SECRET') || ''
       }
     });
 

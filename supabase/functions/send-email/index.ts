@@ -18,6 +18,16 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Verify shared secret to restrict access to internal callers only
+    const sharedSecret = Deno.env.get('FUNCTION_SHARED_SECRET');
+    const headerSecret = req.headers.get('x-function-secret');
+    if (!sharedSecret || headerSecret !== sharedSecret) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
     const { to, subject, html, type = 'notification' }: EmailRequest = await req.json();
     
     console.log(`Sending ${type} email to: ${to}`);
