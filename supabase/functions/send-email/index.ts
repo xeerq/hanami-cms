@@ -1,9 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { Resend } from "npm:resend@4.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY') || '');
 
 interface EmailRequest {
   to: string;
@@ -32,42 +35,26 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log(`Sending ${type} email to: ${to}`);
 
-    // Use native fetch to send email via SMTP API or service
-    const emailData = {
-      from: Deno.env.get('SMTP_FROM_EMAIL')!,
-      to,
+    // Actually send using Resend
+    const from = Deno.env.get('SMTP_FROM_EMAIL') || 'Hanami Spa <onboarding@resend.dev>';
+
+    if (!Deno.env.get('RESEND_API_KEY')) {
+      throw new Error('Missing RESEND_API_KEY');
+    }
+
+    const { data, error } = await resend.emails.send({
+      from,
+      to: [to],
       subject,
       html,
-    };
+    });
 
-    // For now, we'll use a simple nodemailer-like approach with fetch
-    const smtpHost = Deno.env.get('SMTP_HOST')!;
-    const smtpPort = Deno.env.get('SMTP_PORT') || '587';
-    const smtpUser = Deno.env.get('SMTP_USER')!;
-    const smtpPassword = Deno.env.get('SMTP_PASSWORD')!;
-    const smtpFrom = Deno.env.get('SMTP_FROM_EMAIL')!;
+    if (error) {
+      console.error('Resend error:', error);
+      throw new Error(typeof error === 'string' ? error : (error.message || 'Email send failed'));
+    }
 
-    // Create a simple email message
-    const message = [
-      `From: ${smtpFrom}`,
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/html; charset=utf-8',
-      '',
-      html
-    ].join('\r\n');
-
-    // Use a more robust email sending approach
-    const encoder = new TextEncoder();
-    const data = encoder.encode(message);
-
-    console.log(`Email prepared for: ${to}, length: ${data.length}`);
-    console.log(`SMTP Config: ${smtpHost}:${smtpPort}, User: ${smtpUser}`);
-
-    // For testing, let's just log success and return positive response
-    // In production, you would integrate with your actual SMTP service
-    console.log(`Email sent successfully to: ${to}`);
+    console.log(`Email sent successfully to: ${to}`, data);
 
     return new Response(
       JSON.stringify({ success: true, message: 'Email sent successfully' }),
