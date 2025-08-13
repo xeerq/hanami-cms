@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { usePagination, usePaginatedData } from "@/hooks/usePagination";
+import { PaginationControlsComponent } from "@/components/ui/pagination-controls";
 
 interface Appointment {
   id: string;
@@ -35,6 +37,9 @@ const TherapistAppointments = ({ therapistId }: TherapistAppointmentsProps) => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  const pagination = usePagination(appointments.length, 10);
+  const paginatedAppointments = usePaginatedData(appointments, pagination);
 
   useEffect(() => {
     fetchAppointments();
@@ -187,90 +192,102 @@ const TherapistAppointments = ({ therapistId }: TherapistAppointmentsProps) => {
             Brak nadchodzących wizyt
           </p>
         ) : (
-          <div className="space-y-4">
-            {appointments.map((appointment) => (
-              <div
-                key={appointment.id}
-                className="p-4 border border-hanami-neutral/20 rounded-lg"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Calendar className="h-4 w-4 text-hanami-neutral" />
-                      <span className="font-medium">
-                        {format(new Date(appointment.appointment_date), "EEEE, d MMMM yyyy", { locale: pl })}
-                      </span>
-                      <Clock className="h-4 w-4 text-hanami-neutral ml-4" />
-                      <span>{appointment.appointment_time.slice(0, 5)}</span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2 mb-2">
-                      <User className="h-4 w-4 text-hanami-neutral" />
-                      <span>{appointment.is_guest ? appointment.guest_name : "Zarejestrowany klient"}</span>
-                      {appointment.guest_phone && (
-                        <>
-                          <Phone className="h-4 w-4 text-hanami-neutral ml-4" />
-                          <span>{appointment.guest_phone}</span>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="text-sm text-hanami-neutral mb-2">
-                      <strong>Usługa:</strong> {appointment.services?.name}
-                    </div>
-
-                    <div className="text-sm text-hanami-neutral mb-2">
-                      <strong>Czas trwania:</strong> {appointment.services?.duration} min
-                    </div>
-
-                    <div className="text-sm text-hanami-neutral mb-2">
-                      <strong>Cena:</strong> {appointment.services?.price} zł
-                      {appointment.voucher_code && (
-                        <span className="ml-2 text-green-600">(Bon: {appointment.voucher_code})</span>
-                      )}
-                    </div>
-
-                    {appointment.notes && (
-                      <div className="text-sm text-hanami-neutral">
-                        <strong>Notatki:</strong> {appointment.notes}
+          <>
+            <div className="space-y-4">
+              {paginatedAppointments.map((appointment) => (
+                <div
+                  key={appointment.id}
+                  className="p-4 border border-hanami-neutral/20 rounded-lg"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Calendar className="h-4 w-4 text-hanami-neutral" />
+                        <span className="font-medium">
+                          {format(new Date(appointment.appointment_date), "EEEE, d MMMM yyyy", { locale: pl })}
+                        </span>
+                        <Clock className="h-4 w-4 text-hanami-neutral ml-4" />
+                        <span>{appointment.appointment_time.slice(0, 5)}</span>
                       </div>
-                    )}
-                  </div>
+                      
+                      <div className="flex items-center space-x-2 mb-2">
+                        <User className="h-4 w-4 text-hanami-neutral" />
+                        <span>{appointment.is_guest ? appointment.guest_name : "Zarejestrowany klient"}</span>
+                        {appointment.guest_phone && (
+                          <>
+                            <Phone className="h-4 w-4 text-hanami-neutral ml-4" />
+                            <span>{appointment.guest_phone}</span>
+                          </>
+                        )}
+                      </div>
 
-                  <div className="flex flex-col items-end space-y-2">
-                    <Badge className={getStatusColor(appointment.status)}>
-                      {getStatusText(appointment.status)}
-                    </Badge>
+                      <div className="text-sm text-hanami-neutral mb-2">
+                        <strong>Usługa:</strong> {appointment.services?.name}
+                      </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Select
-                        value={appointment.status}
-                        onValueChange={(value) => updateAppointmentStatus(appointment.id, value)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="confirmed">Potwierdzona</SelectItem>
-                          <SelectItem value="completed">Zakończona</SelectItem>
-                          <SelectItem value="cancelled">Anulowana</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="text-sm text-hanami-neutral mb-2">
+                        <strong>Czas trwania:</strong> {appointment.services?.duration} min
+                      </div>
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteAppointment(appointment.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="text-sm text-hanami-neutral mb-2">
+                        <strong>Cena:</strong> {appointment.services?.price} zł
+                        {appointment.voucher_code && (
+                          <span className="ml-2 text-green-600">(Bon: {appointment.voucher_code})</span>
+                        )}
+                      </div>
+
+                      {appointment.notes && (
+                        <div className="text-sm text-hanami-neutral">
+                          <strong>Notatki:</strong> {appointment.notes}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col items-end space-y-2">
+                      <Badge className={getStatusColor(appointment.status)}>
+                        {getStatusText(appointment.status)}
+                      </Badge>
+
+                      <div className="flex items-center space-x-2">
+                        <Select
+                          value={appointment.status}
+                          onValueChange={(value) => updateAppointmentStatus(appointment.id, value)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="confirmed">Potwierdzona</SelectItem>
+                            <SelectItem value="completed">Zakończona</SelectItem>
+                            <SelectItem value="cancelled">Anulowana</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteAppointment(appointment.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
+              ))}
+            </div>
+            
+            {appointments.length > 0 && (
+              <div className="border-t pt-4">
+                <PaginationControlsComponent
+                  pagination={pagination}
+                  totalItems={appointments.length}
+                  pageSizeOptions={[5, 10, 20, 50]}
+                />
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

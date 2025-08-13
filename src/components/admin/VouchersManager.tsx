@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CreateVoucherDialog } from "./CreateVoucherDialog";
 import { RedeemVoucherDialog } from "./RedeemVoucherDialog";
 import { EditVoucherDialog } from "./EditVoucherDialog";
+import { usePagination, usePaginatedData } from "@/hooks/usePagination";
+import { PaginationControlsComponent } from "@/components/ui/pagination-controls";
 
 interface Voucher {
   id: string;
@@ -49,6 +51,21 @@ export function VouchersManager() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const { toast } = useToast();
+
+  const filteredVouchers = vouchers.filter(voucher => {
+    const matchesSearch = searchTerm === "" || 
+      voucher.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (voucher.purchaser_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (voucher.purchaser_email?.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesStatus = statusFilter === "all" || voucher.status === statusFilter;
+    const matchesType = typeFilter === "all" || voucher.voucher_type === typeFilter;
+    
+    return matchesSearch && matchesStatus && matchesType;
+  });
+
+  const pagination = usePagination(filteredVouchers.length, 15);
+  const paginatedVouchers = usePaginatedData(filteredVouchers, pagination);
 
   useEffect(() => {
     loadVouchers();
@@ -198,17 +215,6 @@ export function VouchersManager() {
     }
   };
 
-  const filteredVouchers = vouchers.filter(voucher => {
-    const matchesSearch = searchTerm === "" || 
-      voucher.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (voucher.purchaser_name?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (voucher.purchaser_email?.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = statusFilter === "all" || voucher.status === statusFilter;
-    const matchesType = typeFilter === "all" || voucher.voucher_type === typeFilter;
-    
-    return matchesSearch && matchesStatus && matchesType;
-  });
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -315,7 +321,7 @@ export function VouchersManager() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredVouchers.map((voucher) => (
+                {paginatedVouchers.map((voucher) => (
                   <TableRow key={voucher.id}>
                     <TableCell className="font-mono">{voucher.code}</TableCell>
                     <TableCell>
@@ -373,6 +379,16 @@ export function VouchersManager() {
               </TableBody>
             </Table>
           </div>
+          
+          {filteredVouchers.length > 0 && (
+            <div className="mt-4">
+              <PaginationControlsComponent
+                pagination={pagination}
+                totalItems={filteredVouchers.length}
+                pageSizeOptions={[10, 15, 25, 50]}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 

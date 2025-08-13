@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import CreateServiceDialog from "./CreateServiceDialog";
 import EditServiceDialog from "./EditServiceDialog";
+import { usePagination, usePaginatedData } from "@/hooks/usePagination";
+import { PaginationControlsComponent } from "@/components/ui/pagination-controls";
 
 interface Service {
   id: string;
@@ -31,6 +33,9 @@ const ServicesManager = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const { toast } = useToast();
+  
+  const pagination = usePagination(services.length, 8);
+  const paginatedServices = usePaginatedData(services, pagination);
 
   useEffect(() => {
     fetchServices();
@@ -173,70 +178,84 @@ const ServicesManager = () => {
                 Brak usług do wyświetlenia
               </div>
             ) : (
-              services.map((service) => (
-                <div key={service.id} className="border border-hanami-accent/20 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-16 h-16 bg-hanami-secondary rounded-full flex items-center justify-center">
-                        <Settings className="h-8 w-8 text-hanami-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="font-semibold text-hanami-primary text-lg">
-                            {service.name}
-                          </h3>
-                          {service.category && (
-                            <Badge variant="outline" className="text-xs">
-                              {service.category}
-                            </Badge>
-                          )}
+              <>
+                <div className="space-y-4">
+                  {paginatedServices.map((service) => (
+                    <div key={service.id} className="border border-hanami-accent/20 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-4">
+                          <div className="w-16 h-16 bg-hanami-secondary rounded-full flex items-center justify-center">
+                            <Settings className="h-8 w-8 text-hanami-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h3 className="font-semibold text-hanami-primary text-lg">
+                                {service.name}
+                              </h3>
+                              {service.category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {service.category}
+                                </Badge>
+                              )}
+                            </div>
+                            {service.description && (
+                              <p className="text-sm text-hanami-neutral mb-2">
+                                {service.description}
+                              </p>
+                            )}
+                            <div className="flex items-center space-x-4 text-sm text-hanami-neutral">
+                              <span className="flex items-center">
+                                <Clock className="h-4 w-4 mr-1" />
+                                {service.duration} min
+                              </span>
+                              <span className="flex items-center">
+                                <DollarSign className="h-4 w-4 mr-1" />
+                                {service.price} zł
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        {service.description && (
-                          <p className="text-sm text-hanami-neutral mb-2">
-                            {service.description}
-                          </p>
-                        )}
-                        <div className="flex items-center space-x-4 text-sm text-hanami-neutral">
-                          <span className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {service.duration} min
-                          </span>
-                          <span className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-1" />
-                            {service.price} zł
-                          </span>
+                        <div className="flex items-center space-x-2">
+                          <Badge className={service.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                            {service.is_active ? "Aktywna" : "Nieaktywna"}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditService(service)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleServiceStatus(service.id, service.is_active)}
+                          >
+                            {service.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteService(service.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={service.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                        {service.is_active ? "Aktywna" : "Nieaktywna"}
-                      </Badge>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditService(service)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleServiceStatus(service.id, service.is_active)}
-                      >
-                        {service.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteService(service.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))
+                
+                {services.length > 0 && (
+                  <div className="border-t pt-4">
+                    <PaginationControlsComponent
+                      pagination={pagination}
+                      totalItems={services.length}
+                      pageSizeOptions={[4, 8, 16, 32]}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </CardContent>

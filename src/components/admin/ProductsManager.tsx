@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import CreateProductDialog from "./CreateProductDialog";
 import EditProductDialog from "./EditProductDialog";
+import { usePagination, usePaginatedData } from "@/hooks/usePagination";
+import { PaginationControlsComponent } from "@/components/ui/pagination-controls";
 
 interface Product {
   id: string;
@@ -33,6 +35,9 @@ const ProductsManager = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { toast } = useToast();
+  
+  const pagination = usePagination(products.length, 12);
+  const paginatedProducts = usePaginatedData(products, pagination);
 
   useEffect(() => {
     fetchProducts();
@@ -179,71 +184,85 @@ const ProductsManager = () => {
                 Brak produktów do wyświetlenia
               </div>
             ) : (
-              products.map((product) => (
-                <div key={product.id} className="border border-hanami-accent/20 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
-                      <div className="w-16 h-16 bg-hanami-secondary rounded-full flex items-center justify-center">
-                        <Package className="h-8 w-8 text-hanami-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="font-semibold text-hanami-primary text-lg">
-                            {product.name}
-                          </h3>
-                          {product.category && (
-                            <Badge variant="outline" className="text-xs">
-                              {product.category}
-                            </Badge>
-                          )}
+              <>
+                <div className="space-y-4">
+                  {paginatedProducts.map((product) => (
+                    <div key={product.id} className="border border-hanami-accent/20 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start space-x-4">
+                          <div className="w-16 h-16 bg-hanami-secondary rounded-full flex items-center justify-center">
+                            <Package className="h-8 w-8 text-hanami-primary" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h3 className="font-semibold text-hanami-primary text-lg">
+                                {product.name}
+                              </h3>
+                              {product.category && (
+                                <Badge variant="outline" className="text-xs">
+                                  {product.category}
+                                </Badge>
+                              )}
+                            </div>
+                            {product.description && (
+                              <p className="text-sm text-hanami-neutral mb-2">
+                                {product.description}
+                              </p>
+                            )}
+                            <div className="flex items-center space-x-4 text-sm text-hanami-neutral">
+                              <span className="flex items-center">
+                                <DollarSign className="h-4 w-4 mr-1" />
+                                {product.price} zł
+                              </span>
+                              {product.stock_quantity !== null && (
+                                <span>
+                                  Stan: {product.stock_quantity} szt.
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        {product.description && (
-                          <p className="text-sm text-hanami-neutral mb-2">
-                            {product.description}
-                          </p>
-                        )}
-                        <div className="flex items-center space-x-4 text-sm text-hanami-neutral">
-                          <span className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-1" />
-                            {product.price} zł
-                          </span>
-                          {product.stock_quantity !== null && (
-                            <span>
-                              Stan: {product.stock_quantity} szt.
-                            </span>
-                          )}
+                        <div className="flex items-center space-x-2">
+                          <Badge className={product.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                            {product.is_active ? "Aktywny" : "Nieaktywny"}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditProduct(product)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleProductStatus(product.id, product.is_active)}
+                          >
+                            {product.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteProduct(product.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={product.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                        {product.is_active ? "Aktywny" : "Nieaktywny"}
-                      </Badge>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditProduct(product)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleProductStatus(product.id, product.is_active)}
-                      >
-                        {product.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteProduct(product.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))
+                
+                {products.length > 0 && (
+                  <div className="border-t pt-4">
+                    <PaginationControlsComponent
+                      pagination={pagination}
+                      totalItems={products.length}
+                      pageSizeOptions={[6, 12, 24, 48]}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </CardContent>

@@ -6,6 +6,8 @@ import { UserCog, Plus, Edit, Trash2, Shield, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePagination, usePaginatedData } from "@/hooks/usePagination";
+import { PaginationControlsComponent } from "@/components/ui/pagination-controls";
 
 interface UserWithRole {
   user_id: string;
@@ -20,6 +22,9 @@ const UsersManager = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  
+  const pagination = usePagination(users.length, 10);
+  const paginatedUsers = usePaginatedData(users, pagination);
 
   useEffect(() => {
     fetchUsers();
@@ -155,49 +160,63 @@ const UsersManager = () => {
               Brak użytkowników do wyświetlenia
             </div>
           ) : (
-            users.map((user) => (
-              <div key={user.user_id} className="border border-hanami-accent/20 rounded-lg p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4">
-                    <div className="w-12 h-12 bg-hanami-secondary rounded-full flex items-center justify-center">
-                      <User className="h-6 w-6 text-hanami-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-hanami-primary">
-                        {user.first_name} {user.last_name}
-                      </h3>
-                      {user.phone && (
-                        <p className="text-sm text-hanami-neutral">
-                          Telefon: {user.phone}
-                        </p>
-                      )}
-                      <div className="flex items-center space-x-2 mt-2">
-                        {user.roles.map((role) => (
-                          <Badge key={role} className={getRoleColor(role)}>
-                            {getRoleText(role)}
-                          </Badge>
-                        ))}
+            <>
+              <div className="space-y-4">
+                {paginatedUsers.map((user) => (
+                  <div key={user.user_id} className="border border-hanami-accent/20 rounded-lg p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-12 h-12 bg-hanami-secondary rounded-full flex items-center justify-center">
+                          <User className="h-6 w-6 text-hanami-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-hanami-primary">
+                            {user.first_name} {user.last_name}
+                          </h3>
+                          {user.phone && (
+                            <p className="text-sm text-hanami-neutral">
+                              Telefon: {user.phone}
+                            </p>
+                          )}
+                          <div className="flex items-center space-x-2 mt-2">
+                            {user.roles.map((role) => (
+                              <Badge key={role} className={getRoleColor(role)}>
+                                {getRoleText(role)}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Select
+                          value={user.roles[0] || 'user'}
+                          onValueChange={(value) => updateUserRole(user.user_id, value)}
+                        >
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">Użytkownik</SelectItem>
+                            <SelectItem value="therapist">Terapeuta</SelectItem>
+                            <SelectItem value="admin">Administrator</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Select
-                      value={user.roles[0] || 'user'}
-                      onValueChange={(value) => updateUserRole(user.user_id, value)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="user">Użytkownik</SelectItem>
-                        <SelectItem value="therapist">Terapeuta</SelectItem>
-                        <SelectItem value="admin">Administrator</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))
+              
+              {users.length > 0 && (
+                <div className="border-t pt-4">
+                  <PaginationControlsComponent
+                    pagination={pagination}
+                    totalItems={users.length}
+                    pageSizeOptions={[5, 10, 25, 50]}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </CardContent>

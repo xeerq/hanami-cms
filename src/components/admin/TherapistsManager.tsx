@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import CreateTherapistDialog from "./CreateTherapistDialog";
 import EditTherapistDialog from "./EditTherapistDialog";
+import { usePagination, usePaginatedData } from "@/hooks/usePagination";
+import { PaginationControlsComponent } from "@/components/ui/pagination-controls";
 
 interface Therapist {
   id: string;
@@ -27,6 +29,9 @@ const TherapistsManager = () => {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
   const { toast } = useToast();
+  
+  const pagination = usePagination(therapists.length, 8);
+  const paginatedTherapists = usePaginatedData(therapists, pagination);
 
   useEffect(() => {
     fetchTherapists();
@@ -174,66 +179,80 @@ const TherapistsManager = () => {
                 Brak terapeutów do wyświetlenia
               </div>
             ) : (
-              therapists.map((therapist) => (
-                <div key={therapist.id} className="border border-hanami-accent/20 rounded-lg p-4">
-                  <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4">
-                    <Avatar className="w-16 h-16">
-                      <AvatarImage src={therapist.avatar_url} alt={therapist.name} />
-                      <AvatarFallback className="bg-hanami-secondary text-hanami-primary">
-                        {getAvatarFallback(therapist.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-hanami-primary text-lg">
-                        {therapist.name}
-                      </h3>
-                      {therapist.specialization && (
-                        <p className="text-sm text-hanami-neutral mb-1">
-                          <strong>Specjalizacja:</strong> {therapist.specialization}
-                        </p>
-                      )}
-                      {therapist.experience && (
-                        <p className="text-sm text-hanami-neutral mb-1">
-                          <strong>Doświadczenie:</strong> {therapist.experience}
-                        </p>
-                      )}
-                      {therapist.bio && (
-                        <p className="text-sm text-hanami-neutral line-clamp-2">
-                          {therapist.bio}
-                        </p>
-                      )}
+              <>
+                <div className="space-y-4">
+                  {paginatedTherapists.map((therapist) => (
+                    <div key={therapist.id} className="border border-hanami-accent/20 rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-4">
+                        <Avatar className="w-16 h-16">
+                          <AvatarImage src={therapist.avatar_url} alt={therapist.name} />
+                          <AvatarFallback className="bg-hanami-secondary text-hanami-primary">
+                            {getAvatarFallback(therapist.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-hanami-primary text-lg">
+                            {therapist.name}
+                          </h3>
+                          {therapist.specialization && (
+                            <p className="text-sm text-hanami-neutral mb-1">
+                              <strong>Specjalizacja:</strong> {therapist.specialization}
+                            </p>
+                          )}
+                          {therapist.experience && (
+                            <p className="text-sm text-hanami-neutral mb-1">
+                              <strong>Doświadczenie:</strong> {therapist.experience}
+                            </p>
+                          )}
+                          {therapist.bio && (
+                            <p className="text-sm text-hanami-neutral line-clamp-2">
+                              {therapist.bio}
+                            </p>
+                          )}
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge className={therapist.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+                            {therapist.is_active ? "Aktywny" : "Nieaktywny"}
+                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditTherapist(therapist)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleTherapistStatus(therapist.id, therapist.is_active)}
+                          >
+                            {therapist.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteTherapist(therapist.id, therapist)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <Badge className={therapist.is_active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                        {therapist.is_active ? "Aktywny" : "Nieaktywny"}
-                      </Badge>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditTherapist(therapist)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleTherapistStatus(therapist.id, therapist.is_active)}
-                      >
-                        {therapist.is_active ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => deleteTherapist(therapist.id, therapist)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))
+                
+                {therapists.length > 0 && (
+                  <div className="border-t pt-4">
+                    <PaginationControlsComponent
+                      pagination={pagination}
+                      totalItems={therapists.length}
+                      pageSizeOptions={[4, 8, 16, 32]}
+                    />
+                  </div>
+                )}
+              </>
             )}
           </div>
         </CardContent>
