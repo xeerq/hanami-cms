@@ -1,12 +1,23 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@4.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY') || '');
+// Initialize SMTP client
+const client = new SMTPClient({
+  connection: {
+    hostname: Deno.env.get('SMTP_HOST') || 'localhost',
+    port: parseInt(Deno.env.get('SMTP_PORT') || '587'),
+    tls: true,
+    auth: {
+      username: Deno.env.get('SMTP_USER') || '',
+      password: Deno.env.get('SMTP_PASSWORD') || '',
+    },
+  },
+});
 
 interface EmailRequest {
   to: string;
@@ -35,26 +46,22 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log(`Sending ${type} email to: ${to}`);
 
-    // Actually send using Resend
-    const from = Deno.env.get('SMTP_FROM_EMAIL') || 'Hanami Spa <onboarding@resend.dev>';
+    // Send using SMTP
+    const from = Deno.env.get('SMTP_FROM_EMAIL') || 'Hanami Spa <noreply@hanami-spa.pl>';
 
-    if (!Deno.env.get('RESEND_API_KEY')) {
-      throw new Error('Missing RESEND_API_KEY');
+    if (!Deno.env.get('SMTP_HOST') || !Deno.env.get('SMTP_USER') || !Deno.env.get('SMTP_PASSWORD')) {
+      throw new Error('Missing SMTP configuration (SMTP_HOST, SMTP_USER, SMTP_PASSWORD)');
     }
 
-    const { data, error } = await resend.emails.send({
+    await client.send({
       from,
-      to: [to],
+      to,
       subject,
+      content: html,
       html,
     });
 
-    if (error) {
-      console.error('Resend error:', error);
-      throw new Error(typeof error === 'string' ? error : (error.message || 'Email send failed'));
-    }
-
-    console.log(`Email sent successfully to: ${to}`, data);
+    console.log(`Email sent successfully to: ${to}`);
 
     return new Response(
       JSON.stringify({ success: true, message: 'Email sent successfully' }),
