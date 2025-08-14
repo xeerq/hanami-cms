@@ -171,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
             type: 'notification'
           },
           headers: {
-            'X-Function-Secret': Deno.env.get('FUNCTION_SHARED_SECRET') || ''
+            'x-function-secret': Deno.env.get('FUNCTION_SHARED_SECRET') || ''
           }
         });
 
@@ -180,6 +180,14 @@ const handler = async (req: Request): Promise<Response> => {
           return { email, success: false, error: response.error.message };
         }
 
+        const data = response.data;
+        if (!data || !data.success) {
+          const errorMsg = data?.error || 'Unknown error';
+          console.error(`Failed to send to ${email}: ${errorMsg}`);
+          return { email, success: false, error: errorMsg };
+        }
+
+        console.log(`Successfully sent to ${email}`);
         return { email, success: true };
       } catch (error: any) {
         console.error(`Error sending to ${email}:`, error);

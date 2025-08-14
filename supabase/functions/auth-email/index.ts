@@ -169,7 +169,7 @@ const handler = async (req: Request): Promise<Response> => {
         type: email_action_type === 'signup' ? 'confirmation' : 'recovery'
       },
       headers: {
-        'X-Function-Secret': Deno.env.get('FUNCTION_SHARED_SECRET') || ''
+        'x-function-secret': Deno.env.get('FUNCTION_SHARED_SECRET') || ''
       }
     });
 
