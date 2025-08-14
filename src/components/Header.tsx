@@ -31,18 +31,18 @@ const Header = () => {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
-            <div className="flex items-center">
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center">
               <img 
                 src="/lovable-uploads/152f7754-c797-4189-b673-6e2549f67d3e.png" 
                 alt="Hanami SPA" 
                 className="h-10 w-auto"
               />
-            </div>
-          </Link>
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="hidden lg:flex items-center space-x-6">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -50,7 +50,7 @@ const Header = () => {
                 className={`text-sm font-medium transition-zen ${
                   location.pathname === item.href
                     ? "text-hanami-primary"
-                    : "text-hanami-neutral hover:text-hanami-primary"
+                    : "text-foreground hover:text-hanami-primary"
                 }`}
               >
                 {item.name}
@@ -59,15 +59,15 @@ const Header = () => {
           </nav>
 
           {/* Actions */}
-          <div className="hidden md:flex items-center space-x-4">
+          <div className="hidden lg:flex items-center space-x-3">
             {user ? (
               <>
-                <span className="text-sm text-hanami-neutral">
-                  Witaj, {user.email}
-                </span>
+                <div className="text-xs text-muted-foreground max-w-24 truncate">
+                  {user.email}
+                </div>
                 <Button variant="outline" size="sm" asChild>
                   <Link to="/dashboard">
-                    <User className="h-4 w-4 mr-2" />
+                    <User className="h-4 w-4 mr-1" />
                     Panel
                   </Link>
                 </Button>
@@ -87,26 +87,25 @@ const Header = () => {
                 )}
                 <Button size="sm" asChild>
                   <Link to="/booking">
-                    <Calendar className="h-4 w-4 mr-2" />
+                    <Calendar className="h-4 w-4 mr-1" />
                     Rezerwuj
                   </Link>
                 </Button>
                 <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Wyloguj
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </>
             ) : (
               <>
                 <Button variant="outline" size="sm" asChild>
                   <Link to="/auth">
-                    <User className="h-4 w-4 mr-2" />
+                    <User className="h-4 w-4 mr-1" />
                     Zaloguj się
                   </Link>
                 </Button>
                 <Button size="sm" asChild>
                   <Link to="/booking">
-                    <Calendar className="h-4 w-4 mr-2" />
+                    <Calendar className="h-4 w-4 mr-1" />
                     Rezerwuj
                   </Link>
                 </Button>
@@ -115,7 +114,7 @@ const Header = () => {
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <Button
               variant="ghost"
               size="sm"
