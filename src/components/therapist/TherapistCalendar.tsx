@@ -513,12 +513,12 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
               <div 
                 className="grid gap-0 rounded-2xl overflow-hidden border border-gray-200"
                 style={{
-                  gridTemplateColumns: 'minmax(120px, 1fr) repeat(7, minmax(120px, 1fr))',
-                  gridTemplateRows: `60px repeat(${timeSlots.length}, 60px)`,
+                  gridTemplateColumns: 'minmax(100px, 120px) repeat(7, minmax(140px, 1fr))',
+                  gridTemplateRows: `auto repeat(${timeSlots.length}, 60px)`,
                 }}
               >
                 {/* Header Row */}
-                <div className="grid-header bg-gradient-to-br from-gray-50 to-white border-b border-r border-gray-200 p-4 text-sm font-semibold text-gray-600 flex items-center justify-center">
+                <div className="grid-header bg-gradient-to-br from-gray-50 to-white border-b border-r border-gray-200 p-3 text-sm font-semibold text-gray-600 flex items-center justify-center min-h-[80px]">
                   Godzina
                 </div>
                 {weekDays.map((day) => {
@@ -526,7 +526,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                   return (
                     <div 
                       key={`header-${day.toISOString()}`}
-                      className={`grid-header border-b border-gray-200 p-4 text-center text-sm font-semibold transition-all duration-300 ${
+                      className={`grid-header border-b border-gray-200 p-3 text-center text-sm font-semibold transition-all duration-300 min-h-[80px] flex flex-col justify-center ${
                         isToday 
                           ? "bg-gradient-to-br from-hanami-primary/10 to-hanami-accent/10 text-hanami-primary" 
                           : "bg-gradient-to-br from-gray-50 to-white text-gray-700"
