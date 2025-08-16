@@ -99,17 +99,17 @@ const TherapistsCalendarsView = ({ embedded = false }: TherapistsCalendarsViewPr
       ) : (
         <Tabs defaultValue={therapists[0]?.id} className="space-y-8">
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
-            <TabsList className="grid w-full gap-2" style={{ gridTemplateColumns: `repeat(${therapists.length}, minmax(0, 1fr))` }}>
+            <TabsList className="w-full flex flex-wrap gap-2 h-auto p-2 bg-hanami-secondary/20">
               {therapists.map((therapist) => (
                 <TabsTrigger 
                   key={therapist.id} 
                   value={therapist.id}
-                  className="flex flex-col items-center space-y-1 p-4 data-[state=active]:bg-gradient-to-r data-[state=active]:from-hanami-primary data-[state=active]:to-hanami-accent data-[state=active]:text-white"
+                  className="flex flex-col items-center space-y-1 p-4 min-w-0 flex-1 min-h-[80px] data-[state=active]:bg-gradient-to-r data-[state=active]:from-hanami-primary data-[state=active]:to-hanami-accent data-[state=active]:text-white hover:bg-hanami-secondary/30 transition-zen"
                 >
-                  <Users className="h-5 w-5" />
-                  <span className="font-medium">{therapist.name}</span>
+                  <Users className="h-5 w-5 flex-shrink-0" />
+                  <span className="font-medium text-center text-sm leading-tight">{therapist.name}</span>
                   {therapist.specialization && (
-                    <span className="text-xs opacity-70">{therapist.specialization}</span>
+                    <span className="text-xs opacity-70 text-center leading-tight">{therapist.specialization}</span>
                   )}
                 </TabsTrigger>
               ))}
