@@ -11,7 +11,7 @@ const Footer = () => {
             <img 
               src="/lovable-uploads/152f7754-c797-4189-b673-6e2549f67d3e.png" 
               alt="Hanami SPA" 
-              className="h-12 w-auto"
+              className="h-12 w-auto mix-blend-screen"
             />
             <p className="text-sm text-primary-foreground/80">
               Profesjonalne usługi masażu i spa w sercu Ostrowa Wielkopolskiego. 
