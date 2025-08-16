@@ -71,7 +71,7 @@ const Index = () => {
                 Zarezerwuj wizytę
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" asChild>
+            <Button size="lg" variant="outline-white" asChild>
               <Link to="/services">
                 Poznaj nasze usługi
               </Link>

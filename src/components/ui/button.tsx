@@ -14,6 +14,8 @@ const buttonVariants = cva(
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
           "border border-hanami-accent bg-background hover:bg-hanami-secondary hover:text-hanami-primary",
+        "outline-white":
+          "border border-white text-white hover:bg-white/10 hover:text-white",
         secondary:
           "bg-hanami-secondary text-hanami-primary hover:bg-hanami-accent",
         ghost: "hover:bg-hanami-secondary hover:text-hanami-primary",
