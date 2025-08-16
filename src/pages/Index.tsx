@@ -233,7 +233,7 @@ const Index = () => {
                 Zarezerwuj wizytę
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" asChild>
+            <Button size="lg" variant="outline-white" asChild>
               <Link to="/shop">
                 <ShoppingBag className="h-5 w-5 mr-2" />
                 Odwiedź sklep
