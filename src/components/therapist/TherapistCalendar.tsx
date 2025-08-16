@@ -551,14 +551,14 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                     <div className="contents" key={`row-${time}`}>
                       {/* Time Label */}
                       <div 
-                        className="grid-time-label bg-white border-r border-gray-200 p-4 text-sm font-medium text-gray-600 flex items-center justify-center"
+                        className="grid-time-label bg-white border-r border-gray-200 p-2 text-sm font-medium text-gray-600 flex items-center justify-center min-h-[60px]"
                         style={{ 
                           gridRow: timeIndex + 2,
                           gridColumn: 1,
                           borderBottom: timeIndex < timeSlots.length - 1 ? '1px solid rgb(229 231 235)' : 'none'
                         }}
                       >
-                        <span className="px-3 py-1 bg-gray-50 rounded-lg font-mono">{time}</span>
+                        <span className="px-2 py-1 bg-gray-50 rounded-lg font-mono text-xs">{time}</span>
                       </div>
 
                       {/* Day Cells */}
