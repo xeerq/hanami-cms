@@ -236,6 +236,58 @@ const EditSettingDialog = ({
           </div>
         );
 
+      case "terms_of_service":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Tytuł regulaminu</Label>
+              <Input
+                id="title"
+                value={formData.title || ""}
+                onChange={(e) => handleInputChange("title", e.target.value)}
+                placeholder="Regulamin świadczenia usług"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="content">Treść regulaminu</Label>
+              <Textarea
+                id="content"
+                value={formData.content || ""}
+                onChange={(e) => handleInputChange("content", e.target.value)}
+                placeholder="Treść regulaminu..."
+                rows={15}
+                className="text-sm"
+              />
+            </div>
+          </div>
+        );
+
+      case "privacy_policy":
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="title">Tytuł polityki prywatności</Label>
+              <Input
+                id="title"
+                value={formData.title || ""}
+                onChange={(e) => handleInputChange("title", e.target.value)}
+                placeholder="Polityka Prywatności"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="content">Treść polityki prywatności</Label>
+              <Textarea
+                id="content"
+                value={formData.content || ""}
+                onChange={(e) => handleInputChange("content", e.target.value)}
+                placeholder="Treść polityki prywatności..."
+                rows={15}
+                className="text-sm"
+              />
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="space-y-2">
