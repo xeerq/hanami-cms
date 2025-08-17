@@ -17,8 +17,8 @@ import AdminPanel from "./pages/AdminPanel";
 import TherapistPanel from "./pages/TherapistPanel";
 import AuthConfirm from "./pages/AuthConfirm";
 import ResetPassword from "./pages/ResetPassword";
-
-
+import TherapistsCalendars from "./pages/TherapistsCalendars";
+import CookieBanner from "@/components/CookieBanner";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -41,11 +41,13 @@ const App = () => (
             <Route path="/therapist" element={<TherapistPanel />} />
             <Route path="/auth/confirm" element={<AuthConfirm />} />
             <Route path="/auth/reset-password" element={<ResetPassword />} />
+            <Route path="/therapists-calendars" element={<TherapistsCalendars />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        <CookieBanner />
       </TooltipProvider>
     </AuthProvider>
   </QueryClientProvider>
