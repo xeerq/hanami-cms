@@ -7,11 +7,19 @@ import { Sparkles, Heart, Clock, Flower, Droplets, Star } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useServices } from "@/hooks/useServices";
+import { useCMSContent } from "@/hooks/useCMSContent";
 import treatmentImage from "@/assets/treatment-room.jpg";
 
 const Services = () => {
-  const { services: allServices, categories: serviceCategories, loading } = useServices();
+  const { services: allServices, categories: serviceCategories, loading: servicesLoading } = useServices();
+  const { getContent, loading: cmsLoading } = useCMSContent([
+    'services_hero',
+    'services_approach',
+    'services_cta'
+  ]);
   const [selectedCategory, setSelectedCategory] = useState("Wszystkie");
+
+  const loading = servicesLoading || cmsLoading;
 
   // Create icon mapping for services
   const getServiceIcon = (category: string, index: number) => {
@@ -34,6 +42,11 @@ const Services = () => {
   // Create categories list with "Wszystkie" option
   const categories = ["Wszystkie", ...serviceCategories.map(cat => cat.name)];
 
+  // CMS Content
+  const heroContent = getContent('services_hero');
+  const approachContent = getContent('services_approach');
+  const ctaContent = getContent('services_cta');
+
   return (
     <div className="min-h-screen bg-gradient-warm">
       <Header />
@@ -41,10 +54,9 @@ const Services = () => {
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-hanami text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-light mb-6">Nasze usługi</h1>
+          <h1 className="text-5xl font-light mb-6">{heroContent.title || 'Nasze usługi'}</h1>
           <p className="text-xl max-w-3xl mx-auto text-white/90">
-            Odkryj pełną gamę profesjonalnych zabiegów spa i masaży 
-            inspirowanych japońską tradycją wellness
+            {heroContent.description || 'Odkryj pełną gamę profesjonalnych zabiegów spa i masaży inspirowanych japońską tradycją wellness'}
           </p>
         </div>
       </section>
@@ -151,46 +163,72 @@ const Services = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-4xl font-light text-hanami-primary mb-6">
-                Nasze podejście
+                {approachContent.title || 'Nasze podejście'}
               </h2>
-              <p className="text-lg text-hanami-neutral mb-6">
-                Każdy zabieg w Dayspa Hanami to starannie zaplanowane doświadczenie, 
-                które łączy nowoczesne techniki z japońską filozofią wellness.
-              </p>
-              <p className="text-hanami-neutral mb-8">
-                Nasze doświadczone terapeutki dostosowują każdy zabieg do 
-                indywidualnych potrzeb klienta, zapewniając maksymalny komfort 
-                i efektywność.
-              </p>
+              {approachContent.content?.map((paragraph: string, index: number) => (
+                <p key={index} className={`text-hanami-neutral mb-6 ${index === 0 ? 'text-lg' : ''}`}>
+                  {paragraph}
+                </p>
+              )) || (
+                <>
+                  <p className="text-lg text-hanami-neutral mb-6">
+                    Każdy zabieg w Dayspa Hanami to starannie zaplanowane doświadczenie, 
+                    które łączy nowoczesne techniki z japońską filozofią wellness.
+                  </p>
+                  <p className="text-hanami-neutral mb-8">
+                    Nasze doświadczone terapeutki dostosowują każdy zabieg do 
+                    indywidualnych potrzeb klienta, zapewniając maksymalny komfort 
+                    i efektywność.
+                  </p>
+                </>
+              )}
               
               <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <Star className="h-5 w-5 text-hanami-primary mt-1" />
-                  <div>
-                    <h4 className="font-semibold text-hanami-primary">Certyfikowane terapeutki</h4>
-                    <p className="text-sm text-hanami-neutral">
-                      Wszystkie nasze specjalistki posiadają odpowiednie kwalifikacje
-                    </p>
+                {approachContent.features?.map((feature: any, index: number) => (
+                  <div key={index} className="flex items-start space-x-3">
+                    {[
+                      <Star className="h-5 w-5 text-hanami-primary mt-1" />,
+                      <Droplets className="h-5 w-5 text-hanami-primary mt-1" />,
+                      <Heart className="h-5 w-5 text-hanami-primary mt-1" />
+                    ][index] || <Star className="h-5 w-5 text-hanami-primary mt-1" />}
+                    <div>
+                      <h4 className="font-semibold text-hanami-primary">{feature.title}</h4>
+                      <p className="text-sm text-hanami-neutral">
+                        {feature.description}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Droplets className="h-5 w-5 text-hanami-primary mt-1" />
-                  <div>
-                    <h4 className="font-semibold text-hanami-primary">Premium produkty</h4>
-                    <p className="text-sm text-hanami-neutral">
-                      Używamy tylko najwyższej jakości kosmetyków i olejków
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-3">
-                  <Heart className="h-5 w-5 text-hanami-primary mt-1" />
-                  <div>
-                    <h4 className="font-semibold text-hanami-primary">Indywidualne podejście</h4>
-                    <p className="text-sm text-hanami-neutral">
-                      Każdy zabieg dostosowujemy do Twoich potrzeb
-                    </p>
-                  </div>
-                </div>
+                )) || (
+                  <>
+                    <div className="flex items-start space-x-3">
+                      <Star className="h-5 w-5 text-hanami-primary mt-1" />
+                      <div>
+                        <h4 className="font-semibold text-hanami-primary">Certyfikowane terapeutki</h4>
+                        <p className="text-sm text-hanami-neutral">
+                          Wszystkie nasze specjalistki posiadają odpowiednie kwalifikacje
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <Droplets className="h-5 w-5 text-hanami-primary mt-1" />
+                      <div>
+                        <h4 className="font-semibold text-hanami-primary">Premium produkty</h4>
+                        <p className="text-sm text-hanami-neutral">
+                          Używamy tylko najwyższej jakości kosmetyków i olejków
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <Heart className="h-5 w-5 text-hanami-primary mt-1" />
+                      <div>
+                        <h4 className="font-semibold text-hanami-primary">Indywidualne podejście</h4>
+                        <p className="text-sm text-hanami-neutral">
+                          Każdy zabieg dostosowujemy do Twoich potrzeb
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             
@@ -209,14 +247,14 @@ const Services = () => {
       <section className="py-20 bg-gradient-hanami text-white">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-light mb-6">
-            Gotowy na relaks?
+            {ctaContent.title || 'Gotowy na relaks?'}
           </h2>
           <p className="text-xl mb-8 text-white/90">
-            Zarezerwuj swoją wizytę już dziś i odkryj magię japońskiego spa
+            {ctaContent.description || 'Zarezerwuj swoją wizytę już dziś i odkryj magię japońskiego spa'}
           </p>
           <Button size="lg" variant="secondary" asChild>
             <Link to="/booking">
-              Zarezerwuj wizytę
+              {ctaContent.button_text || 'Zarezerwuj wizytę'}
             </Link>
           </Button>
         </div>

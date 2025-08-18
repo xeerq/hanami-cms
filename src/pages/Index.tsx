@@ -5,12 +5,22 @@ import { Sparkles, Heart, Clock, Star, Calendar, ShoppingBag, Users, Award } fro
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { useServices } from "@/hooks/useServices";
+import { useCMSContent } from "@/hooks/useCMSContent";
 import heroImage from "@/assets/hero-spa.jpg";
 import zenImage from "@/assets/spa-zen.jpg";
 import treatmentImage from "@/assets/treatment-room.jpg";
 
 const Index = () => {
-  const { services: allServices, loading } = useServices();
+  const { services: allServices, loading: servicesLoading } = useServices();
+  const { getContent, loading: cmsLoading } = useCMSContent([
+    'home_hero',
+    'home_services', 
+    'home_about',
+    'home_features',
+    'home_cta'
+  ]);
+
+  const loading = servicesLoading || cmsLoading;
   
   // Take first 3 services for homepage display
   const services = allServices.slice(0, 3).map((service, index) => ({
@@ -25,23 +35,22 @@ const Index = () => {
     ][index] || <Star className="h-6 w-6" />
   }));
 
-  const features = [
-    {
-      icon: <Users className="h-8 w-8 text-hanami-primary" />,
-      title: "Doświadczone terapeutki",
-      description: "Nasze masażystki posiadają wieloletnie doświadczenie i certyfikaty"
-    },
-    {
-      icon: <Award className="h-8 w-8 text-hanami-primary" />,
-      title: "Wysokiej jakości produkty",
-      description: "Używamy tylko najlepszych, naturalnych olejków i kosmetyków"
-    },
-    {
-      icon: <Star className="h-8 w-8 text-hanami-primary" />,
-      title: "Indywidualne podejście",
-      description: "Każdy zabieg dostosowujemy do potrzeb i preferencji klienta"
-    }
-  ];
+  // CMS Content
+  const heroContent = getContent('home_hero');
+  const servicesContent = getContent('home_services');
+  const aboutContent = getContent('home_about');
+  const featuresContent = getContent('home_features');
+  const ctaContent = getContent('home_cta');
+
+  const features = featuresContent.features?.map((feature: any, index: number) => ({
+    icon: [
+      <Users className="h-8 w-8 text-hanami-primary" />,
+      <Award className="h-8 w-8 text-hanami-primary" />,
+      <Star className="h-8 w-8 text-hanami-primary" />
+    ][index] || <Star className="h-8 w-8 text-hanami-primary" />,
+    title: feature.title,
+    description: feature.description
+  })) || [];
 
   return (
     <div className="min-h-screen bg-gradient-warm">
@@ -58,22 +67,22 @@ const Index = () => {
         
         <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
           <h1 className="text-5xl md:text-7xl font-light text-white mb-6 tracking-wide">
-            Salon
-            <span className="block text-hanami-accent">Hanami-Spa</span>
+            {heroContent.title?.split(' ')[0] || 'Salon'}
+            <span className="block text-hanami-accent">{heroContent.title?.split(' ').slice(1).join(' ') || 'Hanami-Spa'}</span>
           </h1>
           <p className="text-xl md:text-2xl text-white/90 mb-8 font-light">
-            Odkryj japońską filozofię relaksu w sercu Ostrowa Wielkopolskiego
+            {heroContent.subtitle || 'Odkryj japońską filozofię relaksu w sercu Ostrowa Wielkopolskiego'}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" className="bg-hanami-primary hover:bg-hanami-primary-light text-white" asChild>
               <Link to="/booking">
                 <Calendar className="h-5 w-5 mr-2" />
-                Zarezerwuj wizytę
+                {heroContent.button_primary || 'Zarezerwuj wizytę'}
               </Link>
             </Button>
             <Button size="lg" variant="outline-white" asChild>
               <Link to="/services">
-                Poznaj nasze usługi
+                {heroContent.button_secondary || 'Poznaj nasze usługi'}
               </Link>
             </Button>
           </div>
@@ -85,10 +94,10 @@ const Index = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-light text-hanami-primary mb-4">
-              Nasze usługi
+              {servicesContent.title || 'Nasze usługi'}
             </h2>
             <p className="text-lg text-hanami-neutral max-w-2xl mx-auto">
-              Profesjonalne masaże i zabiegi spa inspirowane japońską tradycją i nowoczesnymi technikami
+              {servicesContent.description || 'Profesjonalne masaże i zabiegi spa inspirowane japońską tradycją i nowoczesnymi technikami'}
             </p>
           </div>
 
@@ -161,21 +170,17 @@ const Index = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-4xl font-light text-hanami-primary mb-6">
-                Filozofia Hanami
+                {aboutContent.title || 'Filozofia Hanami'}
               </h2>
               <p className="text-lg text-hanami-neutral mb-6">
-                Hanami to japońska tradycja podziwiania kwitnących wiśni, symbolizująca 
-                przemijającą piękność życia. W naszym spa łączymy tę filozofię z 
-                nowoczesną terapią, tworząc przestrzeń harmonii i odnowy.
+                {aboutContent.content || 'Hanami to japońska tradycja podziwiania kwitnących wiśni, symbolizująca przemijającą piękność życia. W naszym spa łączymy tę filozofię z nowoczesną terapią, tworząc przestrzeń harmonii i odnowy.'}
               </p>
               <p className="text-hanami-neutral mb-8">
-                Nasze doświadczone terapeutki oferują personalizowane zabiegi, 
-                które nie tylko relaksują ciało, ale także uspokajają umysł, 
-                przywracając naturalną równowagę.
+                {aboutContent.content_secondary || 'Nasze doświadczone terapeutki oferują personalizowane zabiegi, które nie tylko relaksują ciało, ale także uspokajają umysł, przywracając naturalną równowagę.'}
               </p>
               <Button asChild>
                 <Link to="/about">
-                  Poznaj naszą historię
+                  {aboutContent.button_text || 'Poznaj naszą historię'}
                 </Link>
               </Button>
             </div>
@@ -195,7 +200,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-light text-hanami-primary mb-4">
-              Dlaczego wybierają nas klienci
+              {featuresContent.title || 'Dlaczego wybierają nas klienci'}
             </h2>
           </div>
 
@@ -221,22 +226,22 @@ const Index = () => {
       <section className="py-20 bg-gradient-hanami text-white">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-light mb-6">
-            Gotowy na chwilę relaksu?
+            {ctaContent.title || 'Gotowy na chwilę relaksu?'}
           </h2>
           <p className="text-xl mb-8 text-white/90">
-            Zarezerwuj swoją wizytę już dziś i doświadcz magii japońskiego spa
+            {ctaContent.description || 'Zarezerwuj swoją wizytę już dziś i doświadcz magii japońskiego spa'}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button size="lg" variant="secondary" asChild>
               <Link to="/booking">
                 <Calendar className="h-5 w-5 mr-2" />
-                Zarezerwuj wizytę
+                {ctaContent.button_primary || 'Zarezerwuj wizytę'}
               </Link>
             </Button>
             <Button size="lg" variant="outline-white" asChild>
               <Link to="/shop">
                 <ShoppingBag className="h-5 w-5 mr-2" />
-                Odwiedź sklep
+                {ctaContent.button_secondary || 'Odwiedź sklep'}
               </Link>
             </Button>
           </div>

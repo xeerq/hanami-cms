@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCMSContent } from "@/hooks/useCMSContent";
 import zenImage from "@/assets/spa-zen.jpg";
 
 interface Therapist {
@@ -22,6 +23,13 @@ interface Therapist {
 const About = () => {
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [loading, setLoading] = useState(true);
+  const { getContent, loading: cmsLoading } = useCMSContent([
+    'about_hero',
+    'about_story',
+    'about_values',
+    'about_team',
+    'about_philosophy'
+  ]);
 
   useEffect(() => {
     const fetchTherapists = async () => {
@@ -44,28 +52,25 @@ const About = () => {
     fetchTherapists();
   }, []);
 
-  const values = [
-    {
-      icon: <Heart className="h-8 w-8 text-hanami-primary" />,
-      title: "Pasja",
-      description: "Każdy zabieg wykonujemy z pełnym zaangażowaniem i miłością do tego, co robimy."
-    },
-    {
-      icon: <Award className="h-8 w-8 text-hanami-primary" />,
-      title: "Jakość",
-      description: "Używamy tylko najlepszych produktów i najnowszych technik masażu."
-    },
-    {
-      icon: <Users className="h-8 w-8 text-hanami-primary" />,
-      title: "Troska",
-      description: "Dbamy o komfort i zadowolenie każdego naszego klienta."
-    },
-    {
-      icon: <Star className="h-8 w-8 text-hanami-primary" />,
-      title: "Doświadczenie",
-      description: "Nasze terapeutki posiadają wieloletnie doświadczenie i certyfikaty."
-    }
-  ];
+  // CMS Content
+  const heroContent = getContent('about_hero');
+  const storyContent = getContent('about_story');
+  const valuesContent = getContent('about_values');
+  const teamContent = getContent('about_team');
+  const philosophyContent = getContent('about_philosophy');
+
+  const values = valuesContent.values?.map((value: any, index: number) => ({
+    icon: [
+      <Heart className="h-8 w-8 text-hanami-primary" />,
+      <Award className="h-8 w-8 text-hanami-primary" />,
+      <Users className="h-8 w-8 text-hanami-primary" />,
+      <Star className="h-8 w-8 text-hanami-primary" />
+    ][index] || <Star className="h-8 w-8 text-hanami-primary" />,
+    title: value.title,
+    description: value.description
+  })) || [];
+
+  const isLoading = loading || cmsLoading;
 
   return (
     <div className="min-h-screen bg-gradient-warm">
@@ -74,10 +79,9 @@ const About = () => {
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-hanami text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-light mb-6">O nas</h1>
+          <h1 className="text-5xl font-light mb-6">{heroContent.title || 'O nas'}</h1>
           <p className="text-xl max-w-3xl mx-auto text-white/90">
-            Poznaj historię i filozofię Dayspa Hanami - miejsca, gdzie tradycja 
-            spotyka się z nowoczesnością
+            {heroContent.description || 'Poznaj historię i filozofię Dayspa Hanami - miejsca, gdzie tradycja spotyka się z nowoczesnością'}
           </p>
         </div>
       </section>
@@ -88,27 +92,35 @@ const About = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-4xl font-light text-hanami-primary mb-6">
-                Nasza historia
+                {storyContent.title || 'Nasza historia'}
               </h2>
-              <p className="text-lg text-hanami-neutral mb-6">
-                Dayspa Hanami powstało z pasji do japońskiej kultury wellness 
-                i głębokiego przekonania, że każdy zasługuje na chwile relaksu 
-                i regeneracji w swoim życiu.
-              </p>
-              <p className="text-hanami-neutral mb-6">
-                Nazwa "Hanami" pochodzi od japońskiej tradycji podziwiania 
-                kwitnących wiśni - symbolu przemijającego piękna i chwil, 
-                które warto celebrować. Podobnie jak ta tradycja, nasze spa 
-                zachęca do zatrzymania się, zwolnienia i cieszenia się 
-                obecną chwilą.
-              </p>
-              <p className="text-hanami-neutral mb-8">
-                Oferujemy profesjonalne usługi masażu i spa w sercu Ostrowa 
-                Wielkopolskiego, łącząc najlepsze tradycje Wschodu z nowoczesnymi 
-                technikami terapeutycznymi.
-              </p>
+              {storyContent.content?.map((paragraph: string, index: number) => (
+                <p key={index} className={`text-hanami-neutral mb-6 ${index === 0 ? 'text-lg' : ''}`}>
+                  {paragraph}
+                </p>
+              )) || (
+                <>
+                  <p className="text-lg text-hanami-neutral mb-6">
+                    Dayspa Hanami powstało z pasji do japońskiej kultury wellness 
+                    i głębokiego przekonania, że każdy zasługuje na chwile relaksu 
+                    i regeneracji w swoim życiu.
+                  </p>
+                  <p className="text-hanami-neutral mb-6">
+                    Nazwa "Hanami" pochodzi od japońskiej tradycji podziwiania 
+                    kwitnących wiśni - symbolu przemijającego piękna i chwil, 
+                    które warto celebrować. Podobnie jak ta tradycja, nasze spa 
+                    zachęca do zatrzymania się, zwolnienia i cieszenia się 
+                    obecną chwilą.
+                  </p>
+                  <p className="text-hanami-neutral mb-8">
+                    Oferujemy profesjonalne usługi masażu i spa w sercu Ostrowa 
+                    Wielkopolskiego, łącząc najlepsze tradycje Wschodu z nowoczesnymi 
+                    technikami terapeutycznymi.
+                  </p>
+                </>
+              )}
               <Button size="lg" asChild>
-                <a href="/services">Poznaj nasze usługi</a>
+                <a href="/services">{storyContent.button_text || 'Poznaj nasze usługi'}</a>
               </Button>
             </div>
             <div className="relative">
@@ -127,11 +139,10 @@ const About = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-light text-hanami-primary mb-4">
-              Nasze wartości
+              {valuesContent.title || 'Nasze wartości'}
             </h2>
             <p className="text-lg text-hanami-neutral max-w-2xl mx-auto">
-              To, co kieruje nami w codziennej pracy i sprawia, że jesteśmy 
-              wyjątkowi w branży wellness
+              {valuesContent.description || 'To, co kieruje nami w codziennej pracy i sprawia, że jesteśmy wyjątkowi w branży wellness'}
             </p>
           </div>
 
@@ -158,16 +169,15 @@ const About = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-light text-hanami-primary mb-4">
-              Nasz zespół
+              {teamContent.title || 'Nasz zespół'}
             </h2>
             <p className="text-lg text-hanami-neutral max-w-2xl mx-auto">
-              Poznaj doświadczone terapeutki, które zadbają o Twój komfort 
-              i relaks podczas każdej wizyty
+              {teamContent.description || 'Poznaj doświadczone terapeutki, które zadbają o Twój komfort i relaks podczas każdej wizyty'}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {loading ? (
+            {isLoading ? (
               // Loading skeletons
               Array.from({ length: 2 }).map((_, index) => (
                 <Card key={index} className="border-hanami-accent/20">
@@ -227,19 +237,16 @@ const About = () => {
       <section className="py-20 bg-gradient-hanami text-white">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-light mb-6">
-            Filozofia Hanami
+            {philosophyContent.title || 'Filozofia Hanami'}
           </h2>
           <p className="text-xl mb-8 text-white/90">
-            "Hanami" to japońska tradycja kontemplacji przemijającego piękna 
-            kwitnących wiśni. W naszym spa tworzymy przestrzeń, gdzie możesz 
-            zatrzymać się, odetchnąć i docenić piękno obecnej chwili.
+            {philosophyContent.description || '"Hanami" to japońska tradycja kontemplacji przemijającego piękna kwitnących wiśni. W naszym spa tworzymy przestrzeń, gdzie możesz zatrzymać się, odetchnąć i docenić piękno obecnej chwili.'}
           </p>
           <blockquote className="text-lg italic text-white/80 mb-8">
-            "Prawdziwe piękno tkwi w umiejętności zatrzymania się i 
-            docenienia chwili, którą mamy teraz."
+            "{philosophyContent.quote || 'Prawdziwe piękno tkwi w umiejętności zatrzymania się i docenienia chwili, którą mamy teraz.'}"
           </blockquote>
           <Button size="lg" variant="secondary" asChild>
-            <a href="/booking">Zarezerwuj swoją chwilę relaksu</a>
+            <a href="/booking">{philosophyContent.button_text || 'Zarezerwuj swoją chwilę relaksu'}</a>
           </Button>
         </div>
       </section>

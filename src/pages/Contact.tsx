@@ -7,9 +7,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { MapPin, Phone, Mail, Clock, Facebook, Instagram } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useCMSContent } from "@/hooks/useCMSContent";
 
 const Contact = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const { getContent, loading: cmsLoading } = useCMSContent([
+    'contact_hero',
+    'contact_info',
+    'contact_form',
+    'contact_faq',
+    'contact_map',
+    'social_media'
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,26 +27,34 @@ const Contact = () => {
     setTimeout(() => setIsLoading(false), 1000);
   };
 
+  // CMS Content
+  const heroContent = getContent('contact_hero');
+  const contactInfoContent = getContent('contact_info');
+  const formContent = getContent('contact_form');
+  const faqContent = getContent('contact_faq');
+  const mapContent = getContent('contact_map');
+  const socialContent = getContent('social_media');
+
   const contactInfo = [
     {
       icon: <MapPin className="h-6 w-6" />,
-      title: "Adres",
-      details: ["Ostrów Wielkopolski", "ul. Przykładowa 123", "63-400 Ostrów Wielkopolski"]
+      title: contactInfoContent.address?.title || "Adres",
+      details: contactInfoContent.address?.details || ["Ostrów Wielkopolski", "ul. Przykładowa 123", "63-400 Ostrów Wielkopolski"]
     },
     {
       icon: <Phone className="h-6 w-6" />,
-      title: "Telefon",
-      details: ["+48 123 456 789", "+48 987 654 321"]
+      title: contactInfoContent.phone?.title || "Telefon",
+      details: contactInfoContent.phone?.details || ["+48 123 456 789", "+48 987 654 321"]
     },
     {
       icon: <Mail className="h-6 w-6" />,
-      title: "Email",
-      details: ["info@dayspahanami.pl", "rezerwacje@dayspahanami.pl"]
+      title: contactInfoContent.email?.title || "Email",
+      details: contactInfoContent.email?.details || ["info@dayspahanami.pl", "rezerwacje@dayspahanami.pl"]
     },
     {
       icon: <Clock className="h-6 w-6" />,
-      title: "Godziny otwarcia",
-      details: [
+      title: contactInfoContent.hours?.title || "Godziny otwarcia",
+      details: contactInfoContent.hours?.details || [
         "Poniedziałek - Piątek: 9:00 - 20:00",
         "Sobota: 10:00 - 18:00", 
         "Niedziela: 11:00 - 17:00"
@@ -45,7 +62,7 @@ const Contact = () => {
     }
   ];
 
-  const faqItems = [
+  const faqItems = faqContent.items || [
     {
       question: "Jak mogę zarezerwować wizytę?",
       answer: "Możesz zarezerwować wizytę online przez naszą stronę internetową, telefonicznie lub osobiście w salonie."
@@ -75,10 +92,9 @@ const Contact = () => {
       {/* Hero Section */}
       <section className="relative py-20 bg-gradient-hanami text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-light mb-6">Kontakt</h1>
+          <h1 className="text-5xl font-light mb-6">{heroContent.title || 'Kontakt'}</h1>
           <p className="text-xl max-w-3xl mx-auto text-white/90">
-            Skontaktuj się z nami - jesteśmy tutaj, aby odpowiedzieć na wszystkie 
-            Twoje pytania dotyczące naszych usług
+            {heroContent.description || 'Skontaktuj się z nami - jesteśmy tutaj, aby odpowiedzieć na wszystkie Twoje pytania dotyczące naszych usług'}
           </p>
         </div>
       </section>
@@ -91,7 +107,7 @@ const Contact = () => {
             <div className="space-y-8">
               <div>
                 <h2 className="text-3xl font-light text-hanami-primary mb-8">
-                  Informacje kontaktowe
+                  {contactInfoContent.title || 'Informacje kontaktowe'}
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {contactInfo.map((info, index) => (
@@ -121,11 +137,11 @@ const Contact = () => {
               {/* Social Media */}
               <div>
                 <h3 className="text-xl font-semibold text-hanami-primary mb-4">
-                  Śledź nas w mediach społecznościowych
+                  {socialContent.title || 'Śledź nas w mediach społecznościowych'}
                 </h3>
                 <div className="flex space-x-4">
                   <a 
-                    href="https://www.facebook.com/dayspahanami" 
+                    href={socialContent.facebook || "https://www.facebook.com/dayspahanami"} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="flex items-center space-x-2 text-hanami-primary hover:text-hanami-primary-light transition-zen"
@@ -134,7 +150,7 @@ const Contact = () => {
                     <span>Facebook</span>
                   </a>
                   <a 
-                    href="#" 
+                    href={socialContent.instagram || "#"} 
                     className="flex items-center space-x-2 text-hanami-primary hover:text-hanami-primary-light transition-zen"
                   >
                     <Instagram className="h-5 w-5" />
@@ -149,7 +165,7 @@ const Contact = () => {
               <Card className="border-hanami-accent/20">
                 <CardHeader>
                   <CardTitle className="text-2xl text-hanami-primary">
-                    Napisz do nas
+                    {formContent.title || 'Napisz do nas'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -222,10 +238,10 @@ const Contact = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-light text-hanami-primary mb-4">
-              Często zadawane pytania
+              {faqContent.title || 'Często zadawane pytania'}
             </h2>
             <p className="text-hanami-neutral">
-              Znajdź odpowiedzi na najczęściej zadawane pytania
+              {faqContent.description || 'Znajdź odpowiedzi na najczęściej zadawane pytania'}
             </p>
           </div>
 
@@ -251,23 +267,23 @@ const Contact = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-light text-hanami-primary mb-4">
-              Jak nas znaleźć
+              {mapContent.title || 'Jak nas znaleźć'}
             </h2>
             <p className="text-hanami-neutral">
-              Znajdziesz nas w centrum Ostrowa Wielkopolskiego
+              {mapContent.description || 'Znajdziesz nas w centrum Ostrowa Wielkopolskiego'}
             </p>
           </div>
 
           <div className="bg-hanami-secondary/20 rounded-lg p-8 text-center">
             <MapPin className="h-16 w-16 text-hanami-primary mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-hanami-primary mb-2">
-              Mapa Google
+              {mapContent.map_title || 'Mapa Google'}
             </h3>
             <p className="text-hanami-neutral mb-4">
-              Dokładną lokalizację znajdziesz na mapie Google
+              {mapContent.map_description || 'Dokładną lokalizację znajdziesz na mapie Google'}
             </p>
             <Button variant="outline">
-              Otwórz w Google Maps
+              {mapContent.button_text || 'Otwórz w Google Maps'}
             </Button>
           </div>
         </div>
