@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Calendar, Users, UserCog, Settings, Package, ShoppingBag, Link2, Tag, Ticket, Mail } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { useEffect } from "react";
+import { useNavigate, Routes, Route, Navigate } from "react-router-dom";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { AdminSidebar } from "@/components/admin/AdminSidebar";
+import AdminDashboard from "@/components/admin/AdminDashboard";
 import AppointmentsManager from "@/components/admin/AppointmentsManager";
 import TherapistsManager from "@/components/admin/TherapistsManager";
 import ServicesManager from "@/components/admin/ServicesManager";
@@ -31,10 +29,10 @@ const AdminPanel = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-warm flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-hanami-primary"></div>
-          <p className="mt-4 text-hanami-neutral">Sprawdzanie uprawnień...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+          <p className="mt-4 text-muted-foreground">Sprawdzanie uprawnień...</p>
         </div>
       </div>
     );
@@ -45,127 +43,54 @@ const AdminPanel = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-warm">
-      <Header />
-      
-      {/* Hero Section */}
-      <section className="py-12 bg-gradient-hanami text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-4xl font-light mb-4">Panel Administracyjny</h1>
-          <p className="text-xl text-white/90">
-            Zarządzaj wszystkimi aspektami spa
-          </p>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AdminSidebar />
+        
+        <div className="flex-1 flex flex-col">
+          {/* Top Header */}
+          <header className="h-16 border-b border-border bg-card flex items-center px-6 shadow-sm">
+            <SidebarTrigger className="mr-4" />
+            <div className="flex-1">
+              <h1 className="text-lg font-semibold text-foreground">
+                Panel Administracyjny
+              </h1>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {new Date().toLocaleDateString('pl-PL', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </div>
+          </header>
+          
+          {/* Main Content Area */}
+          <main className="flex-1 overflow-auto">
+            <div className="p-6">
+              <Routes>
+                <Route index element={<AdminDashboard />} />
+                <Route path="appointments" element={<AppointmentsManager />} />
+                <Route path="therapists" element={<TherapistsManager />} />
+                <Route path="services" element={<ServicesManager />} />
+                <Route path="assignments" element={<TherapistServicesManager />} />
+                <Route path="products" element={<ProductsManager />} />
+                <Route path="vouchers" element={<VouchersManager />} />
+                <Route path="users" element={<UsersManager />} />
+                <Route path="categories" element={<CategoriesManager />} />
+                <Route path="calendars" element={<TherapistsCalendarsView embedded={true} />} />
+                <Route path="blocked" element={<BlockedSlotsManager />} />
+                <Route path="content" element={<ContentManager />} />
+                <Route path="notifications" element={<NotificationManager />} />
+                {/* Redirect any unknown admin routes to dashboard */}
+                <Route path="*" element={<Navigate to="/admin" replace />} />
+              </Routes>
+            </div>
+          </main>
         </div>
-      </section>
-
-      {/* Admin Content */}
-      <section className="py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Tabs defaultValue="appointments" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-5 lg:grid-cols-12">
-              <TabsTrigger value="appointments" className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4" />
-                <span className="hidden sm:inline">Wizyty</span>
-              </TabsTrigger>
-              <TabsTrigger value="therapists" className="flex items-center space-x-2">
-                <Users className="h-4 w-4" />
-                <span className="hidden sm:inline">Terapeuci</span>
-              </TabsTrigger>
-              <TabsTrigger value="services" className="flex items-center space-x-2">
-                <Settings className="h-4 w-4" />
-                <span className="hidden sm:inline">Usługi</span>
-              </TabsTrigger>
-              <TabsTrigger value="assignments" className="flex items-center space-x-2">
-                <Link2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Przypisania</span>
-              </TabsTrigger>
-              <TabsTrigger value="products" className="flex items-center space-x-2">
-                <Package className="h-4 w-4" />
-                <span className="hidden sm:inline">Produkty</span>
-              </TabsTrigger>
-              <TabsTrigger value="vouchers" className="flex items-center space-x-2">
-                <Ticket className="h-4 w-4" />
-                <span className="hidden sm:inline">Bony</span>
-              </TabsTrigger>
-              <TabsTrigger value="users" className="flex items-center space-x-2">
-                <UserCog className="h-4 w-4" />
-                <span className="hidden sm:inline">Użytkownicy</span>
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="flex items-center space-x-2">
-                <Tag className="h-4 w-4" />
-                <span className="hidden sm:inline">Kategorie</span>
-              </TabsTrigger>
-              <TabsTrigger value="calendars" className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4" />
-                <span className="hidden sm:inline">Kalendarze</span>
-              </TabsTrigger>
-              <TabsTrigger value="blocked" className="flex items-center space-x-2">
-                <ShoppingBag className="h-4 w-4" />
-                <span className="hidden sm:inline">Blokady</span>
-              </TabsTrigger>
-              <TabsTrigger value="content" className="flex items-center space-x-2">
-                <Settings className="h-4 w-4" />
-                <span className="hidden sm:inline">Treść</span>
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center space-x-2">
-                <Mail className="h-4 w-4" />
-                <span className="hidden sm:inline">Email</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="appointments">
-              <AppointmentsManager />
-            </TabsContent>
-
-            <TabsContent value="therapists">
-              <TherapistsManager />
-            </TabsContent>
-
-            <TabsContent value="services">
-              <ServicesManager />
-            </TabsContent>
-
-            <TabsContent value="assignments">
-              <TherapistServicesManager />
-            </TabsContent>
-
-            <TabsContent value="products">
-              <ProductsManager />
-            </TabsContent>
-
-            <TabsContent value="vouchers">
-              <VouchersManager />
-            </TabsContent>
-
-            <TabsContent value="users">
-              <UsersManager />
-            </TabsContent>
-
-            <TabsContent value="categories">
-              <CategoriesManager />
-            </TabsContent>
-
-            <TabsContent value="calendars">
-              <TherapistsCalendarsView embedded={true} />
-            </TabsContent>
-
-            <TabsContent value="blocked">
-              <BlockedSlotsManager />
-            </TabsContent>
-
-            <TabsContent value="content">
-              <ContentManager />
-            </TabsContent>
-
-            <TabsContent value="notifications">
-              <NotificationManager />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </section>
-
-      <Footer />
-    </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
