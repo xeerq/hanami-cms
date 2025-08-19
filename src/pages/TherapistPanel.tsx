@@ -11,6 +11,7 @@ import TherapistAppointments from "@/components/therapist/TherapistAppointments"
 import TherapistDashboard from "@/components/therapist/TherapistDashboard";
 import TherapistHistory from "@/components/therapist/TherapistHistory";
 import { VouchersManager } from "@/components/admin/VouchersManager";
+import { TherapistScheduleManager } from "@/components/therapist/TherapistScheduleManager";
 
 const TherapistPanel = () => {
   const { isTherapist, therapistInfo, loading } = useTherapistCheck();
@@ -55,7 +56,7 @@ const TherapistPanel = () => {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="dashboard" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="dashboard" className="flex items-center space-x-2">
                 <BarChart3 className="h-4 w-4" />
                 <span>Dashboard</span>
@@ -71,6 +72,10 @@ const TherapistPanel = () => {
               <TabsTrigger value="history" className="flex items-center space-x-2">
                 <History className="h-4 w-4" />
                 <span>Historia</span>
+              </TabsTrigger>
+              <TabsTrigger value="schedule" className="flex items-center space-x-2">
+                <Clock className="h-4 w-4" />
+                <span>Grafik</span>
               </TabsTrigger>
               <TabsTrigger value="vouchers" className="flex items-center space-x-2">
                 <Users className="h-4 w-4" />
@@ -95,6 +100,10 @@ const TherapistPanel = () => {
 
             <TabsContent value="history">
               <TherapistHistory therapistId={therapistInfo?.therapist_id} />
+            </TabsContent>
+
+            <TabsContent value="schedule">
+              <TherapistScheduleManager therapistId={therapistInfo?.therapist_id} />
             </TabsContent>
 
             <TabsContent value="vouchers">

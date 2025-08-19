@@ -79,6 +79,11 @@ const menuItems = [
     icon: Calendar 
   },
   { 
+    title: "Grafiki", 
+    url: "/admin/schedules", 
+    icon: Calendar 
+  },
+  { 
     title: "Blokady", 
     url: "/admin/blocked", 
     icon: Shield 

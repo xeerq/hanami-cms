@@ -16,6 +16,7 @@ import TherapistsCalendarsView from "@/pages/TherapistsCalendars";
 import ContentManager from "@/components/admin/ContentManager";
 import { VouchersManager } from "@/components/admin/VouchersManager";
 import { NotificationManager } from "@/components/admin/NotificationManager";
+import { ScheduleApprovalManager } from "@/components/admin/ScheduleApprovalManager";
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAdminCheck();
@@ -80,6 +81,7 @@ const AdminPanel = () => {
                 <Route path="users" element={<UsersManager />} />
                 <Route path="categories" element={<CategoriesManager />} />
                 <Route path="calendars" element={<TherapistsCalendarsView embedded={true} />} />
+                <Route path="schedules" element={<ScheduleApprovalManager />} />
                 <Route path="blocked" element={<BlockedSlotsManager />} />
                 <Route path="content" element={<ContentManager />} />
                 <Route path="notifications" element={<NotificationManager />} />

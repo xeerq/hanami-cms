@@ -481,6 +481,62 @@ export type Database = {
         }
         Relationships: []
       }
+      therapist_schedules: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          start_time: string
+          status: string
+          therapist_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          start_time: string
+          status?: string
+          therapist_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          start_time?: string
+          status?: string
+          therapist_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_therapist"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       therapist_services: {
         Row: {
           created_at: string
@@ -742,6 +798,15 @@ export type Database = {
       }
     }
     Functions: {
+      check_therapist_availability: {
+        Args: {
+          p_appointment_date: string
+          p_appointment_time: string
+          p_duration?: number
+          p_therapist_id: string
+        }
+        Returns: boolean
+      }
       generate_voucher_code: {
         Args: Record<PropertyKey, never>
         Returns: string
