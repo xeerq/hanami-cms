@@ -53,7 +53,9 @@ export const ScheduleApprovalManager = () => {
             name
           )
         `)
-        .order('created_at', { ascending: false });
+        .order('therapist_id', { ascending: true })
+        .order('day_of_week', { ascending: true })
+        .order('start_time', { ascending: true });
 
       if (filter !== 'all') {
         query = query.eq('status', filter);
@@ -164,6 +166,23 @@ export const ScheduleApprovalManager = () => {
     return schedules.filter(s => s.status === 'pending').length;
   };
 
+  const groupSchedulesByTherapist = () => {
+    const grouped = schedules.reduce((acc, schedule) => {
+      const therapistName = schedule.therapists.name;
+      if (!acc[therapistName]) {
+        acc[therapistName] = [];
+      }
+      acc[therapistName].push(schedule);
+      return acc;
+    }, {} as Record<string, Schedule[]>);
+    
+    return Object.entries(grouped);
+  };
+
+  const getTherapistPendingCount = (therapistSchedules: Schedule[]) => {
+    return therapistSchedules.filter(s => s.status === 'pending').length;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -209,133 +228,153 @@ export const ScheduleApprovalManager = () => {
               <p>Brak grafików do wyświetlenia</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {schedules.map(schedule => (
-                <div key={schedule.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4" />
-                        <span className="font-medium">{schedule.therapists.name}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        <span>{getDayLabel(schedule.day_of_week)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span>{schedule.start_time} - {schedule.end_time}</span>
-                      </div>
-                      {getStatusBadge(schedule.status)}
+            <div className="space-y-6">
+              {groupSchedulesByTherapist().map(([therapistName, therapistSchedules]) => (
+                <Card key={therapistName} className="border border-border/50">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <User className="h-5 w-5" />
+                        {therapistName}
+                        {getTherapistPendingCount(therapistSchedules) > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {getTherapistPendingCount(therapistSchedules)} oczekuje
+                          </Badge>
+                        )}
+                      </CardTitle>
+                      <Badge variant="outline" className="text-xs">
+                        {therapistSchedules.length} {therapistSchedules.length === 1 ? 'grafik' : 'grafików'}
+                      </Badge>
                     </div>
-                    
-                    <div className="flex gap-2">
-                      {schedule.status === 'pending' && (
-                        <>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button size="sm" variant="outline" className="gap-2"
-                                onClick={() => {
-                                  setSelectedSchedule(schedule);
-                                  setAdminNotes('');
-                                }}>
-                                <Check className="h-4 w-4" />
-                                Zatwierdź
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Zatwierdź grafik</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div className="p-4 bg-muted rounded-lg">
-                                  <p><strong>Terapeuta:</strong> {schedule.therapists.name}</p>
-                                  <p><strong>Dzień:</strong> {getDayLabel(schedule.day_of_week)}</p>
-                                  <p><strong>Godziny:</strong> {schedule.start_time} - {schedule.end_time}</p>
-                                  {schedule.notes && (
-                                    <p><strong>Notatki terapeuty:</strong> {schedule.notes}</p>
-                                  )}
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium">Notatki administratora (opcjonalne)</label>
-                                  <Textarea
-                                    value={adminNotes}
-                                    onChange={(e) => setAdminNotes(e.target.value)}
-                                    placeholder="Dodatkowe uwagi..."
-                                    className="mt-2"
-                                  />
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button onClick={() => handleApproveSchedule(schedule.id, adminNotes)}>
-                                    Zatwierdź
-                                  </Button>
-                                  <Button variant="outline" onClick={() => setSelectedSchedule(null)}>
-                                    Anuluj
-                                  </Button>
-                                </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-3">
+                      {therapistSchedules.map(schedule => (
+                        <div key={schedule.id} className="border rounded-lg p-4 bg-card/50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="h-4 w-4" />
+                                <span className="font-medium">{getDayLabel(schedule.day_of_week)}</span>
                               </div>
-                            </DialogContent>
-                          </Dialog>
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                <span>{schedule.start_time} - {schedule.end_time}</span>
+                              </div>
+                              {getStatusBadge(schedule.status)}
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              {schedule.status === 'pending' && (
+                                <>
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button size="sm" variant="outline" className="gap-2"
+                                        onClick={() => {
+                                          setSelectedSchedule(schedule);
+                                          setAdminNotes('');
+                                        }}>
+                                        <Check className="h-4 w-4" />
+                                        Zatwierdź
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Zatwierdź grafik</DialogTitle>
+                                      </DialogHeader>
+                                      <div className="space-y-4">
+                                        <div className="p-4 bg-muted rounded-lg">
+                                          <p><strong>Terapeuta:</strong> {schedule.therapists.name}</p>
+                                          <p><strong>Dzień:</strong> {getDayLabel(schedule.day_of_week)}</p>
+                                          <p><strong>Godziny:</strong> {schedule.start_time} - {schedule.end_time}</p>
+                                          {schedule.notes && (
+                                            <p><strong>Notatki terapeuty:</strong> {schedule.notes}</p>
+                                          )}
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium">Notatki administratora (opcjonalne)</label>
+                                          <Textarea
+                                            value={adminNotes}
+                                            onChange={(e) => setAdminNotes(e.target.value)}
+                                            placeholder="Dodatkowe uwagi..."
+                                            className="mt-2"
+                                          />
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Button onClick={() => handleApproveSchedule(schedule.id, adminNotes)}>
+                                            Zatwierdź
+                                          </Button>
+                                          <Button variant="outline" onClick={() => setSelectedSchedule(null)}>
+                                            Anuluj
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                  
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button size="sm" variant="destructive" className="gap-2"
+                                        onClick={() => {
+                                          setSelectedSchedule(schedule);
+                                          setAdminNotes('');
+                                        }}>
+                                        <X className="h-4 w-4" />
+                                        Odrzuć
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                      <DialogHeader>
+                                        <DialogTitle>Odrzuć grafik</DialogTitle>
+                                      </DialogHeader>
+                                      <div className="space-y-4">
+                                        <div className="p-4 bg-muted rounded-lg">
+                                          <p><strong>Terapeuta:</strong> {schedule.therapists.name}</p>
+                                          <p><strong>Dzień:</strong> {getDayLabel(schedule.day_of_week)}</p>
+                                          <p><strong>Godziny:</strong> {schedule.start_time} - {schedule.end_time}</p>
+                                        </div>
+                                        <div>
+                                          <label className="text-sm font-medium">Powód odrzucenia *</label>
+                                          <Textarea
+                                            value={adminNotes}
+                                            onChange={(e) => setAdminNotes(e.target.value)}
+                                            placeholder="Podaj powód odrzucenia..."
+                                            className="mt-2"
+                                          />
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Button 
+                                            variant="destructive" 
+                                            onClick={() => handleRejectSchedule(schedule.id, adminNotes)}
+                                          >
+                                            Odrzuć
+                                          </Button>
+                                          <Button variant="outline" onClick={() => setSelectedSchedule(null)}>
+                                            Anuluj
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </DialogContent>
+                                  </Dialog>
+                                </>
+                              )}
+                            </div>
+                          </div>
                           
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button size="sm" variant="destructive" className="gap-2"
-                                onClick={() => {
-                                  setSelectedSchedule(schedule);
-                                  setAdminNotes('');
-                                }}>
-                                <X className="h-4 w-4" />
-                                Odrzuć
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Odrzuć grafik</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div className="p-4 bg-muted rounded-lg">
-                                  <p><strong>Terapeuta:</strong> {schedule.therapists.name}</p>
-                                  <p><strong>Dzień:</strong> {getDayLabel(schedule.day_of_week)}</p>
-                                  <p><strong>Godziny:</strong> {schedule.start_time} - {schedule.end_time}</p>
-                                </div>
-                                <div>
-                                  <label className="text-sm font-medium">Powód odrzucenia *</label>
-                                  <Textarea
-                                    value={adminNotes}
-                                    onChange={(e) => setAdminNotes(e.target.value)}
-                                    placeholder="Podaj powód odrzucenia..."
-                                    className="mt-2"
-                                  />
-                                </div>
-                                <div className="flex gap-2">
-                                  <Button 
-                                    variant="destructive" 
-                                    onClick={() => handleRejectSchedule(schedule.id, adminNotes)}
-                                  >
-                                    Odrzuć
-                                  </Button>
-                                  <Button variant="outline" onClick={() => setSelectedSchedule(null)}>
-                                    Anuluj
-                                  </Button>
-                                </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </>
-                      )}
+                          {schedule.notes && schedule.status !== 'pending' && (
+                            <div className="mt-3 p-3 bg-muted rounded text-sm">
+                              <strong>Notatki:</strong> {schedule.notes}
+                            </div>
+                          )}
+                          
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            Utworzono: {new Date(schedule.created_at).toLocaleString('pl-PL')}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                  
-                  {schedule.notes && schedule.status !== 'pending' && (
-                    <div className="mt-3 p-3 bg-muted rounded text-sm">
-                      <strong>Notatki:</strong> {schedule.notes}
-                    </div>
-                  )}
-                  
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    Utworzono: {new Date(schedule.created_at).toLocaleString('pl-PL')}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}
