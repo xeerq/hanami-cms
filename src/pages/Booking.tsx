@@ -169,20 +169,6 @@ const Booking = () => {
     try {
       console.log("Checking availability for:", { date, therapistId });
       
-      const { data: bookedAppointments, error } = await supabase
-        .from("appointments")
-        .select(`
-          appointment_time,
-          duration
-        `)
-        .eq("therapist_id", therapistId)
-        .eq("appointment_date", date)
-        .in("status", ["confirmed", "pending"]); // Nie blokuj anulowanych wizyt
-
-      if (error) throw error;
-
-      console.log("Booked appointments:", bookedAppointments);
-
       // Jeśli brak wybranej usługi, nie blokuj niczego
       if (!selectedService) {
         setAvailableTimes(timeSlots);
@@ -192,47 +178,44 @@ const Booking = () => {
       const selectedServiceDuration = selectedService.duration;
       const blockedTimes = new Set<string>();
 
-      // Dla każdego slotu czasowego sprawdź czy można zarezerwować usługę
-      timeSlots.forEach(slot => {
-        const slotTimeMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
-        const slotEndTimeMinutes = slotTimeMinutes + selectedServiceDuration;
-        
-        let isSlotAvailable = true;
+      // Sprawdź każdy slot czasowy czy jest dostępny według grafiku terapeuty i istniejących wizyt
+      for (const slot of timeSlots) {
+        try {
+          const { data: isAvailable, error } = await supabase
+            .rpc('check_therapist_availability', {
+              p_therapist_id: therapistId,
+              p_appointment_date: date,
+              p_appointment_time: slot,
+              p_duration: selectedServiceDuration
+            });
 
-        // Sprawdź konflikt z każdą istniejącą wizytą
-        bookedAppointments?.forEach(apt => {
-          const appointmentTime = apt.appointment_time.slice(0, 5);
-          const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
-          const appointmentEndTimeMinutes = appointmentTimeMinutes + (apt.duration || 60);
-
-          // Sprawdź czy nowa wizyta koliduje z istniejącą
-          // Kolizja występuje gdy:
-          // 1. Nowa wizyta zaczyna się w trakcie istniejącej wizyty
-          // 2. Nowa wizyta kończy się w trakcie istniejącej wizyty  
-          // 3. Nowa wizyta całkowicie zawiera istniejącą wizytę
-          // 4. Istniejąca wizyta całkowicie zawiera nową wizytę
-          
-          const newStartsBeforeExistingEnds = slotTimeMinutes < appointmentEndTimeMinutes;
-          const newEndsAfterExistingStarts = slotEndTimeMinutes > appointmentTimeMinutes;
-          
-          if (newStartsBeforeExistingEnds && newEndsAfterExistingStarts) {
-            isSlotAvailable = false;
+          if (error) {
+            console.error("Error checking slot availability:", error);
+            // W przypadku błędu, domyślnie blokuj slot
+            blockedTimes.add(slot);
+            continue;
           }
-        });
 
-        // Sprawdź też czy wizyta nie wykracza poza godziny pracy (18:00)
-        const endHour = Math.floor(slotEndTimeMinutes / 60);
-        const endMinute = slotEndTimeMinutes % 60;
-        if (endHour > 18 || (endHour === 18 && endMinute > 0)) {
-          isSlotAvailable = false;
-        }
+          // Jeśli funkcja zwróci false, slot jest niedostępny
+          if (!isAvailable) {
+            blockedTimes.add(slot);
+          }
 
-        if (!isSlotAvailable) {
+          // Dodatkowo sprawdź czy wizyta nie wykracza poza godziny pracy (18:00)
+          const slotTimeMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
+          const slotEndTimeMinutes = slotTimeMinutes + selectedServiceDuration;
+          const endHour = Math.floor(slotEndTimeMinutes / 60);
+          const endMinute = slotEndTimeMinutes % 60;
+          if (endHour > 18 || (endHour === 18 && endMinute > 0)) {
+            blockedTimes.add(slot);
+          }
+        } catch (error) {
+          console.error("Error checking slot:", slot, error);
           blockedTimes.add(slot);
         }
-      });
+      }
       
-      console.log("Blocked times with duration:", Array.from(blockedTimes));
+      console.log("Blocked times (including schedule):", Array.from(blockedTimes));
       
       const available = timeSlots.filter(time => !blockedTimes.has(time));
       
@@ -388,39 +371,30 @@ const Booking = () => {
 
     setLoading(true);
     try {
-      // Check if time slot is still available with overlapping appointments
-      const serviceDuration = selectedService.duration;
-      const selectedTimeMinutes = parseInt(selectedTime.split(':')[0]) * 60 + parseInt(selectedTime.split(':')[1]);
-      const selectedEndTimeMinutes = selectedTimeMinutes + serviceDuration;
-      
-      const { data: conflictingAppointments } = await supabase
-        .from("appointments")
-        .select(`
-          id, 
-          appointment_time,
-          duration
-        `)
-        .eq("therapist_id", selectedTherapist.id)
-        .eq("appointment_date", selectedDate)
-        .in("status", ["confirmed", "pending"]);
+      // Check if the selected time slot is available using the therapist schedule validation
+      const { data: isAvailable, error: availabilityError } = await supabase
+        .rpc('check_therapist_availability', {
+          p_therapist_id: selectedTherapist.id,
+          p_appointment_date: selectedDate,
+          p_appointment_time: selectedTime,
+          p_duration: selectedService.duration
+        });
 
-      // Check for time conflicts more accurately
-      const hasConflict = conflictingAppointments?.some(apt => {
-        const appointmentTime = apt.appointment_time.slice(0, 5);
-        const appointmentTimeMinutes = parseInt(appointmentTime.split(':')[0]) * 60 + parseInt(appointmentTime.split(':')[1]);
-        const appointmentEndTimeMinutes = appointmentTimeMinutes + (apt.duration || 60);
-
-        // Check if appointments overlap
-        const newStartsBeforeExistingEnds = selectedTimeMinutes < appointmentEndTimeMinutes;
-        const newEndsAfterExistingStarts = selectedEndTimeMinutes > appointmentTimeMinutes;
-        
-        return newStartsBeforeExistingEnds && newEndsAfterExistingStarts;
-      });
-
-      if (hasConflict) {
+      if (availabilityError) {
+        console.error("Error checking availability:", availabilityError);
         toast({
           title: "Błąd",
-          description: "Ten termin już nie jest dostępny. Proszę wybrać inną godzinę.",
+          description: "Nie udało się sprawdzić dostępności terminu",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (!isAvailable) {
+        toast({
+          title: "Błąd",
+          description: "Ten termin nie jest dostępny w grafiku terapeuty lub jest już zajęty. Proszę wybrać inną godzinę.",
           variant: "destructive",
         });
         // Refresh available times for selected date

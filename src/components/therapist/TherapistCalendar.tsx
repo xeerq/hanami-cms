@@ -51,6 +51,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [therapistSchedule, setTherapistSchedule] = useState<any[]>([]);
   const { toast } = useToast();
 
   // Generowanie godzin co 30 minut
@@ -73,6 +74,7 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
 
   useEffect(() => {
     fetchAppointments();
+    fetchTherapistSchedule();
   }, [currentWeek, therapistId]);
 
   const fetchAppointments = async () => {
@@ -164,6 +166,49 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchTherapistSchedule = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("therapist_schedules")
+        .select("*")
+        .eq("therapist_id", therapistId)
+        .eq("status", "approved")
+        .eq("is_active", true);
+
+      if (error) throw error;
+      setTherapistSchedule(data || []);
+    } catch (error: any) {
+      console.error("Error fetching therapist schedule:", error);
+    }
+  };
+
+  // Check if a time slot is blocked based on therapist schedule
+  const isTimeSlotBlocked = (time: string, day: Date) => {
+    const dayOfWeek = day.getDay(); // 0=Sunday, 6=Saturday
+    const [hour, minute] = time.split(':').map(Number);
+    const timeMinutes = hour * 60 + minute;
+
+    // Check if therapist has any approved schedule for this day
+    const daySchedules = therapistSchedule.filter(schedule => schedule.day_of_week === dayOfWeek);
+    
+    if (daySchedules.length === 0) {
+      // No schedule for this day - blocked
+      return true;
+    }
+
+    // Check if the time slot falls within any approved schedule
+    const isWithinSchedule = daySchedules.some(schedule => {
+      const [startHour, startMinute] = schedule.start_time.split(':').map(Number);
+      const [endHour, endMinute] = schedule.end_time.split(':').map(Number);
+      const startMinutes = startHour * 60 + startMinute;
+      const endMinutes = endHour * 60 + endMinute;
+      
+      return timeMinutes >= startMinutes && timeMinutes < endMinutes;
+    });
+
+    return !isWithinSchedule;
   };
 
   const getClientName = (appointment: Appointment) => {
@@ -587,8 +632,17 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
                             {/* Current Time Indicator */}
                             {currentTimeIndicator}
                             
+                            {/* Show blocked time slots based on therapist schedule */}
+                            {isTimeSlotBlocked(time, day) && (
+                              <div className="absolute inset-0 bg-gray-300/50 backdrop-blur-sm flex items-center justify-center">
+                                <div className="text-xs text-gray-600 font-medium bg-white/80 px-2 py-1 rounded">
+                                  Niedostępny
+                                </div>
+                              </div>
+                            )}
+                            
                             {/* Empty slot indicator */}
-                            {!isPastDay && (
+                            {!isPastDay && !isTimeSlotBlocked(time, day) && (
                               <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-xs text-gray-400 text-center absolute inset-0 flex items-center justify-center">
                                 Wolny termin
                               </div>
@@ -708,6 +762,10 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded-full bg-gradient-to-r from-pink-400 to-rose-500 shadow-sm"></div>
               <span className="text-sm text-gray-600 font-medium">Wiśnia japońska</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-4 h-4 rounded-full bg-gray-300/50 border border-gray-400"></div>
+              <span className="text-sm text-gray-600 font-medium">Niedostępny w grafiku</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-4 h-4 rounded-full bg-gray-200 opacity-60"></div>

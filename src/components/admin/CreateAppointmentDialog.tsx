@@ -92,31 +92,30 @@ const CreateAppointmentDialog = ({ open, onOpenChange, onSuccess }: CreateAppoin
         throw new Error('Nie wybrano usługi lub brak czasu trwania usługi');
       }
 
-      // Pre-check conflicts for the therapist/day
-      const { data: existing, error: checkError } = await supabase
-        .from('appointments')
-        .select('appointment_time, duration')
-        .eq('therapist_id', formData.therapist_id)
-        .eq('appointment_date', formData.appointment_date)
-        .in('status', ['confirmed','pending']);
+      // Check if the time slot is available using therapist schedule validation
+      const { data: isAvailable, error: availabilityError } = await supabase
+        .rpc('check_therapist_availability', {
+          p_therapist_id: formData.therapist_id,
+          p_appointment_date: formData.appointment_date,
+          p_appointment_time: formData.appointment_time,
+          p_duration: serviceDuration
+        });
 
-      if (checkError) throw checkError;
-
-      const [h, m] = formData.appointment_time.split(':').map(Number);
-      const newStart = h * 60 + m;
-      const newEnd = newStart + serviceDuration;
-
-      const overlapping = existing?.some(apt => {
-        const [eh, em] = apt.appointment_time.slice(0,5).split(':').map(Number);
-        const exStart = eh * 60 + em;
-        const exEnd = exStart + (apt.duration || 60);
-        return newStart < exEnd && newEnd > exStart;
-      });
-
-      if (overlapping) {
+      if (availabilityError) {
+        console.error("Error checking availability:", availabilityError);
         toast({
-          title: 'Konflikt terminów',
-          description: 'Ten termin nakłada się z istniejącą wizytą. Wybierz inny czas.',
+          title: 'Błąd sprawdzania dostępności',
+          description: 'Nie udało się sprawdzić dostępności terminu',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (!isAvailable) {
+        toast({
+          title: 'Termin niedostępny',
+          description: 'Ten termin nie jest dostępny w grafiku terapeuty lub jest już zajęty. Wybierz inny czas.',
           variant: 'destructive',
         });
         setLoading(false);
