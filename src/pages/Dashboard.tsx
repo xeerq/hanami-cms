@@ -26,8 +26,11 @@ const Dashboard = () => {
   useEffect(() => {
     if (user) {
       loadUserData();
+    } else {
+      // Redirect to homepage when user is not authenticated
+      navigate('/');
     }
-  }, [user]);
+  }, [user, navigate]);
 
   const loadUserData = async () => {
     try {
