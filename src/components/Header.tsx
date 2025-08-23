@@ -157,8 +157,11 @@ const Header = () => {
               <div className="pt-2 space-y-2">
                 {user ? (
                   <>
-                    <div className="px-3 py-2 text-sm text-hanami-neutral">
-                      Zalogowany jako: {user.email}
+                    <div className="px-3 py-2 flex items-center justify-between">
+                      <span className="text-sm text-hanami-neutral">
+                        Zalogowany jako: {user.email}
+                      </span>
+                      <NotificationCenter />
                     </div>
                     <Button variant="outline" size="sm" className="w-full" asChild>
                       <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
