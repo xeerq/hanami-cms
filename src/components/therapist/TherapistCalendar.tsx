@@ -688,44 +688,59 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
             }}
             onClick={() => handleAppointmentClick(appointment)}
           >
-                            <div className="space-y-1">
-                              {/* Nazwa usługi */}
-                              <div className="font-semibold truncate text-xs">
-                                {appointment.services?.name || "Nieznana usługa"}
-                              </div>
-                              
-                              {/* Informacja o bonie */}
-                              {appointment.voucher_info && appointment.voucher_info.is_voucher && (
-                                <div className="text-xs bg-white/20 rounded px-1 py-0.5 backdrop-blur-sm">
-                                  BON: {appointment.voucher_info.display}
-                                </div>
-                              )}
-                              
-                              {/* Klient */}
-                              <div className="text-xs opacity-90 truncate">
-                                {getClientName(appointment)}
-                              </div>
-                              
-                              {/* Czas trwania */}
-              <div className="text-xs opacity-75">
-                {(appointment.duration ?? appointment.services?.duration ?? 30)} min
+            <div className="h-full flex flex-col justify-between space-y-1">
+              {/* Header: Usługa i cena */}
+              <div className="flex justify-between items-start">
+                <div className="font-semibold text-xs leading-tight flex-1 pr-1">
+                  {appointment.services?.name || "Nieznana usługa"}
+                </div>
+                <div className="text-xs font-bold bg-white/30 rounded px-1.5 py-0.5 backdrop-blur-sm whitespace-nowrap">
+                  {appointment.services?.price ? `${appointment.services.price}zł` : "- zł"}
+                </div>
               </div>
-                              
-                              {/* Status badge */}
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs bg-black/20 rounded px-1 py-0.5">
-                                  {appointment.status === 'confirmed' ? 'Potw.' :
-                                   appointment.status === 'cancelled' ? 'Anul.' :
-                                   appointment.status === 'pending' ? 'Oczek.' :
-                                   appointment.status === 'completed' ? 'Zak.' : appointment.status}
-                                </span>
-                                {appointment.voucher_code && !appointment.voucher_info && (
-                                  <span className="text-xs bg-yellow-400/80 text-yellow-900 rounded px-1 py-0.5">
-                                    BON
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+
+              {/* Czas: start - koniec */}
+              <div className="text-xs font-medium bg-white/20 rounded px-1.5 py-0.5 backdrop-blur-sm text-center">
+                {appointment.appointment_time} - {(() => {
+                  const startTime = new Date(`2000-01-01T${appointment.appointment_time}`);
+                  const duration = appointment.duration ?? appointment.services?.duration ?? 30;
+                  const endTime = new Date(startTime.getTime() + duration * 60000);
+                  return endTime.toTimeString().slice(0, 5);
+                })()}
+              </div>
+
+              {/* Klient i telefon */}
+              <div className="space-y-0.5">
+                <div className="text-xs opacity-95 truncate font-medium">
+                  {getClientName(appointment)}
+                </div>
+                {((appointment.is_guest && appointment.guest_phone) || 
+                  (!appointment.is_guest && appointment.profiles?.phone)) && (
+                  <div className="text-xs opacity-80 truncate">
+                    📞 {appointment.is_guest ? appointment.guest_phone : appointment.profiles?.phone}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer: Status i bon */}
+              <div className="flex justify-between items-center mt-auto">
+                <span className="text-xs bg-black/20 rounded px-1.5 py-0.5 font-medium">
+                  {appointment.status === 'confirmed' ? 'Potw.' :
+                   appointment.status === 'cancelled' ? 'Anul.' :
+                   appointment.status === 'pending' ? 'Oczek.' :
+                   appointment.status === 'completed' ? 'Zak.' : appointment.status}
+                </span>
+                {appointment.voucher_info && appointment.voucher_info.is_voucher ? (
+                  <span className="text-xs bg-green-400/80 text-green-900 rounded px-1.5 py-0.5 font-medium">
+                    BON
+                  </span>
+                ) : appointment.voucher_code && (
+                  <span className="text-xs bg-yellow-400/80 text-yellow-900 rounded px-1.5 py-0.5 font-medium">
+                    BON
+                  </span>
+                )}
+              </div>
+            </div>
                           </div>
                         );
                       })}
