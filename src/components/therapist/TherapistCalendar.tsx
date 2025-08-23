@@ -688,20 +688,20 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
             }}
             onClick={() => handleAppointmentClick(appointment)}
           >
-            <div className="h-full flex flex-col justify-between space-y-1">
+            <div className="h-full flex flex-col justify-between space-y-1 p-1">
               {/* Header: Usługa i cena */}
-              <div className="flex justify-between items-start">
-                <div className="font-semibold text-xs leading-tight flex-1 pr-1">
+              <div className="flex justify-between items-start min-h-[16px]">
+                <div className="font-semibold text-xs leading-tight flex-1 pr-1 truncate">
                   {appointment.services?.name || "Nieznana usługa"}
                 </div>
-                <div className="text-xs font-bold bg-white/30 rounded px-1.5 py-0.5 backdrop-blur-sm whitespace-nowrap">
+                <div className="text-xs font-bold bg-white/30 rounded px-1 py-0.5 backdrop-blur-sm whitespace-nowrap text-center min-w-[35px]">
                   {appointment.services?.price ? `${appointment.services.price}zł` : "- zł"}
                 </div>
               </div>
 
-              {/* Czas: start - koniec */}
+              {/* Czas: start - koniec (bez sekund) */}
               <div className="text-xs font-medium bg-white/20 rounded px-1.5 py-0.5 backdrop-blur-sm text-center">
-                {appointment.appointment_time} - {(() => {
+                {appointment.appointment_time.slice(0, 5)} - {(() => {
                   const startTime = new Date(`2000-01-01T${appointment.appointment_time}`);
                   const duration = appointment.duration ?? appointment.services?.duration ?? 30;
                   const endTime = new Date(startTime.getTime() + duration * 60000);
@@ -710,32 +710,32 @@ const TherapistCalendar = ({ therapistId }: TherapistCalendarProps) => {
               </div>
 
               {/* Klient i telefon */}
-              <div className="space-y-0.5">
-                <div className="text-xs opacity-95 truncate font-medium">
+              <div className="space-y-0.5 min-h-[20px]">
+                <div className="text-xs opacity-95 truncate font-medium leading-tight">
                   {getClientName(appointment)}
                 </div>
                 {((appointment.is_guest && appointment.guest_phone) || 
                   (!appointment.is_guest && appointment.profiles?.phone)) && (
-                  <div className="text-xs opacity-80 truncate">
+                  <div className="text-xs opacity-80 truncate leading-tight">
                     📞 {appointment.is_guest ? appointment.guest_phone : appointment.profiles?.phone}
                   </div>
                 )}
               </div>
 
               {/* Footer: Status i bon */}
-              <div className="flex justify-between items-center mt-auto">
-                <span className="text-xs bg-black/20 rounded px-1.5 py-0.5 font-medium">
-                  {appointment.status === 'confirmed' ? 'Potw.' :
-                   appointment.status === 'cancelled' ? 'Anul.' :
-                   appointment.status === 'pending' ? 'Oczek.' :
-                   appointment.status === 'completed' ? 'Zak.' : appointment.status}
+              <div className="flex justify-between items-center mt-auto gap-1 min-h-[18px]">
+                <span className="text-xs bg-black/20 rounded px-1 py-0.5 font-medium truncate flex-shrink-0">
+                  {appointment.status === 'confirmed' ? 'OK' :
+                   appointment.status === 'cancelled' ? 'X' :
+                   appointment.status === 'pending' ? '?' :
+                   appointment.status === 'completed' ? '✓' : appointment.status}
                 </span>
                 {appointment.voucher_info && appointment.voucher_info.is_voucher ? (
-                  <span className="text-xs bg-green-400/80 text-green-900 rounded px-1.5 py-0.5 font-medium">
+                  <span className="text-xs bg-green-400/80 text-green-900 rounded px-1 py-0.5 font-medium flex-shrink-0">
                     BON
                   </span>
                 ) : appointment.voucher_code && (
-                  <span className="text-xs bg-yellow-400/80 text-yellow-900 rounded px-1.5 py-0.5 font-medium">
+                  <span className="text-xs bg-yellow-400/80 text-yellow-900 rounded px-1 py-0.5 font-medium flex-shrink-0">
                     BON
                   </span>
                 )}
