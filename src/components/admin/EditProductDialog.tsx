@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import ImageUploadCrop from "@/components/ui/image-upload-crop";
 
 interface Category {
   id: string;
@@ -50,6 +51,7 @@ const EditProductDialog = ({ open, onOpenChange, product, categories, onSuccess 
     image_url: "",
   });
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,6 +80,40 @@ const EditProductDialog = ({ open, onOpenChange, product, categories, onSuccess 
       });
     }
   }, [product, open]);
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `products/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('product-service-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('product-service-images')
+        .getPublicUrl(fileName);
+
+      setFormData({ ...formData, image_url: data.publicUrl });
+      
+      toast({
+        title: "Sukces",
+        description: "Zdjęcie zostało przesłane",
+      });
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się przesłać zdjęcia",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,23 +230,19 @@ const EditProductDialog = ({ open, onOpenChange, product, categories, onSuccess 
               </Select>
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="image_url">URL obrazu</Label>
-              <Input
-                id="image_url"
-                type="url"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                placeholder="https://example.com/image.jpg"
-              />
-            </div>
+            <ImageUploadCrop
+              onImageUpload={handleImageUpload}
+              currentImageUrl={formData.image_url}
+              aspectRatio={4/3}
+              label="Zdjęcie produktu"
+            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Anuluj
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Zapisywanie..." : "Zapisz zmiany"}
+            <Button type="submit" disabled={loading || uploading}>
+              {loading ? "Zapisywanie..." : uploading ? "Przesyłanie..." : "Zapisz zmiany"}
             </Button>
           </DialogFooter>
         </form>

@@ -190,8 +190,16 @@ const ProductsManager = () => {
                     <div key={product.id} className="border border-hanami-accent/20 rounded-lg p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start space-x-4">
-                          <div className="w-16 h-16 bg-hanami-secondary rounded-full flex items-center justify-center">
-                            <Package className="h-8 w-8 text-hanami-primary" />
+                          <div className="w-16 h-16 bg-hanami-secondary rounded-lg overflow-hidden flex items-center justify-center">
+                            {product.image_url ? (
+                              <img 
+                                src={product.image_url} 
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Package className="h-8 w-8 text-hanami-primary" />
+                            )}
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center space-x-2 mb-1">

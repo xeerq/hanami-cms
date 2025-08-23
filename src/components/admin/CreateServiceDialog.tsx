@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import ImageUploadCrop from "@/components/ui/image-upload-crop";
 
 interface Category {
   id: string;
@@ -27,9 +28,45 @@ const CreateServiceDialog = ({ open, onOpenChange, categories, onSuccess }: Crea
     description: "",
     duration: "",
     price: "",
-    category: ""
+    category: "",
+    image_url: ""
   });
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `services/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('product-service-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('product-service-images')
+        .getPublicUrl(fileName);
+
+      setFormData({ ...formData, image_url: data.publicUrl });
+      
+      toast({
+        title: "Sukces",
+        description: "Zdjęcie zostało przesłane",
+      });
+    } catch (error: any) {
+      console.error("Error uploading image:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się przesłać zdjęcia",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +81,7 @@ const CreateServiceDialog = ({ open, onOpenChange, categories, onSuccess }: Crea
           duration: parseInt(formData.duration),
           price: parseFloat(formData.price),
           category: formData.category || null,
+          image_url: formData.image_url || null,
           is_active: true
         });
 
@@ -61,7 +99,8 @@ const CreateServiceDialog = ({ open, onOpenChange, categories, onSuccess }: Crea
         description: "",
         duration: "",
         price: "",
-        category: ""
+        category: "",
+        image_url: ""
       });
     } catch (error: any) {
       console.error("Error creating service:", error);
@@ -156,12 +195,19 @@ const CreateServiceDialog = ({ open, onOpenChange, categories, onSuccess }: Crea
             </Select>
           </div>
 
+          <ImageUploadCrop
+            onImageUpload={handleImageUpload}
+            currentImageUrl={formData.image_url}
+            aspectRatio={16/9}
+            label="Zdjęcie usługi"
+          />
+
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Anuluj
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? "Dodawanie..." : "Dodaj usługę"}
+            <Button type="submit" disabled={loading || uploading}>
+              {loading ? "Dodawanie..." : uploading ? "Przesyłanie..." : "Dodaj usługę"}
             </Button>
           </div>
         </form>
