@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { useTherapistCheck } from "@/hooks/useTherapistCheck";
+import NotificationCenter from "@/components/NotificationCenter";
 const Header = () => {
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -67,6 +68,7 @@ const Header = () => {
           <div className="hidden lg:flex items-center space-x-3">
             {user ? (
               <>
+                <NotificationCenter />
                 <div className="text-xs text-muted-foreground max-w-24 truncate">
                   {user.email}
                 </div>
