@@ -64,16 +64,38 @@ const ProfileForm = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
+      // Najpierw sprawdź czy profil już istnieje
+      const { data: existingProfile } = await supabase
         .from("profiles")
-        .upsert({
-          user_id: user.id,
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          phone: profile.phone,
-        });
+        .select("user_id")
+        .eq("user_id", user.id)
+        .single();
 
-      if (error) throw error;
+      if (existingProfile) {
+        // Aktualizuj istniejący profil
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            phone: profile.phone,
+          })
+          .eq("user_id", user.id);
+
+        if (error) throw error;
+      } else {
+        // Utwórz nowy profil
+        const { error } = await supabase
+          .from("profiles")
+          .insert({
+            user_id: user.id,
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            phone: profile.phone,
+          });
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Sukces!",
