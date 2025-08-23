@@ -7,11 +7,17 @@ import {
   Clock,
   Star,
   AlertCircle,
-  Activity
+  Activity,
+  Package,
+  ShoppingCart
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import ProductInventoryManager from "./ProductInventoryManager";
+import ProductSalesAnalytics from "./ProductSalesAnalytics";
+import ServiceSalesAnalytics from "./ServiceSalesAnalytics";
 
 interface DashboardStats {
   todayAppointments: number;
@@ -277,80 +283,139 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statCards.map((stat, index) => (
-          <Card key={index} className="shadow-soft hover:shadow-elegant transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {stat.title}
-              </CardTitle>
-              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
-              </div>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview">Przegląd</TabsTrigger>
+          <TabsTrigger value="inventory">Magazyn</TabsTrigger>
+          <TabsTrigger value="product-sales">Sprzedaż produktów</TabsTrigger>
+          <TabsTrigger value="service-sales">Sprzedaż usług</TabsTrigger>
+          <TabsTrigger value="system">System</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {statCards.map((stat, index) => (
+              <Card key={index} className="shadow-soft hover:shadow-elegant transition-shadow">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {stat.title}
+                  </CardTitle>
+                  <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                    <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {stat.description}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle className="text-lg">Szybkie akcje</CardTitle>
+                <CardDescription>
+                  Najczęściej używane funkcje
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Dodaj nową wizytę</span>
+                </div>
+                <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors">
+                  <Users className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Zarządzaj terapeutami</span>
+                </div>
+                <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Utwórz bon prezentowy</span>
+                </div>
+                <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors">
+                  <Package className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Zarządzaj produktami</span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-soft">
+              <CardHeader>
+                <CardTitle className="text-lg">Status systemu</CardTitle>
+                <CardDescription>
+                  Aktualne informacje o działaniu
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Status bazy danych</span>
+                  <span className="text-sm text-green-600 font-medium">Aktywna</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Ostatnia synchronizacja</span>
+                  <span className="text-sm text-muted-foreground">
+                    {new Date().toLocaleTimeString('pl-PL')}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Aktywni użytkownicy</span>
+                  <span className="text-sm text-primary font-medium">
+                    {stats.todayAppointments} dzisiaj
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="inventory">
+          <ProductInventoryManager />
+        </TabsContent>
+
+        <TabsContent value="product-sales">
+          <ProductSalesAnalytics />
+        </TabsContent>
+
+        <TabsContent value="service-sales">
+          <ServiceSalesAnalytics />
+        </TabsContent>
+
+        <TabsContent value="system" className="space-y-6">
+          <Card className="shadow-soft">
+            <CardHeader>
+              <CardTitle className="text-lg">Szczegóły systemu</CardTitle>
+              <CardDescription>
+                Informacje techniczne i konfiguracja
+              </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">
-                {stat.description}
-              </p>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-semibold">Baza danych</h4>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>Status połączenia: <span className="text-green-600">Aktywne</span></p>
+                    <p>Ostatnia kopia zapasowa: {new Date().toLocaleDateString('pl-PL')}</p>
+                    <p>Wersja: PostgreSQL 15</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-semibold">Przechowywanie plików</h4>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>Status: <span className="text-green-600">Działająca</span></p>
+                    <p>Wykorzystane miejsce: ~2.3 GB</p>
+                    <p>Dostępne: 97.7 GB</p>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        ))}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="text-lg">Szybkie akcje</CardTitle>
-            <CardDescription>
-              Najczęściej używane funkcje
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors">
-              <Calendar className="h-5 w-5 text-primary" />
-              <span className="font-medium">Dodaj nową wizytę</span>
-            </div>
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors">
-              <Users className="h-5 w-5 text-primary" />
-              <span className="font-medium">Zarządzaj terapeutami</span>
-            </div>
-            <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors">
-              <TrendingUp className="h-5 w-5 text-primary" />
-              <span className="font-medium">Utwórz bon prezentowy</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-soft">
-          <CardHeader>
-            <CardTitle className="text-lg">Status systemu</CardTitle>
-            <CardDescription>
-              Aktualne informacje o działaniu
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Status bazy danych</span>
-              <span className="text-sm text-green-600 font-medium">Aktywna</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Ostatnia synchronizacja</span>
-              <span className="text-sm text-muted-foreground">
-                {new Date().toLocaleTimeString('pl-PL')}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">Aktywni użytkownicy</span>
-              <span className="text-sm text-primary font-medium">
-                {stats.todayAppointments} dzisiaj
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
