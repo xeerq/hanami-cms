@@ -40,11 +40,21 @@ serve(async (req) => {
       .from('vouchers')
       .select(`
         *,
-        services(name, description),
-        profiles(first_name, last_name)
+        services(name, description)
       `)
       .eq('id', voucherId)
       .single()
+
+    // Fetch profile data separately if user_id exists
+    let userProfile = null
+    if (voucher && voucher.user_id) {
+      const { data: profile } = await supabaseClient
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('user_id', voucher.user_id)
+        .single()
+      userProfile = profile
+    }
 
     if (voucherError) {
       console.error('Error fetching voucher:', voucherError)
@@ -54,8 +64,8 @@ serve(async (req) => {
     console.log('Voucher data:', voucher)
 
     // Generate HTML content for the voucher
-    const voucherOwner = voucher.profiles?.first_name && voucher.profiles?.last_name 
-      ? `${voucher.profiles.first_name} ${voucher.profiles.last_name}`
+    const voucherOwner = userProfile?.first_name && userProfile?.last_name 
+      ? `${userProfile.first_name} ${userProfile.last_name}`
       : voucher.purchaser_name || 'Właściciel bonu'
 
     const serviceInfo = voucher.services?.name || 'Wszystkie usługi'
