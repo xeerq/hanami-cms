@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, FileDown, Search, Edit, Trash2 } from "lucide-react";
+import { Plus, FileDown, Search, Edit, Trash2, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreateVoucherDialog } from "./CreateVoucherDialog";
@@ -215,6 +215,44 @@ export function VouchersManager() {
     }
   };
 
+  const handleDownloadPDF = async (voucher: Voucher) => {
+    try {
+      console.log('Generating PDF for voucher:', voucher.id);
+      
+      const { data, error } = await supabase.functions.invoke('generate-voucher-pdf', {
+        body: { voucherId: voucher.id }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+
+      // Open the HTML response in a new window for printing
+      if (typeof data === 'string') {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(data);
+          printWindow.document.close();
+        }
+
+        toast({
+          title: "Sukces",
+          description: `Bon ${voucher.code} został otwarty do druku`,
+        });
+      } else {
+        throw new Error('Nieprawidłowy format odpowiedzi');
+      }
+    } catch (error: any) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się wygenerować bonu. Spróbuj ponownie.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -340,7 +378,16 @@ export function VouchersManager() {
                       {new Date(voucher.created_at).toLocaleDateString('pl-PL')}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDownloadPDF(voucher)}
+                          title="Pobierz bon jako PDF"
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          PDF
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
