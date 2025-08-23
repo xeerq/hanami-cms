@@ -12,72 +12,18 @@ import { useToast } from "@/hooks/use-toast";
 const Shop = () => {
   const [cart, setCart] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const products = [
-    {
-      id: 1,
-      name: "Olejek do masażu Sakura",
-      description: "Luksusowy olejek do masażu o zapachu kwitnących wiśni",
-      price: 89,
-      category: "Olejki",
-      image: "/lovable-uploads/6abfd03e-faab-45ef-8c3f-8eb2cf6b0ea7.png",
-      inStock: true
-    },
-    {
-      id: 2,
-      name: "Krem regenerujący Hanami",
-      description: "Intensywnie nawilżający krem do ciała z ekstraktami roślin",
-      price: 65,
-      category: "Kosmetyki",
-      image: "/lovable-uploads/3140ba04-33e9-4565-bb1c-d1c585d11e13.png",
-      inStock: true
-    },
-    {
-      id: 3,
-      name: "Zestaw kamieni bazaltowych",
-      description: "Profesjonalne kamienie do masażu hot stone",
-      price: 199,
-      category: "Akcesoria",
-      image: "/lovable-uploads/36929f8b-ac5b-4aed-9ac9-ad38a48028a6.png",
-      inStock: true
-    },
-    {
-      id: 4,
-      name: "Świeca aromaterapeutyczna",
-      description: "Naturalna świeca sojowa o zapachu relaksującym",
-      price: 45,
-      category: "Aromaterapia",
-      image: "/lovable-uploads/a3bc1f9a-ac00-4ccb-8ad5-7532935671d9.png",
-      inStock: true
-    },
-    {
-      id: 5,
-      name: "Olejek eteryczny lawenda",
-      description: "100% naturalny olejek eteryczny z lawendy",
-      price: 39,
-      category: "Olejki",
-      image: "/lovable-uploads/6abfd03e-faab-45ef-8c3f-8eb2cf6b0ea7.png",
-      inStock: false
-    },
-    {
-      id: 6,
-      name: "Masażer bambusowy",
-      description: "Tradycyjny bambusowy masażer do punktowego masażu",
-      price: 79,
-      category: "Akcesoria",
-      image: "/lovable-uploads/3140ba04-33e9-4565-bb1c-d1c585d11e13.png",
-      inStock: true
-    }
-  ];
 
   const categories = ["Wszystkie", "Olejki", "Kosmetyki", "Akcesoria", "Aromaterapia", "Bony"];
   const [selectedCategory, setSelectedCategory] = useState("Wszystkie");
 
   useEffect(() => {
     loadServices();
+    loadProducts();
   }, []);
 
   const loadServices = async () => {
@@ -91,6 +37,28 @@ const Shop = () => {
       setServices(data || []);
     } catch (error) {
       console.error('Error loading services:', error);
+    }
+  };
+
+  const loadProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      
+      const formattedProducts = (data || []).map(product => ({
+        ...product,
+        inStock: (product.stock_quantity || 0) > 0,
+        image: product.image_url || "/lovable-uploads/6abfd03e-faab-45ef-8c3f-8eb2cf6b0ea7.png"
+      }));
+      
+      setProducts(formattedProducts);
+    } catch (error) {
+      console.error('Error loading products:', error);
     }
   };
 
@@ -246,8 +214,8 @@ const Shop = () => {
             {filteredProducts.map((product) => (
               <Card key={product.id} className="group hover:shadow-elegant transition-zen border-hanami-accent/20 overflow-hidden">
                 <div className="relative">
-                  <img 
-                    src={product.image} 
+                   <img 
+                    src={product.image_url || product.image || "/lovable-uploads/6abfd03e-faab-45ef-8c3f-8eb2cf6b0ea7.png"} 
                     alt={product.name}
                     className="w-full h-64 object-cover group-hover:scale-105 transition-zen"
                   />
