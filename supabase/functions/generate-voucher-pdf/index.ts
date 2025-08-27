@@ -260,8 +260,7 @@ serve(async (req) => {
             
             <div class="content">
                 <div class="content-line">
-                    <span class="line-text">Panią/Pana</span>
-                    <div class="dotted-line"></div>
+                    <span class="line-text">Panią/Pana: </span>
                     <span class="filled-value">${voucherOwner}</span>
                 </div>
                 
@@ -290,13 +289,11 @@ serve(async (req) => {
                 
                 <div class="validity-section">
                     <div class="validity-line">
-                        <span class="validity-label">bon ważny do</span>
-                        <div class="validity-dots"></div>
+                        <span class="validity-label">bon ważny do: </span>
                         <span class="validity-value">${expiryDate}</span>
                     </div>
                     <div class="validity-line">
-                        <span class="validity-label">numer</span>
-                        <div class="validity-dots"></div>
+                        <span class="validity-label">numer: </span>
                         <span class="validity-value">${voucher.code}</span>
                     </div>
                 </div>
