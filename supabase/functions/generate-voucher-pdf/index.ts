@@ -187,14 +187,16 @@ serve(async (req) => {
             }
             
             .contact-section {
-                font-size: 8px;
-                line-height: 1.2;
+                font-size: 9px;
+                line-height: 1.4;
                 text-align: left;
+                max-width: 160px;
             }
             
             .validity-section {
                 text-align: right;
-                font-size: 8px;
+                font-size: 9px;
+                max-width: 120px;
             }
             
             .validity-line {
