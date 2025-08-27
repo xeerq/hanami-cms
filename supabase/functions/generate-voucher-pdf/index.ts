@@ -77,7 +77,7 @@ serve(async (req) => {
       ? new Date(voucher.expires_at).toLocaleDateString('pl-PL')
       : 'Bezterminowy'
 
-    // Create HTML template for PDF
+    // Create HTML template for PDF that matches the uploaded voucher design
     const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -86,224 +86,221 @@ serve(async (req) => {
         <style>
             @page {
                 size: A4;
-                margin: 20mm;
+                margin: 15mm;
             }
             
             body {
-                font-family: 'Arial', sans-serif;
+                font-family: 'Times New Roman', serif;
                 margin: 0;
-                padding: 20px;
-                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-                min-height: 100vh;
+                padding: 30px;
+                background: white;
+                color: black;
+                line-height: 1.6;
             }
             
             .voucher-container {
-                max-width: 600px;
+                max-width: 700px;
                 margin: 0 auto;
                 background: white;
-                border-radius: 20px;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-                overflow: hidden;
-                border: 3px solid #e91e63;
-            }
-            
-            .voucher-header {
-                background: linear-gradient(135deg, #e91e63 0%, #f06292 100%);
-                color: white;
-                padding: 30px;
-                text-align: center;
+                padding: 40px;
+                border: 2px solid #000;
+                min-height: 80vh;
                 position: relative;
             }
             
-            .voucher-header::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="white" opacity="0.1"/></svg>');
-                background-size: 30px 30px;
+            .header {
+                text-align: center;
+                margin-bottom: 60px;
             }
             
-            .voucher-title {
-                font-size: 36px;
+            .salon-title {
+                font-size: 48px;
+                font-weight: normal;
+                margin: 0;
+                margin-bottom: 10px;
+                letter-spacing: 2px;
+            }
+            
+            .hanami-spa {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 15px;
+                margin: 20px 0;
+            }
+            
+            .hanami-text {
+                font-size: 64px;
+                font-style: italic;
+                font-weight: bold;
+                color: #000;
+                margin: 0;
+            }
+            
+            .spa-text {
+                font-size: 32px;
+                color: #e91e63;
                 font-weight: bold;
                 margin: 0;
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-                position: relative;
-                z-index: 1;
             }
             
-            .voucher-subtitle {
-                font-size: 18px;
-                margin: 10px 0 0 0;
-                opacity: 0.9;
-                position: relative;
-                z-index: 1;
-            }
-            
-            .voucher-body {
-                padding: 40px;
-                text-align: center;
-            }
-            
-            .voucher-code {
-                background: #f8f9fa;
-                border: 2px dashed #e91e63;
-                border-radius: 15px;
-                padding: 20px;
-                margin: 20px 0;
-                font-family: 'Courier New', monospace;
-                font-size: 24px;
-                font-weight: bold;
+            .flower-icon {
                 color: #e91e63;
-                letter-spacing: 3px;
+                font-size: 40px;
             }
             
-            .voucher-details {
+            .subtitle {
+                font-size: 24px;
+                margin: 30px 0 60px 0;
+                font-weight: normal;
+            }
+            
+            .content {
+                font-size: 20px;
+                line-height: 2.5;
+                margin: 40px 0;
+            }
+            
+            .recipient-line {
+                margin: 30px 0;
+                border-bottom: 1px dotted #000;
+                padding-bottom: 5px;
+                min-height: 25px;
+                display: flex;
+                align-items: baseline;
+            }
+            
+            .recipient-label {
+                margin-right: 10px;
+                white-space: nowrap;
+            }
+            
+            .recipient-value {
+                flex: 1;
+                border-bottom: none;
+                font-weight: bold;
+            }
+            
+            .service-line {
                 margin: 30px 0;
             }
             
-            .detail-row {
+            .value-line {
+                margin: 30px 0;
+                border-bottom: 1px dotted #000;
+                padding-bottom: 5px;
+                min-height: 25px;
+                display: flex;
+                align-items: baseline;
+            }
+            
+            .value-label {
+                margin-right: 10px;
+                white-space: nowrap;
+            }
+            
+            .value-amount {
+                flex: 1;
+                border-bottom: none;
+                font-weight: bold;
+            }
+            
+            .footer {
+                position: absolute;
+                bottom: 40px;
+                left: 40px;
+                right: 40px;
                 display: flex;
                 justify-content: space-between;
-                align-items: center;
-                padding: 15px 0;
-                border-bottom: 1px solid #eee;
+                align-items: flex-end;
                 font-size: 16px;
             }
             
-            .detail-row:last-child {
-                border-bottom: none;
+            .contact-info {
+                text-align: left;
+                line-height: 1.4;
             }
             
-            .detail-label {
-                font-weight: bold;
-                color: #666;
+            .validity-info {
+                text-align: right;
+                line-height: 2;
             }
             
-            .detail-value {
-                color: #333;
-                font-weight: 500;
-            }
-            
-            .value-highlight {
-                background: linear-gradient(135deg, #e91e63 0%, #f06292 100%);
-                color: white;
-                padding: 8px 16px;
-                border-radius: 25px;
-                font-weight: bold;
-                font-size: 18px;
-            }
-            
-            .voucher-footer {
-                background: #f8f9fa;
-                padding: 25px;
-                text-align: center;
-                font-size: 14px;
-                color: #666;
-                border-top: 1px solid #eee;
-            }
-            
-            .logo {
-                font-size: 24px;
-                font-weight: bold;
-                color: #e91e63;
+            .validity-line {
+                border-bottom: 1px dotted #000;
+                padding-bottom: 3px;
                 margin-bottom: 10px;
+                min-width: 200px;
+                min-height: 20px;
+                display: flex;
+                align-items: baseline;
             }
             
-            .decorative-border {
-                height: 6px;
-                background: linear-gradient(90deg, #e91e63, #f06292, #e91e63);
-                margin: 20px 0;
-            }
-            
-            .cherry-blossom {
-                position: absolute;
-                width: 30px;
-                height: 30px;
-                background: rgba(255,255,255,0.2);
-                border-radius: 50%;
-                top: 20px;
-                right: 30px;
-            }
-            
-            .cherry-blossom::before {
-                content: '🌸';
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                font-size: 20px;
+            .number-line {
+                border-bottom: 1px dotted #000;
+                padding-bottom: 3px;
+                min-width: 200px;
+                min-height: 20px;
+                display: flex;
+                align-items: baseline;
             }
             
             @media print {
                 body {
-                    background: white;
+                    padding: 0;
+                    margin: 0;
                 }
                 
                 .voucher-container {
+                    border: 2px solid #000;
                     box-shadow: none;
-                    border: 2px solid #e91e63;
                 }
             }
         </style>
     </head>
     <body>
         <div class="voucher-container">
-            <div class="voucher-header">
-                <div class="cherry-blossom"></div>
-                <h1 class="voucher-title">HANAMI SPA</h1>
-                <p class="voucher-subtitle">Bon Prezentowy</p>
+            <div class="header">
+                <div class="salon-title">Salon</div>
+                <div class="hanami-spa">
+                    <h1 class="hanami-text">Hanami</h1>
+                    <span class="flower-icon">🌸</span>
+                    <span class="spa-text">SPA</span>
+                </div>
+                <div class="subtitle">serdecznie zaprasza</div>
             </div>
             
-            <div class="voucher-body">
-                <div class="decorative-border"></div>
-                
-                <div class="voucher-code">
-                    ${voucher.code}
+            <div class="content">
+                <div class="recipient-line">
+                    <span class="recipient-label">Panią/Pana</span>
+                    <span class="recipient-value">${voucherOwner}</span>
                 </div>
                 
-                <div class="voucher-details">
-                    <div class="detail-row">
-                        <span class="detail-label">Właściciel:</span>
-                        <span class="detail-value">${voucherOwner}</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <span class="detail-label">Usługa:</span>
-                        <span class="detail-value">${serviceInfo}</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <span class="detail-label">Wartość:</span>
-                        <span class="detail-value value-highlight">${voucherValue}</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <span class="detail-label">Ważny do:</span>
-                        <span class="detail-value">${expiryDate}</span>
-                    </div>
-                    
-                    ${voucher.notes ? `
-                    <div class="detail-row">
-                        <span class="detail-label">Notatki:</span>
-                        <span class="detail-value">${voucher.notes}</span>
-                    </div>
-                    ` : ''}
+                <div class="service-line">
+                    na zabieg ${serviceInfo.toLowerCase()}
                 </div>
                 
-                <div class="decorative-border"></div>
+                <div class="value-line">
+                    <span class="value-label">o wartości</span>
+                    <span class="value-amount">${voucherValue}</span>
+                </div>
             </div>
             
-            <div class="voucher-footer">
-                <div class="logo">🌸 HANAMI SPA 🌸</div>
-                <p>Bon do realizacji w salonie Hanami Spa</p>
-                <p>Prezentuj ten kod przy rezerwacji wizyty</p>
-                <p style="margin-top: 15px; font-style: italic;">
-                    Kontakt: info@hanami-spa.pl | tel: +48 123 456 789
-                </p>
+            <div class="footer">
+                <div class="contact-info">
+                    Prosimy o kontakt w celu<br>
+                    ustalenia daty wizyty w Salonie.<br><br>
+                    tel: 605 412 692<br>
+                    63-400 Ostrów Wielkopolski,<br>
+                    ul. Raszkowska 80e
+                </div>
+                
+                <div class="validity-info">
+                    <div>bon ważny do</div>
+                    <div class="validity-line">${expiryDate}</div>
+                    <div>numer</div>
+                    <div class="number-line">${voucher.code}</div>
+                </div>
             </div>
         </div>
     </body>
