@@ -30,9 +30,7 @@ const TeamMembersDisplay = () => {
       // Use the secure view that doesn't expose contact information
       const { data, error } = await supabase
         .from("team_members_display")
-        .select("*")
-        .eq("is_active", true)
-        .order("display_order", { ascending: true });
+        .select("*");
 
       if (error) throw error;
       setTeamMembers(data || []);
