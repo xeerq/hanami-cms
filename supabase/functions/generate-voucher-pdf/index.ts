@@ -77,7 +77,7 @@ serve(async (req) => {
       ? new Date(voucher.expires_at).toLocaleDateString('pl-PL')
       : 'Bezterminowy'
 
-    // Create HTML template for PDF that matches the uploaded voucher design
+    // Create HTML template for PDF that matches the uploaded voucher design exactly
     const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -86,163 +86,185 @@ serve(async (req) => {
         <style>
             @page {
                 size: A4;
-                margin: 15mm;
+                margin: 10mm;
             }
             
             body {
                 font-family: 'Times New Roman', serif;
                 margin: 0;
-                padding: 30px;
+                padding: 20px;
                 background: white;
                 color: black;
-                line-height: 1.6;
+                line-height: 1.4;
+                font-size: 18px;
             }
             
             .voucher-container {
-                max-width: 700px;
+                max-width: 650px;
                 margin: 0 auto;
                 background: white;
-                padding: 40px;
+                padding: 30px 40px;
                 border: 2px solid #000;
-                min-height: 80vh;
+                min-height: 85vh;
                 position: relative;
+                box-sizing: border-box;
             }
             
             .header {
                 text-align: center;
-                margin-bottom: 60px;
+                margin-bottom: 40px;
             }
             
             .salon-title {
-                font-size: 48px;
+                font-size: 36px;
                 font-weight: normal;
-                margin: 0;
-                margin-bottom: 10px;
-                letter-spacing: 2px;
+                margin: 0 0 15px 0;
+                letter-spacing: 1px;
             }
             
-            .hanami-spa {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 15px;
-                margin: 20px 0;
+            .logo-container {
+                margin: 20px 0 25px 0;
+                text-align: center;
             }
             
-            .hanami-text {
-                font-size: 64px;
-                font-style: italic;
-                font-weight: bold;
-                color: #000;
-                margin: 0;
-            }
-            
-            .spa-text {
-                font-size: 32px;
-                color: #e91e63;
-                font-weight: bold;
-                margin: 0;
-            }
-            
-            .flower-icon {
-                color: #e91e63;
-                font-size: 40px;
+            .logo-image {
+                max-width: 300px;
+                height: auto;
             }
             
             .subtitle {
-                font-size: 24px;
-                margin: 30px 0 60px 0;
+                font-size: 22px;
+                margin: 20px 0 40px 0;
                 font-weight: normal;
             }
             
             .content {
-                font-size: 20px;
-                line-height: 2.5;
-                margin: 40px 0;
+                font-size: 18px;
+                line-height: 2.2;
+                margin: 30px 0;
             }
             
             .recipient-line {
-                margin: 30px 0;
-                border-bottom: 1px dotted #000;
-                padding-bottom: 5px;
-                min-height: 25px;
+                margin: 25px 0;
                 display: flex;
                 align-items: baseline;
+                min-height: 25px;
             }
             
             .recipient-label {
-                margin-right: 10px;
+                margin-right: 8px;
                 white-space: nowrap;
+            }
+            
+            .recipient-dots {
+                flex: 1;
+                border-bottom: 1px dotted #000;
+                margin-right: 8px;
+                min-height: 1px;
+                margin-bottom: 3px;
             }
             
             .recipient-value {
-                flex: 1;
-                border-bottom: none;
                 font-weight: bold;
+                min-width: fit-content;
             }
             
             .service-line {
-                margin: 30px 0;
+                margin: 25px 0;
+                line-height: 1.8;
             }
             
             .value-line {
-                margin: 30px 0;
-                border-bottom: 1px dotted #000;
-                padding-bottom: 5px;
-                min-height: 25px;
+                margin: 25px 0;
                 display: flex;
                 align-items: baseline;
+                min-height: 25px;
             }
             
             .value-label {
-                margin-right: 10px;
+                margin-right: 8px;
                 white-space: nowrap;
             }
             
-            .value-amount {
+            .value-dots {
                 flex: 1;
-                border-bottom: none;
+                border-bottom: 1px dotted #000;
+                margin-right: 8px;
+                min-height: 1px;
+                margin-bottom: 3px;
+            }
+            
+            .value-amount {
                 font-weight: bold;
+                min-width: fit-content;
             }
             
             .footer {
                 position: absolute;
-                bottom: 40px;
+                bottom: 30px;
                 left: 40px;
                 right: 40px;
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-end;
-                font-size: 16px;
+                font-size: 14px;
             }
             
             .contact-info {
                 text-align: left;
-                line-height: 1.4;
+                line-height: 1.3;
+                max-width: 250px;
             }
             
             .validity-info {
                 text-align: right;
-                line-height: 2;
+                line-height: 1.8;
             }
             
             .validity-line {
-                border-bottom: 1px dotted #000;
-                padding-bottom: 3px;
-                margin-bottom: 10px;
-                min-width: 200px;
-                min-height: 20px;
                 display: flex;
                 align-items: baseline;
+                margin: 8px 0;
+            }
+            
+            .validity-label {
+                margin-right: 8px;
+                white-space: nowrap;
+            }
+            
+            .validity-dots {
+                border-bottom: 1px dotted #000;
+                min-width: 150px;
+                margin-right: 8px;
+                margin-bottom: 3px;
+            }
+            
+            .validity-value {
+                font-weight: bold;
+                min-width: fit-content;
             }
             
             .number-line {
-                border-bottom: 1px dotted #000;
-                padding-bottom: 3px;
-                min-width: 200px;
-                min-height: 20px;
                 display: flex;
                 align-items: baseline;
+                margin: 8px 0;
+            }
+            
+            .number-label {
+                margin-right: 8px;
+                white-space: nowrap;
+            }
+            
+            .number-dots {
+                border-bottom: 1px dotted #000;
+                min-width: 150px;
+                margin-right: 8px;
+                margin-bottom: 3px;
+            }
+            
+            .number-value {
+                font-weight: bold;
+                min-width: fit-content;
             }
             
             @media print {
@@ -254,6 +276,12 @@ serve(async (req) => {
                 .voucher-container {
                     border: 2px solid #000;
                     box-shadow: none;
+                    margin: 0;
+                }
+                
+                .footer {
+                    position: fixed;
+                    bottom: 30px;
                 }
             }
         </style>
@@ -262,10 +290,8 @@ serve(async (req) => {
         <div class="voucher-container">
             <div class="header">
                 <div class="salon-title">Salon</div>
-                <div class="hanami-spa">
-                    <h1 class="hanami-text">Hanami</h1>
-                    <span class="flower-icon">🌸</span>
-                    <span class="spa-text">SPA</span>
+                <div class="logo-container">
+                    <img src="/lovable-uploads/ca126b9c-7595-42ce-ba12-c10c932b3e07.png" alt="Hanami SPA Logo" class="logo-image">
                 </div>
                 <div class="subtitle">serdecznie zaprasza</div>
             </div>
@@ -273,6 +299,7 @@ serve(async (req) => {
             <div class="content">
                 <div class="recipient-line">
                     <span class="recipient-label">Panią/Pana</span>
+                    <div class="recipient-dots"></div>
                     <span class="recipient-value">${voucherOwner}</span>
                 </div>
                 
@@ -282,6 +309,7 @@ serve(async (req) => {
                 
                 <div class="value-line">
                     <span class="value-label">o wartości</span>
+                    <div class="value-dots"></div>
                     <span class="value-amount">${voucherValue}</span>
                 </div>
             </div>
@@ -296,10 +324,16 @@ serve(async (req) => {
                 </div>
                 
                 <div class="validity-info">
-                    <div>bon ważny do</div>
-                    <div class="validity-line">${expiryDate}</div>
-                    <div>numer</div>
-                    <div class="number-line">${voucher.code}</div>
+                    <div class="validity-line">
+                        <span class="validity-label">bon ważny do</span>
+                        <div class="validity-dots"></div>
+                        <span class="validity-value">${expiryDate}</span>
+                    </div>
+                    <div class="number-line">
+                        <span class="number-label">numer</span>
+                        <div class="number-dots"></div>
+                        <span class="number-value">${voucher.code}</span>
+                    </div>
                 </div>
             </div>
         </div>
