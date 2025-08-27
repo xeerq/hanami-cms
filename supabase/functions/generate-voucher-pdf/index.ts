@@ -172,7 +172,7 @@ serve(async (req) => {
             }
             
             .service-line {
-                margin: 22px 0;
+                margin: 15px 0;
                 font-size: 13px;
                 line-height: 1.6;
             }
@@ -186,9 +186,9 @@ serve(async (req) => {
             
             .footer {
                 position: absolute;
-                bottom: 20px;
-                left: 20px;
-                right: 20px;
+                bottom: 25px;
+                left: 25px;
+                right: 25px;
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
@@ -199,12 +199,14 @@ serve(async (req) => {
                 line-height: 1.4;
                 text-align: left;
                 max-width: 200px;
+                margin-top: 35px;
             }
             
             .validity-section {
                 text-align: right;
                 font-size: 11px;
                 max-width: 150px;
+                margin-top: 35px;
             }
             
             .validity-line {
