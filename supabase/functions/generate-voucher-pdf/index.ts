@@ -85,7 +85,7 @@ serve(async (req) => {
         <meta charset="UTF-8">
         <style>
             @page {
-                size: A5;
+                size: A4 portrait;
                 margin: 10mm;
             }
             
@@ -101,54 +101,55 @@ serve(async (req) => {
             
             .voucher-container {
                 width: 100%;
-                max-width: 400px;
-                height: auto;
-                padding: 20px;
+                max-width: 500px;
+                height: 350px;
+                padding: 15px;
                 box-sizing: border-box;
                 position: relative;
-                margin: 0 auto;
+                margin: 20px auto;
+                border: 1px solid #333;
             }
             
             .header {
                 text-align: center;
-                margin-bottom: 40px;
+                margin-bottom: 25px;
             }
             
             .salon-title {
-                font-size: 18px;
+                font-size: 16px;
                 font-weight: normal;
-                margin: 0 0 15px 0;
+                margin: 0 0 8px 0;
                 letter-spacing: 1px;
             }
             
             .logo-container {
-                margin: 10px 0 15px 0;
+                margin: 5px 0 8px 0;
                 display: flex;
                 justify-content: center;
                 align-items: center;
             }
             
             .logo-image {
-                max-width: 180px;
+                max-width: 140px;
                 height: auto;
             }
             
             .subtitle {
-                font-size: 14px;
-                margin: 15px 0 0 0;
+                font-size: 12px;
+                margin: 8px 0 0 0;
                 font-weight: normal;
             }
             
             .content {
-                margin: 40px 0;
-                font-size: 12px;
+                margin: 25px 0;
+                font-size: 11px;
             }
             
             .content-line {
-                margin: 20px 0;
+                margin: 12px 0;
                 display: flex;
                 align-items: baseline;
-                min-height: 18px;
+                min-height: 15px;
             }
             
             .line-text {
@@ -171,36 +172,36 @@ serve(async (req) => {
             }
             
             .service-line {
-                margin: 20px 0;
-                font-size: 12px;
+                margin: 12px 0;
+                font-size: 11px;
             }
             
             .footer {
                 position: absolute;
-                bottom: 20px;
-                left: 20px;
-                right: 20px;
+                bottom: 15px;
+                left: 15px;
+                right: 15px;
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-end;
             }
             
             .contact-section {
-                font-size: 10px;
-                line-height: 1.3;
+                font-size: 8px;
+                line-height: 1.2;
                 text-align: left;
             }
             
             .validity-section {
                 text-align: right;
-                font-size: 10px;
+                font-size: 8px;
             }
             
             .validity-line {
                 display: flex;
                 align-items: baseline;
-                margin: 6px 0;
-                min-height: 14px;
+                margin: 4px 0;
+                min-height: 12px;
             }
             
             .validity-label {
@@ -210,10 +211,10 @@ serve(async (req) => {
             
             .validity-dots {
                 border-bottom: 1px dotted #333;
-                min-width: 80px;
-                margin-right: 6px;
+                min-width: 60px;
+                margin-right: 4px;
                 position: relative;
-                top: -2px;
+                top: -1px;
             }
             
             .validity-value {
