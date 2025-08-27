@@ -100,9 +100,9 @@ serve(async (req) => {
             }
             
             .voucher-container {
-                width: 400px;
-                height: 280px;
-                padding: 15px;
+                width: 450px;
+                height: 320px;
+                padding: 20px;
                 box-sizing: border-box;
                 position: relative;
                 margin: 30px auto;
@@ -112,7 +112,7 @@ serve(async (req) => {
             
             .header {
                 text-align: center;
-                margin-bottom: 25px;
+                margin-bottom: 30px;
             }
             
             .salon-title {
@@ -141,15 +141,15 @@ serve(async (req) => {
             }
             
             .content {
-                margin: 20px 0 60px 0;
-                font-size: 11px;
+                margin: 25px 0 80px 0;
+                font-size: 12px;
             }
             
             .content-line {
-                margin: 15px 0;
+                margin: 20px 0;
                 display: flex;
                 align-items: baseline;
-                min-height: 18px;
+                min-height: 20px;
             }
             
             .line-text {
@@ -172,32 +172,32 @@ serve(async (req) => {
             }
             
             .service-line {
-                margin: 15px 0;
-                font-size: 11px;
-                line-height: 1.5;
+                margin: 20px 0;
+                font-size: 12px;
+                line-height: 1.6;
             }
             
             .footer {
                 position: absolute;
-                bottom: 10px;
-                left: 15px;
-                right: 15px;
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-start;
             }
             
             .contact-section {
-                font-size: 9px;
-                line-height: 1.4;
+                font-size: 10px;
+                line-height: 1.5;
                 text-align: left;
-                max-width: 160px;
+                max-width: 180px;
             }
             
             .validity-section {
                 text-align: right;
-                font-size: 9px;
-                max-width: 120px;
+                font-size: 10px;
+                max-width: 140px;
             }
             
             .validity-line {
