@@ -100,14 +100,14 @@ serve(async (req) => {
             }
             
             .voucher-container {
-                width: 100%;
-                max-width: 500px;
-                height: 350px;
+                width: 400px;
+                height: 280px;
                 padding: 15px;
                 box-sizing: border-box;
                 position: relative;
-                margin: 20px auto;
-                border: 1px solid #333;
+                margin: 30px auto;
+                border: 2px solid #333;
+                overflow: hidden;
             }
             
             .header {
@@ -224,13 +224,16 @@ serve(async (req) => {
             
             @media print {
                 .voucher-container {
-                    height: auto;
-                    min-height: 100vh;
+                    width: 400px;
+                    height: 280px;
+                    margin: 30px auto;
+                    border: 2px solid #333;
+                    box-shadow: none;
                 }
                 
                 .footer {
-                    position: fixed;
-                    bottom: 40px;
+                    position: absolute;
+                    bottom: 15px;
                 }
             }
         </style>
