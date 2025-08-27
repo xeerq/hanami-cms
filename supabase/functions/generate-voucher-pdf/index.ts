@@ -77,7 +77,7 @@ serve(async (req) => {
       ? new Date(voucher.expires_at).toLocaleDateString('pl-PL')
       : 'Bezterminowy'
 
-    // Create HTML template for PDF that matches the uploaded voucher design exactly
+    // Create HTML template for PDF that matches exactly the uploaded voucher design
     const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -86,202 +86,148 @@ serve(async (req) => {
         <style>
             @page {
                 size: A4;
-                margin: 10mm;
+                margin: 15mm;
             }
             
             body {
                 font-family: 'Times New Roman', serif;
                 margin: 0;
-                padding: 20px;
+                padding: 0;
                 background: white;
                 color: black;
+                font-size: 16px;
                 line-height: 1.4;
-                font-size: 18px;
             }
             
             .voucher-container {
-                max-width: 650px;
-                margin: 0 auto;
-                background: white;
-                padding: 30px 40px;
-                border: 2px solid #000;
-                min-height: 85vh;
-                position: relative;
+                width: 100%;
+                height: 100vh;
+                padding: 40px;
                 box-sizing: border-box;
+                position: relative;
             }
             
             .header {
                 text-align: center;
-                margin-bottom: 40px;
+                margin-bottom: 80px;
             }
             
             .salon-title {
-                font-size: 36px;
+                font-size: 28px;
                 font-weight: normal;
-                margin: 0 0 15px 0;
+                margin: 0 0 30px 0;
                 letter-spacing: 1px;
             }
             
             .logo-container {
-                margin: 20px 0 25px 0;
-                text-align: center;
+                margin: 20px 0 30px 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
             }
             
             .logo-image {
-                max-width: 300px;
+                max-width: 280px;
                 height: auto;
             }
             
             .subtitle {
-                font-size: 22px;
-                margin: 20px 0 40px 0;
+                font-size: 20px;
+                margin: 30px 0 0 0;
                 font-weight: normal;
             }
             
             .content {
+                margin: 80px 0;
                 font-size: 18px;
-                line-height: 2.2;
-                margin: 30px 0;
             }
             
-            .recipient-line {
-                margin: 25px 0;
+            .content-line {
+                margin: 40px 0;
                 display: flex;
                 align-items: baseline;
-                min-height: 25px;
+                min-height: 30px;
             }
             
-            .recipient-label {
-                margin-right: 8px;
+            .line-text {
                 white-space: nowrap;
             }
             
-            .recipient-dots {
+            .dotted-line {
                 flex: 1;
-                border-bottom: 1px dotted #000;
-                margin-right: 8px;
+                border-bottom: 1px dotted #333;
+                margin: 0 10px;
                 min-height: 1px;
-                margin-bottom: 3px;
+                position: relative;
+                top: -3px;
             }
             
-            .recipient-value {
+            .filled-value {
                 font-weight: bold;
+                white-space: nowrap;
                 min-width: fit-content;
             }
             
             .service-line {
-                margin: 25px 0;
-                line-height: 1.8;
-            }
-            
-            .value-line {
-                margin: 25px 0;
-                display: flex;
-                align-items: baseline;
-                min-height: 25px;
-            }
-            
-            .value-label {
-                margin-right: 8px;
-                white-space: nowrap;
-            }
-            
-            .value-dots {
-                flex: 1;
-                border-bottom: 1px dotted #000;
-                margin-right: 8px;
-                min-height: 1px;
-                margin-bottom: 3px;
-            }
-            
-            .value-amount {
-                font-weight: bold;
-                min-width: fit-content;
+                margin: 40px 0;
+                font-size: 18px;
             }
             
             .footer {
                 position: absolute;
-                bottom: 30px;
+                bottom: 40px;
                 left: 40px;
                 right: 40px;
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-end;
+            }
+            
+            .contact-section {
                 font-size: 14px;
-            }
-            
-            .contact-info {
-                text-align: left;
                 line-height: 1.3;
-                max-width: 250px;
+                text-align: left;
             }
             
-            .validity-info {
+            .validity-section {
                 text-align: right;
-                line-height: 1.8;
+                font-size: 14px;
             }
             
             .validity-line {
                 display: flex;
                 align-items: baseline;
-                margin: 8px 0;
+                margin: 10px 0;
+                min-height: 20px;
             }
             
             .validity-label {
-                margin-right: 8px;
                 white-space: nowrap;
+                margin-right: 10px;
             }
             
             .validity-dots {
-                border-bottom: 1px dotted #000;
-                min-width: 150px;
-                margin-right: 8px;
-                margin-bottom: 3px;
+                border-bottom: 1px dotted #333;
+                min-width: 120px;
+                margin-right: 10px;
+                position: relative;
+                top: -2px;
             }
             
             .validity-value {
                 font-weight: bold;
-                min-width: fit-content;
-            }
-            
-            .number-line {
-                display: flex;
-                align-items: baseline;
-                margin: 8px 0;
-            }
-            
-            .number-label {
-                margin-right: 8px;
                 white-space: nowrap;
             }
             
-            .number-dots {
-                border-bottom: 1px dotted #000;
-                min-width: 150px;
-                margin-right: 8px;
-                margin-bottom: 3px;
-            }
-            
-            .number-value {
-                font-weight: bold;
-                min-width: fit-content;
-            }
-            
             @media print {
-                body {
-                    padding: 0;
-                    margin: 0;
-                }
-                
                 .voucher-container {
-                    border: 2px solid #000;
-                    box-shadow: none;
-                    margin: 0;
+                    height: auto;
+                    min-height: 100vh;
                 }
                 
                 .footer {
                     position: fixed;
-                    bottom: 30px;
+                    bottom: 40px;
                 }
             }
         </style>
@@ -291,31 +237,31 @@ serve(async (req) => {
             <div class="header">
                 <div class="salon-title">Salon</div>
                 <div class="logo-container">
-                    <img src="/lovable-uploads/ca126b9c-7595-42ce-ba12-c10c932b3e07.png" alt="Hanami SPA Logo" class="logo-image">
+                    <img src="/lovable-uploads/ca126b9c-7595-42ce-ba12-c10c932b3e07.png" alt="Hanami SPA" class="logo-image">
                 </div>
                 <div class="subtitle">serdecznie zaprasza</div>
             </div>
             
             <div class="content">
-                <div class="recipient-line">
-                    <span class="recipient-label">Panią/Pana</span>
-                    <div class="recipient-dots"></div>
-                    <span class="recipient-value">${voucherOwner}</span>
+                <div class="content-line">
+                    <span class="line-text">Panią/Pana</span>
+                    <div class="dotted-line"></div>
+                    <span class="filled-value">${voucherOwner}</span>
                 </div>
                 
                 <div class="service-line">
                     na zabieg ${serviceInfo.toLowerCase()}
                 </div>
                 
-                <div class="value-line">
-                    <span class="value-label">o wartości</span>
-                    <div class="value-dots"></div>
-                    <span class="value-amount">${voucherValue}</span>
+                <div class="content-line">
+                    <span class="line-text">o wartości</span>
+                    <div class="dotted-line"></div>
+                    <span class="filled-value">${voucherValue}</span>
                 </div>
             </div>
             
             <div class="footer">
-                <div class="contact-info">
+                <div class="contact-section">
                     Prosimy o kontakt w celu<br>
                     ustalenia daty wizyty w Salonie.<br><br>
                     tel: 605 412 692<br>
@@ -323,16 +269,16 @@ serve(async (req) => {
                     ul. Raszkowska 80e
                 </div>
                 
-                <div class="validity-info">
+                <div class="validity-section">
                     <div class="validity-line">
                         <span class="validity-label">bon ważny do</span>
                         <div class="validity-dots"></div>
                         <span class="validity-value">${expiryDate}</span>
                     </div>
-                    <div class="number-line">
-                        <span class="number-label">numer</span>
-                        <div class="number-dots"></div>
-                        <span class="number-value">${voucher.code}</span>
+                    <div class="validity-line">
+                        <span class="validity-label">numer</span>
+                        <div class="validity-dots"></div>
+                        <span class="validity-value">${voucher.code}</span>
                     </div>
                 </div>
             </div>
