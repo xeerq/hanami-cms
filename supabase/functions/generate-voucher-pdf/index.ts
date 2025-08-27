@@ -100,9 +100,9 @@ serve(async (req) => {
             }
             
             .voucher-container {
-                width: 450px;
-                height: 320px;
-                padding: 20px;
+                width: 480px;
+                height: 340px;
+                padding: 25px;
                 box-sizing: border-box;
                 position: relative;
                 margin: 30px auto;
@@ -141,15 +141,15 @@ serve(async (req) => {
             }
             
             .content {
-                margin: 25px 0 80px 0;
-                font-size: 12px;
+                margin: 30px 0 90px 0;
+                font-size: 13px;
             }
             
             .content-line {
-                margin: 20px 0;
+                margin: 22px 0;
                 display: flex;
                 align-items: baseline;
-                min-height: 20px;
+                min-height: 22px;
             }
             
             .line-text {
@@ -172,9 +172,16 @@ serve(async (req) => {
             }
             
             .service-line {
-                margin: 20px 0;
-                font-size: 12px;
+                margin: 22px 0;
+                font-size: 13px;
                 line-height: 1.6;
+            }
+            
+            .contact-text {
+                margin: 25px 0;
+                font-size: 13px;
+                line-height: 1.5;
+                text-align: left;
             }
             
             .footer {
@@ -188,16 +195,16 @@ serve(async (req) => {
             }
             
             .contact-section {
-                font-size: 10px;
-                line-height: 1.5;
+                font-size: 11px;
+                line-height: 1.4;
                 text-align: left;
-                max-width: 180px;
+                max-width: 200px;
             }
             
             .validity-section {
                 text-align: right;
-                font-size: 10px;
-                max-width: 140px;
+                font-size: 11px;
+                max-width: 150px;
             }
             
             .validity-line {
@@ -262,6 +269,11 @@ serve(async (req) => {
                     na zabieg ${serviceInfo.toLowerCase()}
                 </div>
                 
+                <div class="contact-text">
+                    Prosimy o kontakt w celu<br>
+                    ustalenia daty wizyty w Salonie.
+                </div>
+                
                 <div class="content-line">
                     <span class="line-text">o wartości</span>
                     <div class="dotted-line"></div>
@@ -271,8 +283,6 @@ serve(async (req) => {
             
             <div class="footer">
                 <div class="contact-section">
-                    Prosimy o kontakt w celu<br>
-                    ustalenia daty wizyty w Salonie.<br><br>
                     tel: 605 412 692<br>
                     63-400 Ostrów Wielkopolski,<br>
                     ul. Raszkowska 80e
