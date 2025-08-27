@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserCog, Plus, Edit, Trash2, Shield, User } from "lucide-react";
+import { UserCog, Plus, Edit, Trash2, Shield, User, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePagination, usePaginatedData } from "@/hooks/usePagination";
 import { PaginationControlsComponent } from "@/components/ui/pagination-controls";
@@ -22,6 +23,7 @@ const UsersManager = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user: currentUser } = useAuth();
   
   const pagination = usePagination(users.length, 10);
   const paginatedUsers = usePaginatedData(users, pagination);
@@ -73,6 +75,37 @@ const UsersManager = () => {
 
   const updateUserRole = async (userId: string, newRole: string) => {
     try {
+      // Security check: prevent self-role removal for admins
+      if (currentUser?.id === userId) {
+        const currentUserData = users.find(u => u.user_id === userId);
+        const currentRoles = currentUserData?.roles || [];
+        
+        if (currentRoles.includes('admin') && newRole !== 'admin') {
+          toast({
+            title: "Zabroniona operacja",
+            description: "Nie możesz usunąć swojej własnej roli administratora",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
+      // Check if we're removing the last admin
+      if (newRole !== 'admin') {
+        const targetUser = users.find(u => u.user_id === userId);
+        if (targetUser?.roles.includes('admin')) {
+          const adminCount = users.filter(u => u.roles.includes('admin')).length;
+          if (adminCount <= 1) {
+            toast({
+              title: "Zabroniona operacja",
+              description: "Nie można usunąć ostatniego administratora w systemie",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
+
       // Remove existing roles
       await supabase
         .from("user_roles")
@@ -99,11 +132,27 @@ const UsersManager = () => {
       fetchUsers();
     } catch (error: any) {
       console.error("Error updating user role:", error);
-      toast({
-        title: "Błąd",
-        description: "Nie udało się zaktualizować roli użytkownika",
-        variant: "destructive",
-      });
+      
+      // Handle specific database constraint errors
+      if (error.message?.includes('Cannot remove the last administrator')) {
+        toast({
+          title: "Błąd bezpieczeństwa",
+          description: "Nie można usunąć ostatniego administratora",
+          variant: "destructive",
+        });
+      } else if (error.message?.includes('cannot remove their own admin role')) {
+        toast({
+          title: "Błąd bezpieczeństwa", 
+          description: "Administratorzy nie mogą usunąć własnej roli",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Błąd",
+          description: "Nie udało się zaktualizować roli użytkownika",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -188,11 +237,18 @@ const UsersManager = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
+                        {currentUser?.id === user.user_id && user.roles.includes('admin') && (
+                          <div className="flex items-center text-amber-600 text-xs mr-2">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            <span>To Ty</span>
+                          </div>
+                        )}
                         <Select
                           value={user.roles[0] || 'user'}
                           onValueChange={(value) => updateUserRole(user.user_id, value)}
+                          disabled={currentUser?.id === user.user_id && user.roles.includes('admin')}
                         >
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className={`w-32 ${currentUser?.id === user.user_id && user.roles.includes('admin') ? 'opacity-50 cursor-not-allowed' : ''}`}>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
