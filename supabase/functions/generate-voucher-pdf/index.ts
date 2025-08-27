@@ -141,15 +141,15 @@ serve(async (req) => {
             }
             
             .content {
-                margin: 25px 0;
+                margin: 20px 0 60px 0;
                 font-size: 11px;
             }
             
             .content-line {
-                margin: 12px 0;
+                margin: 15px 0;
                 display: flex;
                 align-items: baseline;
-                min-height: 15px;
+                min-height: 18px;
             }
             
             .line-text {
@@ -172,18 +172,19 @@ serve(async (req) => {
             }
             
             .service-line {
-                margin: 12px 0;
+                margin: 15px 0;
                 font-size: 11px;
+                line-height: 1.5;
             }
             
             .footer {
                 position: absolute;
-                bottom: 15px;
+                bottom: 10px;
                 left: 15px;
                 right: 15px;
                 display: flex;
                 justify-content: space-between;
-                align-items: flex-end;
+                align-items: flex-start;
             }
             
             .contact-section {
