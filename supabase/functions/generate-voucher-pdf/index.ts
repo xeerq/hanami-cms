@@ -85,8 +85,8 @@ serve(async (req) => {
         <meta charset="UTF-8">
         <style>
             @page {
-                size: A4;
-                margin: 15mm;
+                size: A5;
+                margin: 10mm;
             }
             
             body {
@@ -101,52 +101,54 @@ serve(async (req) => {
             
             .voucher-container {
                 width: 100%;
-                height: 100vh;
-                padding: 40px;
+                max-width: 400px;
+                height: auto;
+                padding: 20px;
                 box-sizing: border-box;
                 position: relative;
+                margin: 0 auto;
             }
             
             .header {
                 text-align: center;
-                margin-bottom: 80px;
+                margin-bottom: 40px;
             }
             
             .salon-title {
-                font-size: 28px;
+                font-size: 18px;
                 font-weight: normal;
-                margin: 0 0 30px 0;
+                margin: 0 0 15px 0;
                 letter-spacing: 1px;
             }
             
             .logo-container {
-                margin: 20px 0 30px 0;
+                margin: 10px 0 15px 0;
                 display: flex;
                 justify-content: center;
                 align-items: center;
             }
             
             .logo-image {
-                max-width: 280px;
+                max-width: 180px;
                 height: auto;
             }
             
             .subtitle {
-                font-size: 20px;
-                margin: 30px 0 0 0;
+                font-size: 14px;
+                margin: 15px 0 0 0;
                 font-weight: normal;
             }
             
             .content {
-                margin: 80px 0;
-                font-size: 18px;
+                margin: 40px 0;
+                font-size: 12px;
             }
             
             .content-line {
-                margin: 40px 0;
+                margin: 20px 0;
                 display: flex;
                 align-items: baseline;
-                min-height: 30px;
+                min-height: 18px;
             }
             
             .line-text {
@@ -169,36 +171,36 @@ serve(async (req) => {
             }
             
             .service-line {
-                margin: 40px 0;
-                font-size: 18px;
+                margin: 20px 0;
+                font-size: 12px;
             }
             
             .footer {
                 position: absolute;
-                bottom: 40px;
-                left: 40px;
-                right: 40px;
+                bottom: 20px;
+                left: 20px;
+                right: 20px;
                 display: flex;
                 justify-content: space-between;
                 align-items: flex-end;
             }
             
             .contact-section {
-                font-size: 14px;
+                font-size: 10px;
                 line-height: 1.3;
                 text-align: left;
             }
             
             .validity-section {
                 text-align: right;
-                font-size: 14px;
+                font-size: 10px;
             }
             
             .validity-line {
                 display: flex;
                 align-items: baseline;
-                margin: 10px 0;
-                min-height: 20px;
+                margin: 6px 0;
+                min-height: 14px;
             }
             
             .validity-label {
@@ -208,8 +210,8 @@ serve(async (req) => {
             
             .validity-dots {
                 border-bottom: 1px dotted #333;
-                min-width: 120px;
-                margin-right: 10px;
+                min-width: 80px;
+                margin-right: 6px;
                 position: relative;
                 top: -2px;
             }
