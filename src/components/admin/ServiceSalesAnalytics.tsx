@@ -76,12 +76,34 @@ const ServiceSalesAnalytics = () => {
 
       if (appointmentsError) throw appointmentsError;
 
+      // Fetch vouchers created in the same period
+      const { data: vouchersData, error: vouchersError } = await supabase
+        .from("vouchers")
+        .select(`
+          id,
+          voucher_type,
+          original_value,
+          original_sessions,
+          created_at,
+          services (
+            id,
+            name,
+            price,
+            category
+          )
+        `)
+        .gte("created_at", startDateStr)
+        .order("created_at", { ascending: false });
+
+      if (vouchersError) throw vouchersError;
+
       // Process service statistics
       const serviceMap = new Map<string, ServiceStats>();
       const dailyMap = new Map<string, DailyAppointments>();
       const therapistMap = new Map<string, TherapistStats>();
       let totalRev = 0;
       let totalAppts = appointmentsData?.length || 0;
+      let totalVoucherRevenue = 0;
 
       appointmentsData?.forEach(appointment => {
         const service = appointment.services;
@@ -150,6 +172,54 @@ const ServiceSalesAnalytics = () => {
         }
       });
 
+      // Process voucher sales
+      vouchersData?.forEach(voucher => {
+        const service = voucher.services;
+        const voucherValue = voucher.voucher_type === 'single' 
+          ? Number(voucher.original_value || 0)
+          : Number(voucher.original_sessions || 1) * Number(service?.price || 0);
+        
+        const voucherDate = voucher.created_at.split('T')[0];
+        
+        totalVoucherRevenue += voucherValue;
+        
+        // Add voucher sales to service statistics
+        if (service) {
+          const serviceName = service.name;
+          if (serviceMap.has(serviceName)) {
+            const existing = serviceMap.get(serviceName)!;
+            serviceMap.set(serviceName, {
+              ...existing,
+              revenue: existing.revenue + voucherValue
+            });
+          } else {
+            serviceMap.set(serviceName, {
+              serviceName,
+              appointmentCount: 0,
+              revenue: voucherValue,
+              category: service.category || 'Other',
+              avgDuration: 60 // Default duration for voucher services
+            });
+          }
+        }
+        
+        // Add voucher sales to daily statistics
+        if (dailyMap.has(voucherDate)) {
+          const existing = dailyMap.get(voucherDate)!;
+          dailyMap.set(voucherDate, {
+            date: voucherDate,
+            count: existing.count,
+            revenue: existing.revenue + voucherValue
+          });
+        } else {
+          dailyMap.set(voucherDate, {
+            date: voucherDate,
+            count: 0,
+            revenue: voucherValue
+          });
+        }
+      });
+
       const serviceArray = Array.from(serviceMap.values())
         .sort((a, b) => b.revenue - a.revenue);
       
@@ -162,7 +232,7 @@ const ServiceSalesAnalytics = () => {
       setServiceStats(serviceArray);
       setDailyStats(dailyArray);
       setTherapistStats(therapistArray);
-      setTotalRevenue(totalRev);
+      setTotalRevenue(totalRev + totalVoucherRevenue);
       setTotalAppointments(totalAppts);
 
     } catch (error: any) {
