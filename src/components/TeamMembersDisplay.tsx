@@ -27,10 +27,24 @@ const TeamMembersDisplay = () => {
 
   const fetchTeamMembers = async () => {
     try {
-      // Use the secure view that doesn't expose contact information
+      // Query team_members directly with RLS handling data security
+      // RLS policies automatically filter sensitive fields (email, phone) for non-admins
       const { data, error } = await supabase
-        .from("team_members_display")
-        .select("*");
+        .from("team_members")
+        .select(`
+          id,
+          name,
+          position,
+          bio,
+          image_url,
+          social_links,
+          display_order,
+          is_active,
+          created_at,
+          updated_at
+        `)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
 
       if (error) throw error;
       setTeamMembers(data || []);

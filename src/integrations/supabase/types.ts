@@ -942,45 +942,6 @@ export type Database = {
           },
         ]
       }
-      team_members_display: {
-        Row: {
-          bio: string | null
-          created_at: string | null
-          display_order: number | null
-          id: string | null
-          image_url: string | null
-          is_active: boolean | null
-          name: string | null
-          position: string | null
-          social_links: Json | null
-          updated_at: string | null
-        }
-        Insert: {
-          bio?: string | null
-          created_at?: string | null
-          display_order?: number | null
-          id?: string | null
-          image_url?: string | null
-          is_active?: boolean | null
-          name?: string | null
-          position?: string | null
-          social_links?: Json | null
-          updated_at?: string | null
-        }
-        Update: {
-          bio?: string | null
-          created_at?: string | null
-          display_order?: number | null
-          id?: string | null
-          image_url?: string | null
-          is_active?: boolean | null
-          name?: string | null
-          position?: string | null
-          social_links?: Json | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       team_members_public: {
         Row: {
           bio: string | null
