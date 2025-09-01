@@ -21,7 +21,9 @@ interface User {
     first_name?: string;
     last_name?: string;
   };
+  phone?: string;
   is_banned?: boolean;
+  roles?: string[];
 }
 
 interface UserRole {

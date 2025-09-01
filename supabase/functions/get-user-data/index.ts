@@ -88,21 +88,33 @@ serve(async (req) => {
           throw rolesError;
         }
 
-        // Format users data
+        // Get auth users to get real email addresses
+        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+        
+        console.log("Auth users result:", { authUsersCount: authUsers?.users?.length, authError });
+        
+        if (authError) {
+          console.error("Auth error:", authError);
+          throw authError;
+        }
+
+        // Format users data with real email from auth
         const users = profiles?.map(profile => {
           const roles = userRoles?.filter(role => role.user_id === profile.user_id) || [];
+          const authUser = authUsers?.users?.find(au => au.id === profile.user_id);
           
           return {
             id: profile.user_id,
-            email: `${profile.first_name || 'Użytkownik'} ${profile.last_name || ''}`.trim(),
-            email_confirmed_at: null,
+            email: authUser?.email || 'Brak emaila',
+            email_confirmed_at: authUser?.email_confirmed_at || null,
             created_at: profile.created_at,
-            last_sign_in_at: null,
+            last_sign_in_at: authUser?.last_sign_in_at || null,
             user_metadata: {
               first_name: profile.first_name,
               last_name: profile.last_name
             },
-            is_banned: false,
+            phone: profile.phone,
+            is_banned: authUser?.banned_until ? new Date(authUser.banned_until) > new Date() : false,
             roles: roles.map(r => r.role)
           };
         }) || [];

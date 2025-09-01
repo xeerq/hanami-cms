@@ -10,10 +10,15 @@ import { useActivityLogger } from "@/hooks/useActivityLogger";
 interface User {
   id: string;
   email: string;
+  email_confirmed_at: string | null;
+  phone?: string;
   user_metadata: {
     first_name?: string;
     last_name?: string;
   };
+  created_at: string;
+  last_sign_in_at: string | null;
+  is_banned?: boolean;
 }
 
 interface EditUserDialogProps {
@@ -27,6 +32,7 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLogger();
@@ -36,24 +42,10 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
     if (user) {
       setFirstName(user.user_metadata?.first_name || "");
       setLastName(user.user_metadata?.last_name || "");
-      // Get phone from profile
-      fetchUserProfile(user.id);
+      setEmail(user.email || "");
+      setPhone(user.phone || "");
     }
   }, [user]);
-
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("phone")
-        .eq("user_id", userId)
-        .maybeSingle();
-      
-      setPhone(profile?.phone || "");
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +53,21 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
 
     try {
       setLoading(true);
+
+      // Update auth user email using service function
+      if (email !== user.email) {
+        const { error: emailError } = await supabase.functions.invoke('update-user-email', {
+          body: { 
+            userId: user.id, 
+            newEmail: email 
+          }
+        });
+        
+        if (emailError) {
+          console.error("Email update error:", emailError);
+          // Continue with profile update even if email fails
+        }
+      }
 
       // Update profile data
       const { error } = await supabase
@@ -125,9 +132,11 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
               </Label>
               <Input
                 id="email"
-                value={user.email}
-                disabled
-                className="col-span-3 bg-muted"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="col-span-3"
+                required
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
