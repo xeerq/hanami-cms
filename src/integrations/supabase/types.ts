@@ -89,6 +89,33 @@ export type Database = {
           },
         ]
       }
+      auth_rate_limits: {
+        Row: {
+          attempt_count: number
+          blocked_until: string | null
+          created_at: string
+          id: string
+          ip_address: unknown
+          last_attempt: string
+        }
+        Insert: {
+          attempt_count?: number
+          blocked_until?: string | null
+          created_at?: string
+          id?: string
+          ip_address: unknown
+          last_attempt?: string
+        }
+        Update: {
+          attempt_count?: number
+          blocked_until?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown
+          last_attempt?: string
+        }
+        Relationships: []
+      }
       blocked_slots: {
         Row: {
           blocked_date: string
@@ -881,6 +908,10 @@ export type Database = {
           p_therapist_id: string
         }
         Returns: boolean
+      }
+      cleanup_old_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       generate_voucher_code: {
         Args: Record<PropertyKey, never>

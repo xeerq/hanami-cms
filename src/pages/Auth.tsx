@@ -11,6 +11,8 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { PasswordInput } from "@/components/ui/password-input";
+import { validateEmail, validatePhone, sanitizeInput } from "@/lib/security";
 
 const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -21,6 +23,7 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [passwordValid, setPasswordValid] = useState(false);
   const { user, signIn, signUp } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -48,14 +51,52 @@ const Auth = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Sanitize inputs
+    const sanitizedFirstName = sanitizeInput(firstName);
+    const sanitizedLastName = sanitizeInput(lastName);
+    const sanitizedEmail = email.trim().toLowerCase();
+    const sanitizedPhone = phone.trim();
+    
+    // Validation
+    if (!validateEmail(sanitizedEmail)) {
+      toast({
+        title: "Błąd",
+        description: "Wprowadź poprawny adres email",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!validatePhone(sanitizedPhone)) {
+      toast({
+        title: "Błąd", 
+        description: "Wprowadź poprawny numer telefonu",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!passwordValid) {
+      toast({
+        title: "Błąd",
+        description: "Hasło nie spełnia wymagań bezpieczeństwa",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (password !== confirmPassword) {
-      alert("Hasła nie są identyczne");
+      toast({
+        title: "Błąd",
+        description: "Hasła nie są identyczne",
+        variant: "destructive",
+      });
       return;
     }
     
     setIsLoading(true);
     
-    const { error } = await signUp(email, password, firstName, lastName, phone);
+    const { error } = await signUp(sanitizedEmail, password, sanitizedFirstName, sanitizedLastName, sanitizedPhone);
     
     setIsLoading(false);
   };
@@ -250,29 +291,27 @@ const Auth = () => {
                         required
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="registerPassword">Hasło</Label>
-                      <Input
-                        id="registerPassword"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Potwierdź hasło</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                      {isLoading ? "Tworzenie konta..." : "Utwórz konto"}
-                    </Button>
+                     <PasswordInput
+                       id="registerPassword"
+                       label="Hasło"
+                       value={password}
+                       onChange={(e) => setPassword(e.target.value)}
+                       showValidation={true}
+                       onValidationChange={setPasswordValid}
+                       required
+                       placeholder="Wprowadź silne hasło"
+                     />
+                     <PasswordInput
+                       id="confirmPassword"
+                       label="Potwierdź hasło"
+                       value={confirmPassword}
+                       onChange={(e) => setConfirmPassword(e.target.value)}
+                       required
+                       placeholder="Powtórz hasło"
+                     />
+                     <Button type="submit" className="w-full" disabled={isLoading || !passwordValid}>
+                       {isLoading ? "Tworzenie konta..." : "Utwórz konto"}
+                     </Button>
                   </form>
                 </CardContent>
               </Card>
