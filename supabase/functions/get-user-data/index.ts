@@ -54,20 +54,30 @@ serve(async (req) => {
           throw new Error("Unauthorized: Admin access required");
         }
 
-        // Get all profiles (which represent users)
-        const { data: profiles, error: profilesError } = await supabaseClient
+        // Use service role client to bypass RLS for admin operations
+        const supabaseAdmin = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        );
+
+        // Get all profiles using admin client
+        const { data: profiles, error: profilesError } = await supabaseAdmin
           .from("profiles")
           .select("*");
+        
+        console.log("Profiles result:", { profilesCount: profiles?.length, profilesError });
         
         if (profilesError) {
           console.error("Profiles error:", profilesError);
           throw profilesError;
         }
 
-        // Get all user roles
-        const { data: userRoles, error: rolesError } = await supabaseClient
+        // Get all user roles using admin client
+        const { data: userRoles, error: rolesError } = await supabaseAdmin
           .from("user_roles")
           .select("*");
+        
+        console.log("Roles result:", { rolesCount: userRoles?.length, rolesError });
         
         if (rolesError) {
           console.error("Roles error:", rolesError);
