@@ -40,17 +40,10 @@ export const SecurityAuditLog = () => {
 
   const fetchAuditEntries = async () => {
     try {
-      // Fetch audit entries with user information
-      const { data, error } = await supabase
+      // First, fetch audit entries without join
+      const { data: auditData, error } = await supabase
         .from('security_audit_log')
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name,
-            user_id
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -64,28 +57,28 @@ export const SecurityAuditLog = () => {
         return;
       }
 
-      // Enrich data with user information
-      const enrichedData = await Promise.all((data || []).map(async (entry) => {
+      // Then, enrich data with user information
+      const enrichedData = await Promise.all((auditData || []).map(async (entry) => {
         let userInfo = { email: '', name: '' };
         
         if (entry.user_id) {
-          // Try to get email from auth.users if profile data is not complete
+          // Get profile data
           try {
-            const { data: authUser } = await supabase.auth.admin.getUserById(entry.user_id);
-            if (authUser.user) {
-              userInfo.email = authUser.user.email || '';
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('first_name, last_name')
+              .eq('user_id', entry.user_id)
+              .maybeSingle();
+            
+            if (profileData?.first_name || profileData?.last_name) {
+              userInfo.name = `${profileData.first_name || ''} ${profileData.last_name || ''}`.trim();
             }
-          } catch (error) {
-            console.log('Could not fetch auth user:', error);
+          } catch (profileError) {
+            console.log('Could not fetch profile:', profileError);
           }
           
-          // Use profile data if available
-          if (entry.profiles) {
-            const profile = Array.isArray(entry.profiles) ? entry.profiles[0] : entry.profiles;
-            if (profile?.first_name || profile?.last_name) {
-              userInfo.name = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
-            }
-          }
+          // Set a simple identifier for the user
+          userInfo.email = `Użytkownik ${entry.user_id.substring(0, 8)}...`;
         }
         
         return {
