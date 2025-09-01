@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -32,39 +33,73 @@ serve(async (req) => {
 
     const user = userData.user;
     
-    // Get dataType from query params or request body
+    // Get dataType from query params
     const url = new URL(req.url);
-    let dataType = url.searchParams.get("type");
+    const dataType = url.searchParams.get("type");
     
-    // If not in query params, try to get from request body
-    if (!dataType && req.method === 'POST') {
-      try {
-        const body = await req.json();
-        dataType = body.type;
-        console.log("Parsed dataType from body:", dataType);
-      } catch (error) {
-        console.log("Failed to parse request body:", error);
-        // If body parsing fails, continue with null dataType
-      }
-    }
-    
-    console.log("Final dataType:", dataType, "Method:", req.method);
-
-    // Check if user is admin for admin operations using RPC function
-    console.log("Checking admin status for user:", user.id);
-    
-    const { data: isAdminResult, error: adminError } = await supabaseClient
-      .rpc('has_role', {
-        _user_id: user.id,
-        _role: 'admin'
-      });
-    
-    console.log("Admin check result:", { isAdminResult, adminError });
-
-    const isAdmin = isAdminResult === true;
-    console.log("Final isAdmin result:", isAdmin);
+    console.log("Request type:", dataType, "User ID:", user.id);
 
     switch (dataType) {
+      case "users": {
+        // Check if user is admin using RPC function
+        const { data: isAdmin, error: adminError } = await supabaseClient
+          .rpc('has_role', {
+            _user_id: user.id,
+            _role: 'admin'
+          });
+        
+        console.log("Admin check result:", isAdmin, adminError);
+        
+        if (adminError || !isAdmin) {
+          throw new Error("Unauthorized: Admin access required");
+        }
+
+        // Get all profiles (which represent users)
+        const { data: profiles, error: profilesError } = await supabaseClient
+          .from("profiles")
+          .select("*");
+        
+        if (profilesError) {
+          console.error("Profiles error:", profilesError);
+          throw profilesError;
+        }
+
+        // Get all user roles
+        const { data: userRoles, error: rolesError } = await supabaseClient
+          .from("user_roles")
+          .select("*");
+        
+        if (rolesError) {
+          console.error("Roles error:", rolesError);
+          throw rolesError;
+        }
+
+        // Format users data
+        const users = profiles?.map(profile => {
+          const roles = userRoles?.filter(role => role.user_id === profile.user_id) || [];
+          
+          return {
+            id: profile.user_id,
+            email: `${profile.first_name || 'Użytkownik'} ${profile.last_name || ''}`.trim(),
+            email_confirmed_at: null,
+            created_at: profile.created_at,
+            last_sign_in_at: null,
+            user_metadata: {
+              first_name: profile.first_name,
+              last_name: profile.last_name
+            },
+            is_banned: false,
+            roles: roles.map(r => r.role)
+          };
+        }) || [];
+
+        console.log("Returning users:", users.length);
+
+        return new Response(JSON.stringify({ users }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       case "appointments": {
         // Get user's appointments
         const { data: appointments, error } = await supabaseClient
@@ -106,89 +141,10 @@ serve(async (req) => {
         });
       }
 
-      case "profile": {
-        // Get user's profile
-        const { data: profile, error } = await supabaseClient
-          .from("profiles")
-          .select("*")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        return new Response(JSON.stringify({ profile, user }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      case "users": {
-        console.log("Processing users request, isAdmin:", isAdmin);
-        
-        // Admin only: Get all users with profile data
-        if (!isAdmin) {
-          throw new Error("Unauthorized: Admin access required");
-        }
-
-        try {
-          // Get users from profiles table instead of auth.users
-          const { data: profiles, error: profilesError } = await supabaseClient
-            .from("profiles")
-            .select(`
-              id,
-              user_id,
-              first_name,
-              last_name,
-              phone,
-              created_at,
-              updated_at
-            `);
-          
-          if (profilesError) {
-            console.error("Profiles error:", profilesError);
-            throw profilesError;
-          }
-
-          console.log("Profiles fetched:", profiles?.length);
-
-          // Get user roles
-          const { data: userRoles, error: rolesError } = await supabaseClient
-            .from("user_roles")
-            .select("user_id, role");
-          
-          if (rolesError) {
-            console.error("Roles error:", rolesError);
-            throw rolesError;
-          }
-
-          // Format users for the frontend (using profiles data)
-          const users = profiles?.map(profile => ({
-            id: profile.user_id,
-            email: "Email not available", // We can't get email from profiles
-            email_confirmed_at: null,
-            created_at: profile.created_at,
-            last_sign_in_at: null,
-            user_metadata: {
-              first_name: profile.first_name,
-              last_name: profile.last_name
-            },
-            is_banned: false, // We can't check ban status without auth.users access
-            roles: userRoles?.filter(r => r.user_id === profile.user_id).map(r => r.role) || []
-          })) || [];
-
-          console.log("Users formatted:", users.length);
-
-          return new Response(JSON.stringify({ users }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        } catch (error) {
-          console.error("Error in users case:", error);
-          throw error;
-        }
-      }
-
+      case "profile":
       case null:
       case undefined: {
-        // Default behavior for backwards compatibility - return user profile
+        // Get user's profile (default behavior)
         const { data: profile, error } = await supabaseClient
           .from("profiles")
           .select("*")
@@ -203,7 +159,6 @@ serve(async (req) => {
       }
 
       default:
-        console.error("Invalid data type requested. Received:", dataType);
         throw new Error(`Invalid data type requested: ${dataType}`);
     }
 
