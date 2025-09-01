@@ -162,9 +162,9 @@ const UsersManager = () => {
 
   const banUser = async (userId: string, userEmail: string) => {
     try {
-      // Use Supabase admin API to ban user
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
-        ban_duration: '8760h' // 1 year in hours
+      const { data, error } = await supabase.rpc('ban_user', {
+        user_id: userId,
+        ban_duration_hours: 8760 // 1 year
       });
 
       if (error) throw error;
@@ -196,9 +196,8 @@ const UsersManager = () => {
 
   const unbanUser = async (userId: string, userEmail: string) => {
     try {
-      // Use Supabase admin API to unban user
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
-        ban_duration: 'none'
+      const { data, error } = await supabase.rpc('unban_user', {
+        user_id: userId
       });
 
       if (error) throw error;

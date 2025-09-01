@@ -876,6 +876,10 @@ export type Database = {
       }
     }
     Functions: {
+      ban_user: {
+        Args: { ban_duration_hours?: number; user_id: string }
+        Returns: boolean
+      }
       check_auth_rate_limit: {
         Args: { p_ip_address: unknown }
         Returns: boolean
@@ -995,6 +999,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_user_banned: {
+        Args: { user_id: string }
+        Returns: boolean
+      }
       log_data_access: {
         Args: {
           p_access_type?: string
@@ -1032,6 +1040,10 @@ export type Database = {
       security_check: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      unban_user: {
+        Args: { user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
