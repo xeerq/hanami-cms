@@ -31,8 +31,28 @@ serve(async (req) => {
     }
 
     const user = userData.user;
+    
+    // Get dataType from query params or request body
     const url = new URL(req.url);
-    const dataType = url.searchParams.get("type");
+    let dataType = url.searchParams.get("type");
+    
+    // If not in query params, try to get from request body
+    if (!dataType && req.method === 'POST') {
+      try {
+        const body = await req.json();
+        dataType = body.type;
+      } catch {
+        // If body parsing fails, continue with null dataType
+      }
+    }
+
+    // Check if user is admin for admin operations
+    const { data: userRoles } = await supabaseClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id);
+
+    const isAdmin = userRoles?.some(role => role.role === 'admin') || false;
 
     switch (dataType) {
       case "appointments": {
@@ -78,6 +98,54 @@ serve(async (req) => {
 
       case "profile": {
         // Get user's profile
+        const { data: profile, error } = await supabaseClient
+          .from("profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        return new Response(JSON.stringify({ profile, user }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "users": {
+        // Admin only: Get all users with auth data
+        if (!isAdmin) {
+          throw new Error("Unauthorized: Admin access required");
+        }
+
+        // Use Supabase admin client to get auth users
+        const supabaseAdmin = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+        );
+
+        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (authError) throw authError;
+
+        // Format users for the frontend
+        const users = authUsers.users.map(authUser => ({
+          id: authUser.id,
+          email: authUser.email,
+          email_confirmed_at: authUser.email_confirmed_at,
+          created_at: authUser.created_at,
+          last_sign_in_at: authUser.last_sign_in_at,
+          user_metadata: authUser.user_metadata,
+          is_banned: authUser.banned_until ? new Date(authUser.banned_until) > new Date() : false
+        }));
+
+        return new Response(JSON.stringify({ users }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case null:
+      case undefined: {
+        // Default behavior for backwards compatibility - return user profile
         const { data: profile, error } = await supabaseClient
           .from("profiles")
           .select("*")

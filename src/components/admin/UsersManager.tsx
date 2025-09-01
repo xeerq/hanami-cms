@@ -48,8 +48,10 @@ const UsersManager = () => {
     try {
       setLoading(true);
       
-      // Fetch users from the edge function
-      const { data: userData, error: userError } = await supabase.functions.invoke('get-user-data');
+      // Fetch users from the edge function with correct URL construction
+      const { data: userData, error: userError } = await supabase.functions.invoke('get-user-data', {
+        body: { type: 'users' }
+      });
       
       if (userError) throw userError;
       
