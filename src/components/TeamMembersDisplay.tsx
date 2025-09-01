@@ -27,24 +27,10 @@ const TeamMembersDisplay = () => {
 
   const fetchTeamMembers = async () => {
     try {
-      // Query team_members directly with RLS handling data security
-      // RLS policies automatically filter sensitive fields (email, phone) for non-admins
+      // Użyj bezpiecznej view, która automatycznie filtruje wrażliwe dane
       const { data, error } = await supabase
-        .from("team_members")
-        .select(`
-          id,
-          name,
-          position,
-          bio,
-          image_url,
-          social_links,
-          display_order,
-          is_active,
-          created_at,
-          updated_at
-        `)
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+        .from("team_members_public")
+        .select("*");
 
       if (error) throw error;
       setTeamMembers(data || []);

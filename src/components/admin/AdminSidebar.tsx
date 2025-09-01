@@ -94,6 +94,11 @@ const menuItems = [
     icon: FileText 
   },
   { 
+    title: "Zespół", 
+    url: "/admin/team", 
+    icon: Users 
+  },
+  { 
     title: "Email", 
     url: "/admin/notifications", 
     icon: Mail 

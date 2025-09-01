@@ -81,17 +81,20 @@ const ContentManager = () => {
 
       if (settingsError) throw settingsError;
 
-      // Fetch team members (admin can see all data)
+      // Fetch team members with contact info (admin has access)
       const { data: teamData, error: teamError } = await supabase
-        .from("team_members")
-        .select("*")
-        .order("display_order");
+        .rpc('get_team_members_safe', { include_contacts: true });
 
       if (teamError) throw teamError;
 
       setPages(pagesData || []);
       setSettings(settingsData || []);
-      setTeamMembers(teamData || []);
+      // Przekształć dane z position_name na position dla kompatybilności
+      const transformedTeamData = teamData?.map((member: any) => ({
+        ...member,
+        position: member.position_name
+      })) || [];
+      setTeamMembers(transformedTeamData);
     } catch (error: any) {
       console.error("Error fetching data:", error);
       toast({

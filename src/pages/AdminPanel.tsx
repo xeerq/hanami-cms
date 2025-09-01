@@ -18,6 +18,7 @@ import { VouchersManager } from "@/components/admin/VouchersManager";
 import { NotificationManager } from "@/components/admin/NotificationManager";
 import { ScheduleApprovalManager } from "@/components/admin/ScheduleApprovalManager";
 import { SecurityAuditLog } from "@/components/admin/SecurityAuditLog";
+import { TeamMembersManager } from "@/components/admin/TeamMembersManager";
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAdminCheck();
@@ -85,6 +86,7 @@ const AdminPanel = () => {
                 <Route path="schedules" element={<ScheduleApprovalManager />} />
                 <Route path="blocked" element={<BlockedSlotsManager />} />
                 <Route path="content" element={<ContentManager />} />
+                <Route path="team" element={<TeamMembersManager />} />
                 <Route path="notifications" element={<NotificationManager />} />
                 <Route path="security" element={<SecurityAuditLog />} />
                 {/* Redirect any unknown admin routes to dashboard */}
