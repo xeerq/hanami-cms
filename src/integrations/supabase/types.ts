@@ -925,6 +925,42 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_therapist_appointments: {
+        Args: { p_therapist_id?: string }
+        Returns: {
+          appointment_date: string
+          appointment_time: string
+          created_at: string
+          duration: number
+          guest_name: string
+          guest_phone: string
+          id: string
+          is_guest: boolean
+          notes: string
+          service_id: string
+          status: string
+          therapist_id: string
+          updated_at: string
+          user_id: string
+          voucher_code: string
+        }[]
+      }
+      get_therapist_voucher_codes: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          code: string
+          expires_at: string
+          id: string
+          notes: string
+          original_sessions: number
+          original_value: number
+          remaining_sessions: number
+          remaining_value: number
+          service_id: string
+          status: string
+          voucher_type: string
+        }[]
+      }
       get_voucher_public_info: {
         Args: { p_code: string }
         Returns: {
