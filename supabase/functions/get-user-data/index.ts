@@ -118,55 +118,58 @@ serve(async (req) => {
       case "users": {
         console.log("Processing users request, isAdmin:", isAdmin);
         
-        // Admin only: Get all users with auth data
+        // Admin only: Get all users with profile data
         if (!isAdmin) {
           throw new Error("Unauthorized: Admin access required");
         }
 
-        // Check if SERVICE_ROLE_KEY is available
-        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-        console.log("SERVICE_ROLE_KEY available:", serviceRoleKey ? "Yes" : "No");
-        
-        if (!serviceRoleKey) {
-          throw new Error("SERVICE_ROLE_KEY not configured");
-        }
-
-        // Use Supabase admin client to get auth users
-        const supabaseAdmin = createClient(
-          Deno.env.get("SUPABASE_URL") ?? "",
-          serviceRoleKey
-        );
-
-        console.log("Calling auth.admin.listUsers()");
-        
         try {
-          const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+          // Get users from profiles table instead of auth.users
+          const { data: profiles, error: profilesError } = await supabaseClient
+            .from("profiles")
+            .select(`
+              id,
+              user_id,
+              first_name,
+              last_name,
+              phone,
+              created_at,
+              updated_at
+            `);
           
-          console.log("Auth users response:", { 
-            success: !authError, 
-            authUsersCount: authUsers?.users?.length, 
-            authError: authError?.message 
-          });
-          
-          if (authError) {
-            console.error("Auth error details:", authError);
-            throw new Error(`Auth API error: ${authError.message}`);
+          if (profilesError) {
+            console.error("Profiles error:", profilesError);
+            throw profilesError;
           }
 
-          if (!authUsers || !authUsers.users) {
-            throw new Error("No users data returned from auth API");
+          console.log("Profiles fetched:", profiles?.length);
+
+          // Get user roles
+          const { data: userRoles, error: rolesError } = await supabaseClient
+            .from("user_roles")
+            .select("user_id, role");
+          
+          if (rolesError) {
+            console.error("Roles error:", rolesError);
+            throw rolesError;
           }
 
-          // Format users for the frontend
-          const users = authUsers.users.map(authUser => ({
-            id: authUser.id,
-            email: authUser.email,
-            email_confirmed_at: authUser.email_confirmed_at,
-            created_at: authUser.created_at,
-            last_sign_in_at: authUser.last_sign_in_at,
-            user_metadata: authUser.user_metadata,
-            is_banned: authUser.banned_until ? new Date(authUser.banned_until) > new Date() : false
-          }));
+          // Format users for the frontend (using profiles data)
+          const users = profiles?.map(profile => ({
+            id: profile.user_id,
+            email: "Email not available", // We can't get email from profiles
+            email_confirmed_at: null,
+            created_at: profile.created_at,
+            last_sign_in_at: null,
+            user_metadata: {
+              first_name: profile.first_name,
+              last_name: profile.last_name
+            },
+            is_banned: false, // We can't check ban status without auth.users access
+            roles: userRoles?.filter(r => r.user_id === profile.user_id).map(r => r.role) || []
+          })) || [];
+
+          console.log("Users formatted:", users.length);
 
           return new Response(JSON.stringify({ users }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },

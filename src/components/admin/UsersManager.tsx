@@ -55,22 +55,24 @@ const UsersManager = () => {
       
       if (userError) throw userError;
       
-      // Map users and check banned status
+      // Map users and check banned status from the new format
       const usersWithBanStatus = userData?.users?.map((user: any) => ({
         ...user,
-        is_banned: user.banned_until ? new Date(user.banned_until) > new Date() : false
+        is_banned: user.is_banned || false
       })) || [];
       
       setUsers(usersWithBanStatus);
       
-      // Fetch user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("*");
+      // User roles are now included in the user data
+      const allRoles = userData?.users?.flatMap((user: any) => 
+        user.roles?.map((role: string) => ({
+          id: `${user.id}-${role}`,
+          user_id: user.id,
+          role: role
+        })) || []
+      ) || [];
       
-      if (rolesError) throw rolesError;
-      
-      setUserRoles(rolesData || []);
+      setUserRoles(allRoles);
     } catch (error: any) {
       console.error("Error fetching users:", error);
       toast({
@@ -380,71 +382,72 @@ const UsersManager = () => {
                             Usuń Terapeuta
                           </Button>
                         )}
-                        
-                        {/* Account status management */}
-                        {user.is_banned ? (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <CheckCircle className="w-3 h-3 mr-1" />
-                                Odblokuj
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Odblokuj konto użytkownika</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Czy na pewno chcesz odblokować konto użytkownika {user.email}? 
-                                  Użytkownik będzie mógł ponownie się logować.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Anuluj</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => unbanUser(user.id, user.email)}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  Odblokuj konto
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        ) : (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                              >
-                                <Ban className="w-3 h-3 mr-1" />
-                                Zablokuj
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Zablokuj konto użytkownika</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Czy na pewno chcesz zablokować konto użytkownika {user.email}? 
-                                  Użytkownik zostanie wylogowany i nie będzie mógł się logować przez rok.
-                                  Ta akcja zostanie zapisana w logach bezpieczeństwa.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Anuluj</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => banUser(user.id, user.email)}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  Zablokuj konto
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        )}
+                         
+                         {/* Account ban/unban functionality temporarily disabled 
+                             as it requires direct access to auth.users table */}
+                         {false && user.is_banned ? (
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                               <Button
+                                 size="sm"
+                                 variant="default"
+                                 className="bg-green-600 hover:bg-green-700"
+                               >
+                                 <CheckCircle className="w-3 h-3 mr-1" />
+                                 Odblokuj
+                               </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle>Odblokuj konto użytkownika</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                   Czy na pewno chcesz odblokować konto użytkownika {user.email}? 
+                                   Użytkownik będzie mógł ponownie się logować.
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                                 <AlertDialogAction
+                                   onClick={() => unbanUser(user.id, user.email)}
+                                   className="bg-green-600 hover:bg-green-700"
+                                 >
+                                   Odblokuj konto
+                                 </AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+                         ) : false && (
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                               <Button
+                                 size="sm"
+                                 variant="destructive"
+                               >
+                                 <Ban className="w-3 h-3 mr-1" />
+                                 Zablokuj
+                               </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle>Zablokuj konto użytkownika</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                   Czy na pewno chcesz zablokować konto użytkownika {user.email}? 
+                                   Użytkownik zostanie wylogowany i nie będzie mógł się logować przez rok.
+                                   Ta akcja zostanie zapisana w logach bezpieczeństwa.
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                                 <AlertDialogAction
+                                   onClick={() => banUser(user.id, user.email)}
+                                   className="bg-red-600 hover:bg-red-700"
+                                 >
+                                   Zablokuj konto
+                                 </AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+                         )}
                       </div>
                     </TableCell>
                   </TableRow>
