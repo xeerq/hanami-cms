@@ -1110,6 +1110,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      log_data_access: {
+        Args: {
+          p_access_type?: string
+          p_sensitive_fields?: string[]
+          p_table_name: string
+        }
+        Returns: undefined
+      }
       log_security_event: {
         Args: {
           p_action: string
