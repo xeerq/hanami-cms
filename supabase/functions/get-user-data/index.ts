@@ -41,10 +41,14 @@ serve(async (req) => {
       try {
         const body = await req.json();
         dataType = body.type;
-      } catch {
+        console.log("Parsed dataType from body:", dataType);
+      } catch (error) {
+        console.log("Failed to parse request body:", error);
         // If body parsing fails, continue with null dataType
       }
     }
+    
+    console.log("Final dataType:", dataType, "Method:", req.method);
 
     // Check if user is admin for admin operations
     const { data: userRoles } = await supabaseClient
