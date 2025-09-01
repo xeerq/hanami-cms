@@ -123,36 +123,58 @@ serve(async (req) => {
           throw new Error("Unauthorized: Admin access required");
         }
 
+        // Check if SERVICE_ROLE_KEY is available
+        const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+        console.log("SERVICE_ROLE_KEY available:", serviceRoleKey ? "Yes" : "No");
+        
+        if (!serviceRoleKey) {
+          throw new Error("SERVICE_ROLE_KEY not configured");
+        }
+
         // Use Supabase admin client to get auth users
         const supabaseAdmin = createClient(
           Deno.env.get("SUPABASE_URL") ?? "",
-          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+          serviceRoleKey
         );
 
         console.log("Calling auth.admin.listUsers()");
-        const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
         
-        console.log("Auth users response:", { authUsersCount: authUsers?.users?.length, authError });
-        
-        if (authError) {
-          console.error("Auth error:", authError);
-          throw authError;
+        try {
+          const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+          
+          console.log("Auth users response:", { 
+            success: !authError, 
+            authUsersCount: authUsers?.users?.length, 
+            authError: authError?.message 
+          });
+          
+          if (authError) {
+            console.error("Auth error details:", authError);
+            throw new Error(`Auth API error: ${authError.message}`);
+          }
+
+          if (!authUsers || !authUsers.users) {
+            throw new Error("No users data returned from auth API");
+          }
+
+          // Format users for the frontend
+          const users = authUsers.users.map(authUser => ({
+            id: authUser.id,
+            email: authUser.email,
+            email_confirmed_at: authUser.email_confirmed_at,
+            created_at: authUser.created_at,
+            last_sign_in_at: authUser.last_sign_in_at,
+            user_metadata: authUser.user_metadata,
+            is_banned: authUser.banned_until ? new Date(authUser.banned_until) > new Date() : false
+          }));
+
+          return new Response(JSON.stringify({ users }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } catch (error) {
+          console.error("Error in users case:", error);
+          throw error;
         }
-
-        // Format users for the frontend
-        const users = authUsers.users.map(authUser => ({
-          id: authUser.id,
-          email: authUser.email,
-          email_confirmed_at: authUser.email_confirmed_at,
-          created_at: authUser.created_at,
-          last_sign_in_at: authUser.last_sign_in_at,
-          user_metadata: authUser.user_metadata,
-          is_banned: authUser.banned_until ? new Date(authUser.banned_until) > new Date() : false
-        }));
-
-        return new Response(JSON.stringify({ users }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
       }
 
       case null:
