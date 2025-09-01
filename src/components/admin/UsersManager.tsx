@@ -48,12 +48,26 @@ const UsersManager = () => {
     try {
       setLoading(true);
       
-      // Fetch users from the edge function with correct URL construction
-      const { data: userData, error: userError } = await supabase.functions.invoke('get-user-data', {
-        body: { type: 'users' }
+      // Use direct fetch with hardcoded URL for now to debug
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      
+      const response = await fetch('https://mfjfhnwgrbwjovvnlxto.supabase.co/functions/v1/get-user-data?type=users', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mamZobndncmJ3am92dm5seHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMTIwMTQsImV4cCI6MjA2ODc4ODAxNH0.J6hOEg8PYNhdxsUmhwl0UcJXEveun4o7Wzq0jnGtrd8'
+        }
       });
       
-      if (userError) throw userError;
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Direct fetch error:', response.status, errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const userData = await response.json();
+      console.log('Received user data:', userData);
       
       // Map users and check banned status from the new format
       const usersWithBanStatus = userData?.users?.map((user: any) => ({
