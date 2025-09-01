@@ -11,6 +11,7 @@ import {
   Mail,
   FileText,
   Shield,
+  ShieldCheck,
   Home
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
@@ -102,6 +103,11 @@ const menuItems = [
     title: "Email", 
     url: "/admin/notifications", 
     icon: Mail 
+  },
+  { 
+    title: "Logi bezpieczeństwa", 
+    url: "/admin/security", 
+    icon: ShieldCheck 
   },
 ];
 
