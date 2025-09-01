@@ -51,12 +51,17 @@ serve(async (req) => {
     console.log("Final dataType:", dataType, "Method:", req.method);
 
     // Check if user is admin for admin operations
-    const { data: userRoles } = await supabaseClient
+    console.log("Checking admin status for user:", user.id);
+    
+    const { data: userRoles, error: rolesError } = await supabaseClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id);
+    
+    console.log("User roles query result:", { userRoles, rolesError });
 
     const isAdmin = userRoles?.some(role => role.role === 'admin') || false;
+    console.log("Final isAdmin result:", isAdmin);
 
     switch (dataType) {
       case "appointments": {
