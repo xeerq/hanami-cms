@@ -32,11 +32,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Log authentication events
+        if (event === 'SIGNED_IN' && session?.user) {
+          try {
+            await supabase.rpc('log_security_event', {
+              p_action: 'user_login',
+              p_table_name: null,
+              p_record_id: null,
+              p_details: {
+                event_type: 'SIGNED_IN',
+                user_agent: navigator.userAgent,
+                timestamp: new Date().toISOString()
+              }
+            });
+          } catch (error) {
+            console.error('Error logging login event:', error);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          try {
+            await supabase.rpc('log_security_event', {
+              p_action: 'user_logout',
+              p_table_name: null,
+              p_record_id: null,
+              p_details: {
+                event_type: 'SIGNED_OUT',
+                timestamp: new Date().toISOString()
+              }
+            });
+          } catch (error) {
+            console.error('Error logging logout event:', error);
+          }
+        }
       }
     );
 

@@ -21,6 +21,7 @@ import TherapistsCalendars from "./pages/TherapistsCalendars";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookieBanner from "@/components/CookieBanner";
+import { ActivityLogger } from "@/components/admin/ActivityLogger";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -30,6 +31,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ActivityLogger />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />

@@ -64,10 +64,29 @@ export const SecurityAuditLog = () => {
   const getActionColor = (action: string) => {
     switch (action) {
       case 'role_granted':
+      case 'role_granted_enhanced':
         return 'default';
       case 'role_revoked':
+      case 'role_revoked_enhanced':
         return 'destructive';
       case 'role_changed':
+        return 'secondary';
+      case 'login':
+      case 'profile_updated':
+        return 'default';
+      case 'voucher_created':
+      case 'voucher_assigned':
+        return 'secondary';
+      case 'appointment_created':
+      case 'appointment_updated':
+        return 'default';
+      case 'team_member_created':
+      case 'team_member_updated':
+        return 'secondary';
+      case 'sensitive_data_access':
+      case 'guest_contact_accessed':
+        return 'destructive';
+      case 'data_export':
         return 'secondary';
       default:
         return 'outline';
@@ -82,8 +101,38 @@ export const SecurityAuditLog = () => {
         return 'Odebrano rolę';
       case 'role_changed':
         return 'Zmieniono rolę';
+      case 'role_granted_enhanced':
+        return 'Nadano rolę (rozszerzony)';
+      case 'role_revoked_enhanced':
+        return 'Odebrano rolę (rozszerzony)';
+      case 'login':
+        return 'Logowanie';
+      case 'profile_updated':
+        return 'Aktualizacja profilu';
+      case 'voucher_created':
+        return 'Utworzono bon';
+      case 'voucher_assigned':
+        return 'Przypisano bon';
+      case 'appointment_created':
+        return 'Utworzono wizytę';
+      case 'appointment_updated':
+        return 'Zaktualizowano wizytę';
+      case 'team_member_created':
+        return 'Dodano członka zespołu';
+      case 'team_member_updated':
+        return 'Zaktualizowano członka zespołu';
+      case 'team_member_deleted':
+        return 'Usunięto członka zespołu';
+      case 'sensitive_data_access':
+        return 'Dostęp do danych wrażliwych';
+      case 'guest_contact_accessed':
+        return 'Dostęp do kontaktu gościa';
+      case 'voucher_purchaser_data_accessed':
+        return 'Dostęp do danych nabywcy bonu';
+      case 'data_export':
+        return 'Eksport danych';
       default:
-        return action;
+        return action.replace(/_/g, ' ');
     }
   };
 
