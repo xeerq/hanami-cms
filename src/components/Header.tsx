@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { User, Calendar, ShoppingBag, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
@@ -8,13 +8,25 @@ import { useTherapistCheck } from "@/hooks/useTherapistCheck";
 import NotificationCenter from "@/components/NotificationCenter";
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminCheck();
   const { isTherapist } = useTherapistCheck();
 
   const handleSignOut = async () => {
-    await signOut();
+    console.log('Attempting to sign out...');
+    try {
+      const { error } = await signOut();
+      if (!error) {
+        console.log('Sign out successful, redirecting to home...');
+        navigate('/');
+      } else {
+        console.error('Sign out error:', error);
+      }
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error);
+    }
   };
 
   const navigation = [
