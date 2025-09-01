@@ -28,23 +28,45 @@ export const useAdminCheck = () => {
     try {
       console.log("Checking admin role for user:", user.id);
       
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .eq("role", "admin")
-        .maybeSingle();
+      // Use the has_role function instead of direct table access
+      const { data, error } = await supabase.rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin'
+      });
 
-      console.log("Admin role check result:", { data, error });
+      console.log("Admin role check result (has_role):", { data, error });
 
-      if (error && error.code !== "PGRST116") {
+      if (error) {
+        console.error("Admin role check error:", error);
         throw error;
       }
 
-      setIsAdmin(!!data);
+      const hasAdminRole = data === true;
+      console.log("Setting isAdmin to:", hasAdminRole);
+      setIsAdmin(hasAdminRole);
     } catch (error: any) {
       console.error("Error checking admin role:", error);
-      setIsAdmin(false);
+      // Fallback to direct table query if RPC fails
+      try {
+        console.log("Trying fallback query...");
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+
+        console.log("Fallback query result:", { fallbackData, fallbackError });
+        
+        if (!fallbackError) {
+          setIsAdmin(!!fallbackData);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (fallbackErr) {
+        console.error("Fallback query also failed:", fallbackErr);
+        setIsAdmin(false);
+      }
     } finally {
       setLoading(false);
     }

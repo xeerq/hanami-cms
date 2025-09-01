@@ -25,7 +25,9 @@ const AdminPanel = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log("AdminPanel - isAdmin:", isAdmin, "loading:", loading);
     if (!loading && !isAdmin) {
+      console.log("Redirecting to home - no admin access");
       navigate("/");
     }
   }, [isAdmin, loading, navigate]);
