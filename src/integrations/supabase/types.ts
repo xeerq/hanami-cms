@@ -778,10 +778,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "voucher_redemptions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments_therapist_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "voucher_redemptions_voucher_id_fkey"
             columns: ["voucher_id"]
             isOneToOne: false
             referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_redemptions_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers_therapist_view"
             referencedColumns: ["id"]
           },
         ]
@@ -859,6 +873,75 @@ export type Database = {
       }
     }
     Views: {
+      appointments_therapist_view: {
+        Row: {
+          appointment_date: string | null
+          appointment_time: string | null
+          created_at: string | null
+          duration: number | null
+          guest_name: string | null
+          guest_phone: string | null
+          id: string | null
+          is_guest: boolean | null
+          notes: string | null
+          service_id: string | null
+          status: string | null
+          therapist_id: string | null
+          updated_at: string | null
+          user_id: string | null
+          voucher_code: string | null
+        }
+        Insert: {
+          appointment_date?: string | null
+          appointment_time?: string | null
+          created_at?: string | null
+          duration?: number | null
+          guest_name?: never
+          guest_phone?: never
+          id?: string | null
+          is_guest?: boolean | null
+          notes?: string | null
+          service_id?: string | null
+          status?: string | null
+          therapist_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          voucher_code?: string | null
+        }
+        Update: {
+          appointment_date?: string | null
+          appointment_time?: string | null
+          created_at?: string | null
+          duration?: number | null
+          guest_name?: never
+          guest_phone?: never
+          id?: string | null
+          is_guest?: boolean | null
+          notes?: string | null
+          service_id?: string | null
+          status?: string | null
+          therapist_id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          voucher_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members_display: {
         Row: {
           bio: string | null
@@ -898,8 +981,107 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members_public: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          display_order: number | null
+          id: string | null
+          image_url: string | null
+          is_active: boolean | null
+          name: string | null
+          position: string | null
+          social_links: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          position?: string | null
+          social_links?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          id?: string | null
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string | null
+          position?: string | null
+          social_links?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      vouchers_therapist_view: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string | null
+          notes: string | null
+          original_sessions: number | null
+          original_value: number | null
+          remaining_sessions: number | null
+          remaining_value: number | null
+          service_id: string | null
+          status: string | null
+          updated_at: string | null
+          voucher_type: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          notes?: string | null
+          original_sessions?: number | null
+          original_value?: number | null
+          remaining_sessions?: number | null
+          remaining_value?: number | null
+          service_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          voucher_type?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          notes?: string | null
+          original_sessions?: number | null
+          original_value?: number | null
+          remaining_sessions?: number | null
+          remaining_value?: number | null
+          service_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+          voucher_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_vouchers_service_id"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      check_auth_rate_limit: {
+        Args: { p_ip_address: unknown }
+        Returns: boolean
+      }
       check_therapist_availability: {
         Args: {
           p_appointment_date: string
@@ -934,6 +1116,15 @@ export type Database = {
           p_details?: Json
           p_record_id?: string
           p_table_name?: string
+        }
+        Returns: undefined
+      }
+      log_sensitive_access: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_record_id?: string
+          p_table_name: string
         }
         Returns: undefined
       }
