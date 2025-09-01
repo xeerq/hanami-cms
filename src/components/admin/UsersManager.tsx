@@ -4,11 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Crown, Shield, Users, UserX, UserCheck, Ban, CheckCircle } from "lucide-react";
+import { Crown, Shield, Users, UserX, UserCheck, Ban, CheckCircle, Edit } from "lucide-react";
 import { useActivityLogger } from "@/hooks/useActivityLogger";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { EditUserDialog } from "./EditUserDialog";
 
 interface User {
   id: string;
@@ -35,6 +36,8 @@ const UsersManager = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLogger();
 
@@ -351,6 +354,19 @@ const UsersManager = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2 flex-wrap">
+                        {/* Edit user button */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setEditingUser(user);
+                            setEditDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="w-3 h-3 mr-1" />
+                          Edytuj
+                        </Button>
+                        
                         {/* Role management buttons */}
                         {!roles.includes('admin') && (
                           <Button
@@ -478,6 +494,13 @@ const UsersManager = () => {
           </Table>
         </div>
       </CardContent>
+
+      <EditUserDialog
+        user={editingUser}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onUserUpdated={fetchUsers}
+      />
     </Card>
   );
 };
