@@ -40,10 +40,45 @@ export const SecurityAuditLog = () => {
 
   const fetchAuditEntries = async () => {
     try {
-      // First, fetch audit entries without join
+      // Fetch only important security-related actions, excluding page views and logins
+      const importantActions = [
+        'role_granted',
+        'role_revoked', 
+        'role_changed',
+        'role_granted_enhanced',
+        'role_revoked_enhanced',
+        'data_write',
+        'data_delete',
+        'appointment_created',
+        'appointment_updated',
+        'appointment_deleted',
+        'voucher_created',
+        'voucher_assigned',
+        'voucher_deleted',
+        'team_member_created',
+        'team_member_updated',
+        'team_member_deleted',
+        'therapist_created',
+        'therapist_updated',
+        'therapist_deleted',
+        'service_created',
+        'service_updated',
+        'service_deleted',
+        'product_created',
+        'product_updated',
+        'product_deleted',
+        'user_created',
+        'user_updated',
+        'user_deleted',
+        'sensitive_data_access',
+        'data_export',
+        'profile_updated'
+      ];
+
       const { data: auditData, error } = await supabase
         .from('security_audit_log')
         .select('*')
+        .in('action', importantActions)
         .order('created_at', { ascending: false })
         .limit(100);
 
