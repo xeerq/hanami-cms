@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 // Import existing components
-import TherapistsManager from "@/components/admin/TherapistsManager";
+import { UnifiedTeamDisplay } from "@/components/admin/UnifiedTeamDisplay";
 import { TeamMembersManager } from "@/components/admin/TeamMembersManager";
 import BlockedSlotsManager from "@/components/admin/BlockedSlotsManager";
 import { ScheduleApprovalManager } from "@/components/admin/ScheduleApprovalManager";
@@ -163,21 +163,21 @@ export function UnifiedTeamManager() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="therapists" className="w-full">
+          <Tabs defaultValue="team" className="w-full">
             <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="therapists">Terapeuci</TabsTrigger>
               <TabsTrigger value="team">Zespół</TabsTrigger>
+              <TabsTrigger value="settings">Ustawienia zespołu</TabsTrigger>
               <TabsTrigger value="schedules">Grafiki</TabsTrigger>
               <TabsTrigger value="calendars">Kalendarze</TabsTrigger>
               <TabsTrigger value="blocked">Blokady</TabsTrigger>
               <TabsTrigger value="overview">Przegląd</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="therapists" className="mt-6">
-              <TherapistsManager />
+            <TabsContent value="team" className="mt-6">
+              <UnifiedTeamDisplay />
             </TabsContent>
 
-            <TabsContent value="team" className="mt-6">
+            <TabsContent value="settings" className="mt-6">
               <TeamMembersManager />
             </TabsContent>
 
@@ -230,8 +230,8 @@ export function UnifiedTeamManager() {
                       Użyj zakładek powyżej, aby:
                     </p>
                     <ul className="text-sm space-y-1 text-muted-foreground">
-                      <li>• Zarządzać danymi terapeutów i ich uprawnieniami</li>
-                      <li>• Dodawać i edytować członków zespołu</li>
+                      <li>• Zarządzać wszystkimi członkami zespołu w jednym miejscu</li>
+                      <li>• Konfigurować ustawienia zespołu i role</li>
                       <li>• Zatwierdzać grafiki pracy terapeutów</li>
                       <li>• Przeglądać kalendarze i wizyty</li>
                       <li>• Blokować terminy i zarządzać dostępnością</li>
