@@ -1,66 +1,74 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { UserCog, Plus, Edit, Trash2, Shield, User, AlertTriangle } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Crown, Shield, Users, UserX, UserCheck, Ban, CheckCircle } from "lucide-react";
+import { useActivityLogger } from "@/hooks/useActivityLogger";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { usePagination, usePaginatedData } from "@/hooks/usePagination";
-import { PaginationControlsComponent } from "@/components/ui/pagination-controls";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 
-interface UserWithRole {
+interface User {
+  id: string;
+  email: string;
+  email_confirmed_at: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+  user_metadata: {
+    first_name?: string;
+    last_name?: string;
+  };
+  is_banned?: boolean;
+}
+
+interface UserRole {
+  id: string;
   user_id: string;
-  first_name?: string;
-  last_name?: string;
-  phone?: string;
-  email?: string;
-  roles: string[];
+  role: string;
+  created_at: string;
 }
 
 const UsersManager = () => {
-  const [users, setUsers] = useState<UserWithRole[]>([]);
+  const { isAdmin, loading: adminLoading } = useAdminCheck();
+  const [users, setUsers] = useState<User[]>([]);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { user: currentUser } = useAuth();
-  
-  const pagination = usePagination(users.length, 10);
-  const paginatedUsers = usePaginatedData(users, pagination);
+  const { logActivity } = useActivityLogger();
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (!adminLoading && isAdmin) {
+      fetchUsers();
+    }
+  }, [isAdmin, adminLoading]);
 
   const fetchUsers = async () => {
     try {
-      // First get all profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, first_name, last_name, phone");
-
-      if (profilesError) throw profilesError;
-
-      // Then get all user roles
-      const { data: userRoles, error: rolesError } = await supabase
+      setLoading(true);
+      
+      // Fetch users from the edge function
+      const { data: userData, error: userError } = await supabase.functions.invoke('get-user-data');
+      
+      if (userError) throw userError;
+      
+      // Map users and check banned status
+      const usersWithBanStatus = userData?.users?.map((user: any) => ({
+        ...user,
+        is_banned: user.banned_until ? new Date(user.banned_until) > new Date() : false
+      })) || [];
+      
+      setUsers(usersWithBanStatus);
+      
+      // Fetch user roles
+      const { data: rolesData, error: rolesError } = await supabase
         .from("user_roles")
-        .select("user_id, role");
-
+        .select("*");
+      
       if (rolesError) throw rolesError;
-
-      // Combine the data
-      const usersWithRoles: UserWithRole[] = (profiles || []).map(profile => {
-        const roles = (userRoles || [])
-          .filter(role => role.user_id === profile.user_id)
-          .map(role => role.role);
-
-        return {
-          ...profile,
-          roles: roles.length > 0 ? roles : ['user']
-        };
-      });
-
-      setUsers(usersWithRoles);
+      
+      setUserRoles(rolesData || []);
     } catch (error: any) {
       console.error("Error fetching users:", error);
       toast({
@@ -73,106 +81,166 @@ const UsersManager = () => {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: string) => {
+  const getUserRoles = (userId: string): string[] => {
+    return userRoles
+      .filter(role => role.user_id === userId)
+      .map(role => role.role);
+  };
+
+  const addRole = async (userId: string, role: 'admin' | 'therapist' | 'user') => {
     try {
-      // Security check: prevent self-role removal for admins
-      if (currentUser?.id === userId) {
-        const currentUserData = users.find(u => u.user_id === userId);
-        const currentRoles = currentUserData?.roles || [];
-        
-        if (currentRoles.includes('admin') && newRole !== 'admin') {
-          toast({
-            title: "Zabroniona operacja",
-            description: "Nie możesz usunąć swojej własnej roli administratora",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
-      // Check if we're removing the last admin
-      if (newRole !== 'admin') {
-        const targetUser = users.find(u => u.user_id === userId);
-        if (targetUser?.roles.includes('admin')) {
-          const adminCount = users.filter(u => u.roles.includes('admin')).length;
-          if (adminCount <= 1) {
-            toast({
-              title: "Zabroniona operacja",
-              description: "Nie można usunąć ostatniego administratora w systemie",
-              variant: "destructive",
-            });
-            return;
-          }
-        }
-      }
-
-      // Remove existing roles
-      await supabase
+      const { error } = await supabase
         .from("user_roles")
-        .delete()
-        .eq("user_id", userId);
+        .insert({
+          user_id: userId,
+          role: role as 'admin' | 'therapist' | 'user'
+        });
 
-      // Add new role if not 'user' (default)
-      if (newRole !== 'user') {
-        const { error } = await supabase
-          .from("user_roles")
-          .insert({
-            user_id: userId,
-            role: newRole as "admin" | "therapist" | "user"
-          });
+      if (error) throw error;
 
-        if (error) throw error;
-      }
+      const user = users.find(u => u.id === userId);
+      await logActivity({
+        action: 'user_role_granted',
+        details: {
+          description: `Przyznano rolę ${role} użytkownikowi: ${user?.email}`,
+          user_id: userId,
+          role: role
+        }
+      });
 
       toast({
         title: "Sukces",
-        description: "Rola użytkownika została zaktualizowana",
+        description: `Rola ${role} została przyznana`,
       });
 
       fetchUsers();
     } catch (error: any) {
-      console.error("Error updating user role:", error);
-      
-      // Handle specific database constraint errors
-      if (error.message?.includes('Cannot remove the last administrator')) {
-        toast({
-          title: "Błąd bezpieczeństwa",
-          description: "Nie można usunąć ostatniego administratora",
-          variant: "destructive",
-        });
-      } else if (error.message?.includes('cannot remove their own admin role')) {
-        toast({
-          title: "Błąd bezpieczeństwa", 
-          description: "Administratorzy nie mogą usunąć własnej roli",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Błąd",
-          description: "Nie udało się zaktualizować roli użytkownika",
-          variant: "destructive",
-        });
-      }
+      console.error("Error adding role:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się przyznać roli",
+        variant: "destructive",
+      });
     }
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case "admin": return "bg-red-100 text-red-800";
-      case "therapist": return "bg-blue-100 text-blue-800";
-      case "user": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+  const removeRole = async (userId: string, role: 'admin' | 'therapist' | 'user') => {
+    try {
+      const { error } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId)
+        .eq("role", role as 'admin' | 'therapist' | 'user');
+
+      if (error) throw error;
+
+      const user = users.find(u => u.id === userId);
+      await logActivity({
+        action: 'user_role_revoked',
+        details: {
+          description: `Odebrano rolę ${role} użytkownikowi: ${user?.email}`,
+          user_id: userId,
+          role: role
+        }
+      });
+
+      toast({
+        title: "Sukces",
+        description: `Rola ${role} została odebrana`,
+      });
+
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error removing role:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się odebrać roli",
+        variant: "destructive",
+      });
     }
   };
 
-  const getRoleText = (role: string) => {
-    switch (role) {
-      case "admin": return "Administrator";
-      case "therapist": return "Terapeuta";
-      case "user": return "Użytkownik";
-      default: return role;
+  const banUser = async (userId: string, userEmail: string) => {
+    try {
+      // Use Supabase admin API to ban user
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        ban_duration: '8760h' // 1 year in hours
+      });
+
+      if (error) throw error;
+
+      await logActivity({
+        action: 'user_account_banned',
+        details: {
+          description: `Zablokowano konto użytkownika: ${userEmail}`,
+          banned_user_id: userId,
+          ban_duration: '1 year'
+        }
+      });
+
+      toast({
+        title: "Sukces",
+        description: "Konto użytkownika zostało zablokowane",
+      });
+
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error banning user:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się zablokować użytkownika",
+        variant: "destructive",
+      });
     }
   };
+
+  const unbanUser = async (userId: string, userEmail: string) => {
+    try {
+      // Use Supabase admin API to unban user
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        ban_duration: 'none'
+      });
+
+      if (error) throw error;
+
+      await logActivity({
+        action: 'user_account_unbanned',
+        details: {
+          description: `Odblokowano konto użytkownika: ${userEmail}`,
+          unbanned_user_id: userId
+        }
+      });
+
+      toast({
+        title: "Sukces",
+        description: "Konto użytkownika zostało odblokowane",
+      });
+
+      fetchUsers();
+    } catch (error: any) {
+      console.error("Error unbanning user:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się odblokować użytkownika",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'Nigdy';
+    return new Date(dateString).toLocaleDateString('pl-PL', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (adminLoading || !isAdmin) {
+    return null;
+  }
 
   if (loading) {
     return (
@@ -182,8 +250,8 @@ const UsersManager = () => {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-hanami-primary mx-auto"></div>
-            <p className="mt-2 text-hanami-neutral">Ładowanie użytkowników...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Ładowanie użytkowników...</p>
           </div>
         </CardContent>
       </Card>
@@ -193,87 +261,203 @@ const UsersManager = () => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle className="text-hanami-primary">Zarządzanie użytkownikami</CardTitle>
-            <CardDescription>
-              Zarządzaj rolami i uprawnieniami użytkowników
-            </CardDescription>
-          </div>
-        </div>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="w-5 h-5" />
+          Zarządzanie użytkownikami
+        </CardTitle>
+        <CardDescription>
+          Zarządzaj kontami użytkowników, rolami i uprawnieniami. Tylko administratorzy mogą blokować konta.
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {users.length === 0 ? (
-            <div className="text-center py-8 text-hanami-neutral">
-              Brak użytkowników do wyświetlenia
-            </div>
-          ) : (
-            <>
-              <div className="space-y-4">
-                {paginatedUsers.map((user) => (
-                  <div key={user.user_id} className="border border-hanami-accent/20 rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4">
-                        <div className="w-12 h-12 bg-hanami-secondary rounded-full flex items-center justify-center">
-                          <User className="h-6 w-6 text-hanami-primary" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-hanami-primary">
-                            {user.first_name} {user.last_name}
-                          </h3>
-                          {user.phone && (
-                            <p className="text-sm text-hanami-neutral">
-                              Telefon: {user.phone}
-                            </p>
-                          )}
-                          <div className="flex items-center space-x-2 mt-2">
-                            {user.roles.map((role) => (
-                              <Badge key={role} className={getRoleColor(role)}>
-                                {getRoleText(role)}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {currentUser?.id === user.user_id && user.roles.includes('admin') && (
-                          <div className="flex items-center text-amber-600 text-xs mr-2">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            <span>To Ty</span>
-                          </div>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Imię i nazwisko</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status konta</TableHead>
+                <TableHead>Ostatnie logowanie</TableHead>
+                <TableHead>Akcje</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((user) => {
+                const roles = getUserRoles(user.id);
+                const userName = user.user_metadata?.first_name && user.user_metadata?.last_name
+                  ? `${user.user_metadata.first_name} ${user.user_metadata.last_name}`
+                  : 'Brak danych';
+
+                return (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.email}</TableCell>
+                    <TableCell>{userName}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1 flex-wrap">
+                        {roles.length > 0 ? (
+                          roles.map((role) => (
+                            <Badge
+                              key={role}
+                              variant={role === 'admin' ? 'destructive' : role === 'therapist' ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {role === 'admin' ? 'Administrator' : role === 'therapist' ? 'Terapeuta' : 'Użytkownik'}
+                            </Badge>
+                          ))
+                        ) : (
+                          <Badge variant="outline" className="text-xs">Użytkownik</Badge>
                         )}
-                        <Select
-                          value={user.roles[0] || 'user'}
-                          onValueChange={(value) => updateUserRole(user.user_id, value)}
-                          disabled={currentUser?.id === user.user_id && user.roles.includes('admin')}
-                        >
-                          <SelectTrigger className={`w-32 ${currentUser?.id === user.user_id && user.roles.includes('admin') ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="user">Użytkownik</SelectItem>
-                            <SelectItem value="therapist">Terapeuta</SelectItem>
-                            <SelectItem value="admin">Administrator</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {users.length > 0 && (
-                <div className="border-t pt-4">
-                  <PaginationControlsComponent
-                    pagination={pagination}
-                    totalItems={users.length}
-                    pageSizeOptions={[5, 10, 25, 50]}
-                  />
-                </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {user.is_banned ? (
+                          <Badge variant="destructive" className="flex items-center gap-1">
+                            <Ban className="w-3 h-3" />
+                            Zablokowane
+                          </Badge>
+                        ) : user.email_confirmed_at ? (
+                          <Badge variant="default" className="flex items-center gap-1">
+                            <CheckCircle className="w-3 h-3" />
+                            Aktywne
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">
+                            Niepotwerdzone
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatDate(user.last_sign_in_at)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2 flex-wrap">
+                        {/* Role management buttons */}
+                        {!roles.includes('admin') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addRole(user.id, 'admin')}
+                          >
+                            <Crown className="w-3 h-3 mr-1" />
+                            Admin
+                          </Button>
+                        )}
+                        
+                        {!roles.includes('therapist') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addRole(user.id, 'therapist')}
+                          >
+                            <Shield className="w-3 h-3 mr-1" />
+                            Terapeuta
+                          </Button>
+                        )}
+                        
+                        {/* Remove roles buttons */}
+                        {roles.includes('admin') && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeRole(user.id, 'admin')}
+                          >
+                            <UserX className="w-3 h-3 mr-1" />
+                            Usuń Admin
+                          </Button>
+                        )}
+                        
+                        {roles.includes('therapist') && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeRole(user.id, 'therapist')}
+                          >
+                            <UserX className="w-3 h-3 mr-1" />
+                            Usuń Terapeuta
+                          </Button>
+                        )}
+                        
+                        {/* Account status management */}
+                        {user.is_banned ? (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Odblokuj
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Odblokuj konto użytkownika</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Czy na pewno chcesz odblokować konto użytkownika {user.email}? 
+                                  Użytkownik będzie mógł ponownie się logować.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => unbanUser(user.id, user.email)}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  Odblokuj konto
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        ) : (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                              >
+                                <Ban className="w-3 h-3 mr-1" />
+                                Zablokuj
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Zablokuj konto użytkownika</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Czy na pewno chcesz zablokować konto użytkownika {user.email}? 
+                                  Użytkownik zostanie wylogowany i nie będzie mógł się logować przez rok.
+                                  Ta akcja zostanie zapisana w logach bezpieczeństwa.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => banUser(user.id, user.email)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Zablokuj konto
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {users.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    Brak użytkowników
+                  </TableCell>
+                </TableRow>
               )}
-            </>
-          )}
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>
