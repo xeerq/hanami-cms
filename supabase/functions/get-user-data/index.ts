@@ -54,11 +54,15 @@ serve(async (req) => {
           throw new Error("Unauthorized: Admin access required");
         }
 
+        console.log("About to create service role client");
+        
         // Use service role client to bypass RLS for admin operations
         const supabaseAdmin = createClient(
           Deno.env.get("SUPABASE_URL") ?? "",
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
         );
+
+        console.log("Service role client created, fetching profiles...");
 
         // Get all profiles using admin client
         const { data: profiles, error: profilesError } = await supabaseAdmin
