@@ -872,30 +872,6 @@ export type Database = {
           social_links: Json | null
           updated_at: string | null
         }
-        Insert: {
-          bio?: string | null
-          created_at?: string | null
-          display_order?: number | null
-          id?: string | null
-          image_url?: string | null
-          is_active?: boolean | null
-          name?: string | null
-          position?: string | null
-          social_links?: Json | null
-          updated_at?: string | null
-        }
-        Update: {
-          bio?: string | null
-          created_at?: string | null
-          display_order?: number | null
-          id?: string | null
-          image_url?: string | null
-          is_active?: boolean | null
-          name?: string | null
-          position?: string | null
-          social_links?: Json | null
-          updated_at?: string | null
-        }
         Relationships: []
       }
     }
@@ -924,6 +900,21 @@ export type Database = {
       generate_voucher_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_safe_team_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          bio: string
+          created_at: string
+          display_order: number
+          id: string
+          image_url: string
+          is_active: boolean
+          name: string
+          position_title: string
+          social_links: Json
+          updated_at: string
+        }[]
       }
       get_team_members_safe: {
         Args: { include_contacts?: boolean }
@@ -1037,6 +1028,10 @@ export type Database = {
           p_voucher_code: string
         }
         Returns: Json
+      }
+      security_check: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
     }
     Enums: {
