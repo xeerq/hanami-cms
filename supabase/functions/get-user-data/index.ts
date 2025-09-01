@@ -50,17 +50,18 @@ serve(async (req) => {
     
     console.log("Final dataType:", dataType, "Method:", req.method);
 
-    // Check if user is admin for admin operations
+    // Check if user is admin for admin operations using RPC function
     console.log("Checking admin status for user:", user.id);
     
-    const { data: userRoles, error: rolesError } = await supabaseClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id);
+    const { data: isAdminResult, error: adminError } = await supabaseClient
+      .rpc('has_role', {
+        _user_id: user.id,
+        _role: 'admin'
+      });
     
-    console.log("User roles query result:", { userRoles, rolesError });
+    console.log("Admin check result:", { isAdminResult, adminError });
 
-    const isAdmin = userRoles?.some(role => role.role === 'admin') || false;
+    const isAdmin = isAdminResult === true;
     console.log("Final isAdmin result:", isAdmin);
 
     switch (dataType) {
