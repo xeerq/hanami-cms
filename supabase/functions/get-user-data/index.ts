@@ -116,6 +116,8 @@ serve(async (req) => {
       }
 
       case "users": {
+        console.log("Processing users request, isAdmin:", isAdmin);
+        
         // Admin only: Get all users with auth data
         if (!isAdmin) {
           throw new Error("Unauthorized: Admin access required");
@@ -127,9 +129,15 @@ serve(async (req) => {
           Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
         );
 
+        console.log("Calling auth.admin.listUsers()");
         const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
         
-        if (authError) throw authError;
+        console.log("Auth users response:", { authUsersCount: authUsers?.users?.length, authError });
+        
+        if (authError) {
+          console.error("Auth error:", authError);
+          throw authError;
+        }
 
         // Format users for the frontend
         const users = authUsers.users.map(authUser => ({
