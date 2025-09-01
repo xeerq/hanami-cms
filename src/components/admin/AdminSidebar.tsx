@@ -40,8 +40,8 @@ const menuItems = [
     icon: Calendar 
   },
   { 
-    title: "Terapeuci", 
-    url: "/admin/therapists", 
+    title: "Zespół i Terapeuci", 
+    url: "/admin/team", 
     icon: Users 
   },
   { 
@@ -75,29 +75,9 @@ const menuItems = [
     icon: Tag 
   },
   { 
-    title: "Kalendarze", 
-    url: "/admin/calendars", 
-    icon: Calendar 
-  },
-  { 
-    title: "Grafiki", 
-    url: "/admin/schedules", 
-    icon: Calendar 
-  },
-  { 
-    title: "Blokady", 
-    url: "/admin/blocked", 
-    icon: Shield 
-  },
-  { 
     title: "Treść", 
     url: "/admin/content", 
     icon: FileText 
-  },
-  { 
-    title: "Zespół", 
-    url: "/admin/team", 
-    icon: Users 
   },
   { 
     title: "Email", 

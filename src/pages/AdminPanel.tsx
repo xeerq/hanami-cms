@@ -5,20 +5,16 @@ import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import AppointmentsManager from "@/components/admin/AppointmentsManager";
-import TherapistsManager from "@/components/admin/TherapistsManager";
+import { UnifiedTeamManager } from "@/components/admin/UnifiedTeamManager";
 import ServicesManager from "@/components/admin/ServicesManager";
 import ProductsManager from "@/components/admin/ProductsManager";
 import CategoriesManager from "@/components/admin/CategoriesManager";
 import UsersManager from "@/components/admin/UsersManager";
-import BlockedSlotsManager from "@/components/admin/BlockedSlotsManager";
 import TherapistServicesManager from "@/components/admin/TherapistServicesManager";
-import TherapistsCalendarsView from "@/pages/TherapistsCalendars";
 import ContentManager from "@/components/admin/ContentManager";
 import { VouchersManager } from "@/components/admin/VouchersManager";
 import { NotificationManager } from "@/components/admin/NotificationManager";
-import { ScheduleApprovalManager } from "@/components/admin/ScheduleApprovalManager";
 import { SecurityAuditLog } from "@/components/admin/SecurityAuditLog";
-import { TeamMembersManager } from "@/components/admin/TeamMembersManager";
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAdminCheck();
@@ -77,18 +73,14 @@ const AdminPanel = () => {
               <Routes>
                 <Route index element={<AdminDashboard />} />
                 <Route path="appointments" element={<AppointmentsManager />} />
-                <Route path="therapists" element={<TherapistsManager />} />
+                <Route path="team" element={<UnifiedTeamManager />} />
                 <Route path="services" element={<ServicesManager />} />
                 <Route path="assignments" element={<TherapistServicesManager />} />
                 <Route path="products" element={<ProductsManager />} />
                 <Route path="vouchers" element={<VouchersManager />} />
                 <Route path="users" element={<UsersManager />} />
                 <Route path="categories" element={<CategoriesManager />} />
-                <Route path="calendars" element={<TherapistsCalendarsView embedded={true} />} />
-                <Route path="schedules" element={<ScheduleApprovalManager />} />
-                <Route path="blocked" element={<BlockedSlotsManager />} />
                 <Route path="content" element={<ContentManager />} />
-                <Route path="team" element={<TeamMembersManager />} />
                 <Route path="notifications" element={<NotificationManager />} />
                 <Route path="security" element={<SecurityAuditLog />} />
                 {/* Redirect any unknown admin routes to dashboard */}
