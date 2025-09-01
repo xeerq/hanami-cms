@@ -2,8 +2,10 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://d74ff47f-eba2-4ad4-bf16-e07271835d3c.sandbox.lovable.dev",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
 };
 
 serve(async (req) => {
@@ -33,9 +35,22 @@ serve(async (req) => {
 
     const user = userData.user;
     
-    // Get dataType from query params
-    const url = new URL(req.url);
-    const dataType = url.searchParams.get("type");
+    // Get dataType from query params or request body
+    let dataType: string | null = null;
+    
+    if (req.method === 'GET') {
+      const url = new URL(req.url);
+      dataType = url.searchParams.get("type");
+    } else if (req.method === 'POST') {
+      const body = await req.json();
+      dataType = body.type;
+    }
+    
+    // Validate dataType
+    const allowedTypes = ['users', 'appointments', 'orders', 'profile'];
+    if (dataType && !allowedTypes.includes(dataType)) {
+      throw new Error(`Invalid data type: ${dataType}`);
+    }
     
     console.log("Request type:", dataType, "User ID:", user.id);
 

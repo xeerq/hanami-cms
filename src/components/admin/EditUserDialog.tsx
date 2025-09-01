@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useActivityLogger } from "@/hooks/useActivityLogger";
+import { validateEmail, validatePhone, sanitizeInput } from "@/lib/security";
 
 interface User {
   id: string;
@@ -51,6 +52,30 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
     e.preventDefault();
     if (!user) return;
 
+    // Validate inputs
+    if (!validateEmail(email)) {
+      toast({
+        title: "Błąd walidacji",
+        description: "Nieprawidłowy format adresu email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (phone && !validatePhone(phone)) {
+      toast({
+        title: "Błąd walidacji", 
+        description: "Nieprawidłowy format numeru telefonu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Sanitize inputs
+    const sanitizedFirstName = sanitizeInput(firstName);
+    const sanitizedLastName = sanitizeInput(lastName);
+    const sanitizedPhone = phone ? sanitizeInput(phone) : null;
+
     try {
       setLoading(true);
 
@@ -65,17 +90,22 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
         
         if (emailError) {
           console.error("Email update error:", emailError);
-          // Continue with profile update even if email fails
+          toast({
+            title: "Błąd",
+            description: "Nie udało się zaktualizować adresu email",
+            variant: "destructive",
+          });
+          return;
         }
       }
 
-      // Update profile data
+      // Update profile data with sanitized inputs
       const { error } = await supabase
         .from("profiles")
         .update({
-          first_name: firstName,
-          last_name: lastName,
-          phone: phone || null
+          first_name: sanitizedFirstName,
+          last_name: sanitizedLastName,
+          phone: sanitizedPhone
         })
         .eq("user_id", user.id);
 
@@ -84,12 +114,13 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
       await logActivity({
         action: 'user_updated',
         details: {
-          description: `Zaktualizowano dane użytkownika: ${firstName} ${lastName}`,
+          description: `Zaktualizowano dane użytkownika: ${sanitizedFirstName} ${sanitizedLastName}`,
           user_id: user.id,
           changes: {
-            first_name: firstName,
-            last_name: lastName,
-            phone: phone
+            first_name: sanitizedFirstName !== user.user_metadata?.first_name,
+            last_name: sanitizedLastName !== user.user_metadata?.last_name,
+            phone: sanitizedPhone !== user.phone,
+            email: email !== user.email
           }
         }
       });

@@ -53,25 +53,16 @@ const UsersManager = () => {
     try {
       setLoading(true);
       
-      // Use direct fetch with hardcoded URL for now to debug
-      const token = (await supabase.auth.getSession()).data.session?.access_token;
-      
-      const response = await fetch('https://mfjfhnwgrbwjovvnlxto.supabase.co/functions/v1/get-user-data?type=users', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mamZobndncmJ3am92dm5seHRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMyMTIwMTQsImV4cCI6MjA2ODc4ODAxNH0.J6hOEg8PYNhdxsUmhwl0UcJXEveun4o7Wzq0jnGtrd8'
-        }
+      // Use Supabase client to invoke edge function securely
+      const { data: userData, error: functionError } = await supabase.functions.invoke('get-user-data', {
+        body: { type: 'users' }
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Direct fetch error:', response.status, errorText);
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      if (functionError) {
+        console.error('Function error:', functionError);
+        throw new Error(`Edge function error: ${functionError.message}`);
       }
       
-      const userData = await response.json();
       console.log('Received user data:', userData);
       
       // Map users and check banned status from the new format
