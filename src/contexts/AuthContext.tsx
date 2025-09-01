@@ -38,7 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Log authentication events
+        // Log authentication events (but not during signout to avoid errors)
         if (event === 'SIGNED_IN' && session?.user) {
           try {
             await supabase.rpc('log_security_event', {
@@ -54,21 +54,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           } catch (error) {
             console.error('Error logging login event:', error);
           }
-        } else if (event === 'SIGNED_OUT') {
-          try {
-            await supabase.rpc('log_security_event', {
-              p_action: 'user_logout',
-              p_table_name: null,
-              p_record_id: null,
-              p_details: {
-                event_type: 'SIGNED_OUT',
-                timestamp: new Date().toISOString()
-              }
-            });
-          } catch (error) {
-            console.error('Error logging logout event:', error);
-          }
         }
+        // Note: Don't log SIGNED_OUT event here as user is already signed out
       }
     );
 
@@ -156,15 +143,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      console.log('Starting signOut process...');
+      
+      // Log logout event BEFORE signing out while user is still authenticated
+      if (user) {
+        try {
+          await supabase.rpc('log_security_event', {
+            p_action: 'user_logout',
+            p_table_name: null,
+            p_record_id: null,
+            p_details: {
+              event_type: 'MANUAL_LOGOUT',
+              timestamp: new Date().toISOString()
+            }
+          });
+        } catch (logError) {
+          console.error('Error logging logout event:', logError);
+        }
+      }
+
       const { error } = await supabase.auth.signOut();
       
       if (error) {
+        console.error('SignOut error:', error);
         toast({
           title: "Błąd wylogowania",
           description: error.message,
           variant: "destructive",
         });
       } else {
+        console.log('SignOut successful');
         toast({
           title: "Do zobaczenia!",
           description: "Wylogowano pomyślnie.",
@@ -173,6 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return { error };
     } catch (error: any) {
+      console.error('Unexpected error during signOut:', error);
       toast({
         title: "Błąd wylogowania",
         description: error.message,

@@ -19,6 +19,7 @@ export const useAdminCheck = () => {
     }
     
     if (!user) {
+      console.log("No user found, setting isAdmin to false");
       setIsAdmin(false);
       setLoading(false);
       return;
