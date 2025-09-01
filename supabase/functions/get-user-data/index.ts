@@ -164,7 +164,8 @@ serve(async (req) => {
       }
 
       default:
-        throw new Error("Invalid data type requested");
+        console.error("Invalid data type requested. Received:", dataType);
+        throw new Error(`Invalid data type requested: ${dataType}`);
     }
 
   } catch (error) {
