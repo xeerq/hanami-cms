@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useActivityLogger } from "@/hooks/useActivityLogger";
 import ImageUploadCrop from "@/components/ui/image-upload-crop";
 
 interface Category {
@@ -53,6 +54,7 @@ const EditProductDialog = ({ open, onOpenChange, product, categories, onSuccess 
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const { logActivity } = useActivityLogger();
 
   useEffect(() => {
     console.log("EditProductDialog useEffect:", { product, open });
@@ -135,6 +137,26 @@ const EditProductDialog = ({ open, onOpenChange, product, categories, onSuccess 
         .eq("id", product.id);
 
       if (error) throw error;
+
+      // Loguj edycję produktu 
+      const changes: Record<string, { from: any; to: any }> = {};
+      if (product.name !== formData.name) changes.name = { from: product.name, to: formData.name };
+      if (product.description !== formData.description) changes.description = { from: product.description, to: formData.description };
+      if (product.price !== parseFloat(formData.price)) changes.price = { from: product.price, to: parseFloat(formData.price) };
+      if (product.stock_quantity !== parseInt(formData.stock_quantity)) changes.stock_quantity = { from: product.stock_quantity, to: parseInt(formData.stock_quantity) };
+      if (product.category !== formData.category) changes.category = { from: product.category, to: formData.category };
+
+      if (Object.keys(changes).length > 0) {
+        await logActivity({
+          action: 'product_updated',
+          tableName: 'products',
+          recordId: product.id,
+          details: {
+            product_name: product.name,
+            changes: changes
+          }
+        });
+      }
 
       toast({
         title: "Sukces",

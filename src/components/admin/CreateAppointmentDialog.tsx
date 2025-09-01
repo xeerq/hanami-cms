@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useActivityLogger } from "@/hooks/useActivityLogger";
 
 interface CreateAppointmentDialogProps {
   open: boolean;
@@ -48,6 +49,7 @@ const CreateAppointmentDialog = ({ open, onOpenChange, onSuccess }: CreateAppoin
     status: "confirmed"
   });
   const { toast } = useToast();
+  const { logActivity } = useActivityLogger();
 
   useEffect(() => {
     if (open) {
@@ -136,6 +138,24 @@ const CreateAppointmentDialog = ({ open, onOpenChange, onSuccess }: CreateAppoin
         });
 
       if (error) throw error;
+
+      // Loguj utworzenie wizyty
+      const serviceForLog = services.find(s => s.id === formData.service_id);
+      const therapistForLog = therapists.find(t => t.id === formData.therapist_id);
+      const profileForLog = profiles.find(p => p.user_id === formData.user_id);
+
+      await logActivity({
+        action: 'appointment_created',
+        tableName: 'appointments',
+        details: {
+          service_name: serviceForLog?.name,
+          therapist_name: therapistForLog?.name,
+          client_name: profileForLog ? `${profileForLog.first_name} ${profileForLog.last_name}` : 'Gość',
+          appointment_date: formData.appointment_date,
+          appointment_time: formData.appointment_time,
+          status: formData.status
+        }
+      });
 
       toast({
         title: "Sukces",

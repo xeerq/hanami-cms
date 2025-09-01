@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, User, Plus, Edit, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useActivityLogger } from "@/hooks/useActivityLogger";
 import CreateAppointmentDialog from "./CreateAppointmentDialog";
 import { usePagination, usePaginatedData } from "@/hooks/usePagination";
 import { PaginationControlsComponent } from "@/components/ui/pagination-controls";
@@ -25,6 +26,7 @@ const AppointmentsManager = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const { toast } = useToast();
+  const { logActivity } = useActivityLogger();
   
   const pagination = usePagination(appointments.length, 15);
   const paginatedAppointments = usePaginatedData(appointments, pagination);
@@ -85,6 +87,16 @@ const AppointmentsManager = () => {
 
       if (error) throw error;
 
+      // Loguj zmianę statusu wizyty
+      await logActivity({
+        action: 'appointment_updated',
+        tableName: 'appointments',
+        recordId: appointmentId,
+        details: {
+          status_changed: { from: 'previous', to: newStatus }
+        }
+      });
+
       toast({
         title: "Sukces",
         description: "Status wizyty został zaktualizowany",
@@ -111,6 +123,16 @@ const AppointmentsManager = () => {
         .eq("id", appointmentId);
 
       if (error) throw error;
+
+      // Loguj usunięcie wizyty
+      await logActivity({
+        action: 'appointment_deleted',
+        tableName: 'appointments',
+        recordId: appointmentId,
+        details: {
+          note: 'Wizyta została usunięta przez administratora'
+        }
+      });
 
       toast({
         title: "Sukces",

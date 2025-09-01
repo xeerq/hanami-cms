@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useActivityLogger } from "@/hooks/useActivityLogger";
 import ImageUploadCrop from "@/components/ui/image-upload-crop";
 
 interface Category {
@@ -33,6 +34,7 @@ const CreateProductDialog = ({ open, onOpenChange, categories, onSuccess }: Crea
   });
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+  const { logActivity } = useActivityLogger();
 
   const handleImageUpload = async (file: File) => {
     setUploading(true);
@@ -86,6 +88,19 @@ const CreateProductDialog = ({ open, onOpenChange, categories, onSuccess }: Crea
         });
 
       if (error) throw error;
+
+      // Loguj utworzenie produktu
+      await logActivity({
+        action: 'product_created',
+        tableName: 'products',
+        details: {
+          name: formData.name,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          stock_quantity: parseInt(formData.stock_quantity),
+          category: formData.category
+        }
+      });
 
       toast({
         title: "Sukces",
