@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useActivityLogger } from "@/hooks/useActivityLogger";
 
 interface Category {
   id: string;
@@ -48,6 +49,7 @@ const EditServiceDialog = ({ open, onOpenChange, service, categories, onSuccess 
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { logActivity } = useActivityLogger();
 
   useEffect(() => {
     if (service && open) {
@@ -77,18 +79,49 @@ const EditServiceDialog = ({ open, onOpenChange, service, categories, onSuccess 
     setLoading(true);
 
     try {
+      // Zapisz oryginalne wartości do porównania
+      const originalData = {
+        name: service.name,
+        description: service.description,
+        duration: service.duration,
+        price: service.price,
+        category: service.category,
+      };
+
+      const newData = {
+        name: formData.name,
+        description: formData.description || null,
+        duration: parseInt(formData.duration),
+        price: parseFloat(formData.price),
+        category: formData.category || null,
+      };
+
       const { error } = await supabase
         .from("services")
-        .update({
-          name: formData.name,
-          description: formData.description || null,
-          duration: parseInt(formData.duration),
-          price: parseFloat(formData.price),
-          category: formData.category || null,
-        })
+        .update(newData)
         .eq("id", service.id);
 
       if (error) throw error;
+
+      // Loguj zmiany w usłudze
+      const changes: Record<string, { from: any; to: any }> = {};
+      if (originalData.name !== newData.name) changes.name = { from: originalData.name, to: newData.name };
+      if (originalData.description !== newData.description) changes.description = { from: originalData.description, to: newData.description };
+      if (originalData.duration !== newData.duration) changes.duration = { from: originalData.duration, to: newData.duration };
+      if (originalData.price !== newData.price) changes.price = { from: originalData.price, to: newData.price };
+      if (originalData.category !== newData.category) changes.category = { from: originalData.category, to: newData.category };
+
+      if (Object.keys(changes).length > 0) {
+        await logActivity({
+          action: 'service_updated',
+          tableName: 'services',
+          recordId: service.id,
+          details: {
+            service_name: service.name,
+            changes: changes
+          }
+        });
+      }
 
       toast({
         title: "Sukces",
