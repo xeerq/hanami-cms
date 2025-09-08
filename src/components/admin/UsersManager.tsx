@@ -9,7 +9,9 @@ import { useActivityLogger } from "@/hooks/useActivityLogger";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useTherapistCheck } from "@/hooks/useTherapistCheck";
 import { EditUserDialog } from "./EditUserDialog";
+import { CreateUserDialog } from "./CreateUserDialog";
 
 interface User {
   id: string;
@@ -35,19 +37,21 @@ interface UserRole {
 
 const UsersManager = () => {
   const { isAdmin, loading: adminLoading } = useAdminCheck();
+  const { isTherapist, loading: therapistLoading } = useTherapistCheck();
   const [users, setUsers] = useState<User[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLogger();
 
   useEffect(() => {
-    if (!adminLoading && isAdmin) {
+    if (!adminLoading && !therapistLoading && (isAdmin || isTherapist)) {
       fetchUsers();
     }
-  }, [isAdmin, adminLoading]);
+  }, [isAdmin, isTherapist, adminLoading, therapistLoading]);
 
   const fetchUsers = async () => {
     try {
@@ -263,7 +267,7 @@ const UsersManager = () => {
     });
   };
 
-  if (adminLoading || !isAdmin) {
+  if (adminLoading || therapistLoading || (!isAdmin && !isTherapist)) {
     return null;
   }
 
@@ -286,13 +290,24 @@ const UsersManager = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Users className="w-5 h-5" />
-          Zarządzanie użytkownikami
-        </CardTitle>
-        <CardDescription>
-          Zarządzaj kontami użytkowników, rolami i uprawnieniami. Tylko administratorzy mogą blokować konta.
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Zarządzanie użytkownikami
+            </CardTitle>
+            <CardDescription>
+              Zarządzaj kontami użytkowników, rolami i uprawnieniami. Tylko administratorzy mogą blokować konta.
+            </CardDescription>
+          </div>
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Users className="w-4 h-4" />
+            Dodaj użytkownika
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
@@ -513,6 +528,15 @@ const UsersManager = () => {
           fetchUsers();
           setEditingUser(null);
           setEditDialogOpen(false);
+        }}
+      />
+
+      <CreateUserDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onUserCreated={() => {
+          fetchUsers();
+          setCreateDialogOpen(false);
         }}
       />
     </Card>
