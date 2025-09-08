@@ -52,6 +52,7 @@ const UsersManager = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      console.log("Refreshing users data...");
       
       // Use Supabase client to invoke edge function securely
       const { data: userData, error: functionError } = await supabase.functions.invoke('get-user-data', {
@@ -63,14 +64,21 @@ const UsersManager = () => {
         throw new Error(`Edge function error: ${functionError.message}`);
       }
       
-      console.log('Received user data:', userData);
+      console.log('Received updated user data:', userData);
       
       // Map users and check banned status from the new format
       const usersWithBanStatus = userData?.users?.map((user: any) => ({
         ...user,
-        is_banned: user.is_banned || false
+        is_banned: user.is_banned || false,
+        // Include profile data for displaying updated info
+        profile: {
+          first_name: user.user_metadata?.first_name,
+          last_name: user.user_metadata?.last_name,
+          phone: user.phone
+        }
       })) || [];
       
+      console.log("Setting users with updated data:", usersWithBanStatus);
       setUsers(usersWithBanStatus);
       
       // User roles are now included in the user data
@@ -495,8 +503,17 @@ const UsersManager = () => {
       <EditUserDialog
         user={editingUser}
         open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onUserUpdated={fetchUsers}
+        onOpenChange={(open) => {
+          setEditDialogOpen(open);
+          if (!open) {
+            setEditingUser(null);
+          }
+        }}
+        onUserUpdated={() => {
+          fetchUsers();
+          setEditingUser(null);
+          setEditDialogOpen(false);
+        }}
       />
     </Card>
   );

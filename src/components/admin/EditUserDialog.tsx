@@ -109,16 +109,23 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
       }
 
       // Update profile data with sanitized inputs
-      const { error } = await supabase
+      const { data: updatedProfile, error } = await supabase
         .from("profiles")
         .update({
           first_name: sanitizedFirstName,
           last_name: sanitizedLastName,
           phone: sanitizedPhone
         })
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Profile update error:", error);
+        throw error;
+      }
+
+      console.log("Profile updated successfully:", updatedProfile);
 
       await logActivity({
         action: 'user_updated',
