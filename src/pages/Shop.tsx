@@ -315,12 +315,12 @@ const Shop = () => {
                     {product.category === "Bony" ? (
                       <Button 
                         size="sm" 
-                        disabled={!product.inStock || loading}
-                        onClick={() => purchaseVoucher(product)}
+                        disabled={!product.inStock}
+                        onClick={() => addToCart(product)}
                         className="bg-yellow-500 hover:bg-yellow-600"
                       >
-                        <Gift className="h-4 w-4 mr-2" />
-                        {loading ? "Kupowanie..." : "Kup bon"}
+                        <Plus className="h-4 w-4 mr-2" />
+                        {product.inStock ? "Dodaj do koszyka" : "Niedostępny"}
                       </Button>
                     ) : (
                       <Button 
