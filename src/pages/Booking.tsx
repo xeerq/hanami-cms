@@ -22,6 +22,14 @@ interface Service {
   is_active: boolean;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  is_active: boolean;
+}
+
 interface Therapist {
   id: string;
   name: string;
@@ -38,8 +46,11 @@ const Booking = () => {
   
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -78,8 +89,9 @@ const Booking = () => {
     }
   }, [user, navigate, toast]);
 
-  // Fetch services and therapists
+  // Fetch categories, services and therapists
   useEffect(() => {
+    fetchCategories();
     fetchServices();
     fetchTherapists();
   }, []);
@@ -88,6 +100,27 @@ const Booking = () => {
   useEffect(() => {
     fetchTherapists();
   }, [selectedService]);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("type", "service")
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error: any) {
+      console.error("Error fetching categories:", error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się załadować kategorii",
+        variant: "destructive",
+      });
+    }
+  };
 
   const fetchServices = async () => {
     try {
@@ -236,17 +269,30 @@ const Booking = () => {
     }
   };
 
+  const handleCategorySelect = (category: Category) => {
+    setSelectedCategory(category);
+    
+    // Filter services by selected category
+    const filtered = services.filter(service => service.category === category.name);
+    setFilteredServices(filtered);
+    
+    // Reset subsequent selections
+    setSelectedService(null);
+    setSelectedTherapist(null);
+    setStep(2);
+  };
+
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
     // Reset selected therapist when service changes
     setSelectedTherapist(null);
-    setStep(2);
+    setStep(3);
   };
 
   const handleTherapistSelect = (therapist: Therapist) => {
     setSelectedTherapist(therapist);
     setAvailableDates(generateAvailableDates());
-    setStep(3);
+    setStep(4);
   };
 
   const handleDateSelect = async (date: string) => {
@@ -257,12 +303,12 @@ const Booking = () => {
     if (selectedTherapist) {
       await checkAvailableTimes(date, selectedTherapist.id);
     }
-    setStep(4);
+    setStep(5);
   };
 
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
-    setStep(5);
+    setStep(6);
   };
 
   const verifyVoucher = async () => {
@@ -539,7 +585,7 @@ const Booking = () => {
           {/* Progress Bar */}
           <div className="mb-12">
             <div className="flex items-center justify-between">
-              {[1, 2, 3, 4, 5].map((stepNumber) => (
+              {[1, 2, 3, 4, 5, 6].map((stepNumber) => (
                 <div key={stepNumber} className="flex items-center">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
                     step >= stepNumber 
@@ -548,30 +594,72 @@ const Booking = () => {
                   }`}>
                     {step > stepNumber ? <CheckCircle className="h-5 w-5" /> : stepNumber}
                   </div>
-                  {stepNumber < 5 && (
-                    <div className={`h-1 w-16 mx-2 ${
+                  {stepNumber < 6 && (
+                    <div className={`h-1 w-12 mx-2 ${
                       step > stepNumber ? "bg-hanami-primary" : "bg-hanami-secondary"
                     }`} />
                   )}
                 </div>
               ))}
             </div>
+            <div className="flex justify-between mt-4 text-sm text-hanami-neutral">
+              <span>Kategoria</span>
+              <span>Usługa</span>
+              <span>Terapeuta</span>
+              <span>Data</span>
+              <span>Godzina</span>
+              <span>Potwierdzenie</span>
+            </div>
           </div>
 
-          {/* Step 1: Service Selection */}
+          {/* Step 1: Category Selection */}
           {step === 1 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl text-hanami-primary">
-                  Wybierz usługę
+                  Wybierz kategorię zabiegów
+                </CardTitle>
+                <p className="text-hanami-neutral">
+                  Znajdź zabiegi odpowiednie dla Twoich potrzeb
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {categories.map((category) => (
+                    <Card 
+                      key={category.id}
+                      className="cursor-pointer hover:shadow-elegant transition-zen border-hanami-accent/20 hover:border-hanami-primary bg-card hover:bg-accent/50"
+                      onClick={() => handleCategorySelect(category)}
+                    >
+                      <CardContent className="p-6 text-center">
+                        <h3 className="text-xl font-semibold text-hanami-primary mb-3">
+                          {category.name}
+                        </h3>
+                        <p className="text-hanami-neutral text-sm">
+                          {category.description}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 2: Service Selection */}
+          {step === 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-2xl text-hanami-primary">
+                  Wybierz usługę z kategorii: {selectedCategory?.name}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {services.map((service) => (
+                  {filteredServices.map((service) => (
                     <Card 
                       key={service.id}
-                      className="cursor-pointer hover:shadow-elegant transition-zen border-hanami-accent/20 hover:border-hanami-primary"
+                      className="cursor-pointer hover:shadow-elegant transition-zen border-hanami-accent/20 hover:border-hanami-primary bg-card hover:bg-accent/50"
                       onClick={() => handleServiceSelect(service)}
                     >
                       <CardContent className="p-6 text-center">
@@ -594,12 +682,18 @@ const Booking = () => {
                     </Card>
                   ))}
                 </div>
+                <div className="mt-6">
+                  <Button variant="outline" onClick={() => setStep(1)}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Wróć do wyboru kategorii
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Step 2: Therapist Selection */}
-          {step === 2 && (
+          {/* Step 3: Therapist Selection */}
+          {step === 3 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl text-hanami-primary">
@@ -611,7 +705,7 @@ const Booking = () => {
                   {therapists.map((therapist) => (
                     <Card 
                       key={therapist.id}
-                      className="cursor-pointer hover:shadow-elegant transition-zen border-hanami-accent/20 hover:border-hanami-primary"
+                      className="cursor-pointer hover:shadow-elegant transition-zen border-hanami-accent/20 hover:border-hanami-primary bg-card hover:bg-accent/50"
                       onClick={() => handleTherapistSelect(therapist)}
                     >
                       <CardContent className="p-6">
@@ -641,7 +735,7 @@ const Booking = () => {
                   ))}
                 </div>
                 <div className="mt-6">
-                  <Button variant="outline" onClick={() => setStep(1)}>
+                  <Button variant="outline" onClick={() => setStep(2)}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Wróć do wyboru usługi
                   </Button>
@@ -650,8 +744,8 @@ const Booking = () => {
             </Card>
           )}
 
-          {/* Step 3: Date Selection */}
-          {step === 3 && (
+          {/* Step 4: Date Selection */}
+          {step === 4 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl text-hanami-primary">
@@ -682,7 +776,7 @@ const Booking = () => {
                   })}
                 </div>
                 <div className="mt-6">
-                  <Button variant="outline" onClick={() => setStep(2)}>
+                  <Button variant="outline" onClick={() => setStep(3)}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Wróć do wyboru terapeutki
                   </Button>
@@ -691,8 +785,8 @@ const Booking = () => {
             </Card>
           )}
 
-          {/* Step 4: Time Selection */}
-          {step === 4 && (
+          {/* Step 5: Time Selection */}
+          {step === 5 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl text-hanami-primary">
@@ -732,7 +826,7 @@ const Booking = () => {
                   </div>
                 )}
                 <div className="mt-6">
-                  <Button variant="outline" onClick={() => setStep(3)}>
+                  <Button variant="outline" onClick={() => setStep(4)}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Wróć do wyboru daty
                   </Button>
@@ -741,8 +835,8 @@ const Booking = () => {
             </Card>
           )}
 
-          {/* Step 5: Confirmation */}
-          {step === 5 && (
+          {/* Step 6: Confirmation */}
+          {step === 6 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl text-hanami-primary">
@@ -853,7 +947,7 @@ const Booking = () => {
                   </div>
 
                   <div className="flex space-x-4">
-                    <Button variant="outline" onClick={() => setStep(4)}>
+                    <Button variant="outline" onClick={() => setStep(5)}>
                       <ArrowLeft className="h-4 w-4 mr-2" />
                       Wróć do wyboru godziny
                     </Button>
