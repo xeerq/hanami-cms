@@ -11,6 +11,7 @@ import { UnifiedTeamDisplay } from "@/components/admin/UnifiedTeamDisplay";
 import { TeamMembersManager } from "@/components/admin/TeamMembersManager";
 import BlockedSlotsManager from "@/components/admin/BlockedSlotsManager";
 import { ScheduleApprovalManager } from "@/components/admin/ScheduleApprovalManager";
+import { TherapistScheduleManager } from "@/components/admin/TherapistScheduleManager";
 import TherapistsCalendarsView from "@/pages/TherapistsCalendars";
 
 interface TeamStats {
@@ -167,10 +168,10 @@ export function UnifiedTeamManager() {
             <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="team">Zespół</TabsTrigger>
               <TabsTrigger value="settings">Ustawienia zespołu</TabsTrigger>
-              <TabsTrigger value="schedules">Grafiki</TabsTrigger>
+              <TabsTrigger value="schedules">Grafiki (Zatwierdzanie)</TabsTrigger>
+              <TabsTrigger value="admin-schedules">Zarządzanie grafikami</TabsTrigger>
               <TabsTrigger value="calendars">Kalendarze</TabsTrigger>
               <TabsTrigger value="blocked">Blokady</TabsTrigger>
-              <TabsTrigger value="overview">Przegląd</TabsTrigger>
             </TabsList>
 
             <TabsContent value="team" className="mt-6">
@@ -185,6 +186,10 @@ export function UnifiedTeamManager() {
               <ScheduleApprovalManager />
             </TabsContent>
 
+            <TabsContent value="admin-schedules" className="mt-6">
+              <TherapistScheduleManager />
+            </TabsContent>
+
             <TabsContent value="calendars" className="mt-6">
               <TherapistsCalendarsView embedded={true} />
             </TabsContent>
@@ -193,53 +198,6 @@ export function UnifiedTeamManager() {
               <BlockedSlotsManager />
             </TabsContent>
 
-            <TabsContent value="overview" className="mt-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Podsumowanie Zespołu</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Aktywni terapeuci:</span>
-                      <Badge>{stats.activeTherapists}</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Członkowie zespołu:</span>
-                      <Badge>{stats.activeTeamMembers}</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Oczekujące grafiki:</span>
-                      <Badge variant={stats.pendingSchedules > 0 ? "destructive" : "secondary"}>
-                        {stats.pendingSchedules}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm">Zablokowane terminy:</span>
-                      <Badge variant="outline">{stats.blockedSlots}</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Szybkie Akcje</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      Użyj zakładek powyżej, aby:
-                    </p>
-                    <ul className="text-sm space-y-1 text-muted-foreground">
-                      <li>• Zarządzać wszystkimi członkami zespołu w jednym miejscu</li>
-                      <li>• Konfigurować ustawienia zespołu i role</li>
-                      <li>• Zatwierdzać grafiki pracy terapeutów</li>
-                      <li>• Przeglądać kalendarze i wizyty</li>
-                      <li>• Blokować terminy i zarządzać dostępnością</li>
-                    </ul>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
