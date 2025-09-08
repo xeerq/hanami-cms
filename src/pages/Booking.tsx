@@ -12,6 +12,8 @@ import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import TherapistAvailabilityIndicator from "@/components/TherapistAvailabilityIndicator";
+import DateAvailabilityIndicator from "@/components/DateAvailabilityIndicator";
 
 interface Service {
   id: string;
@@ -683,6 +685,26 @@ const Booking = () => {
             {step === 2 && selectedService && (
               <div className="space-y-6">
                 <h3 className="text-xl font-semibold">Wybierz terapeutę</h3>
+                
+                {/* Availability Legend */}
+                <div className="bg-hanami-secondary/10 rounded-lg p-4">
+                  <h4 className="text-sm font-medium mb-2">Legenda dostępności:</h4>
+                  <div className="flex flex-wrap gap-4 text-xs">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span>Dostępny</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      <span>Zajęty/niedostępny</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                      <span>Ograniczona dostępność</span>
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {availableTherapists.map((therapist) => (
                     <Card
@@ -701,9 +723,10 @@ const Booking = () => {
                             alt={therapist.name}
                             className="w-16 h-16 rounded-full object-cover"
                           />
-                          <div>
+                          <div className="flex-1">
                             <h4 className="font-semibold text-hanami-primary">{therapist.name}</h4>
-                            <p className="text-sm text-hanami-neutral">{therapist.specialization}</p>
+                            <p className="text-sm text-hanami-neutral mb-2">{therapist.specialization}</p>
+                            <TherapistAvailabilityIndicator therapistId={therapist.id} />
                           </div>
                         </div>
                       </CardContent>
@@ -726,20 +749,26 @@ const Booking = () => {
                     const monthName = dateObj.toLocaleDateString('pl-PL', { month: 'short' });
                     
                     return (
-                      <Button
-                        key={date}
-                        variant={isSelected ? "default" : "outline"}
-                        className={`h-auto p-4 flex flex-col items-center space-y-1 ${
-                          isSelected 
-                            ? 'ring-2 ring-hanami-primary bg-hanami-primary text-white' 
-                            : 'hover:bg-hanami-secondary/10'
-                        }`}
-                        onClick={() => handleDateSelect(date)}
-                      >
-                        <span className="text-xs font-medium">{dayName}</span>
-                        <span className="text-lg font-bold">{dayNumber}</span>
-                        <span className="text-xs">{monthName}</span>
-                      </Button>
+                      <div key={date} className="relative">
+                        <Button
+                          variant={isSelected ? "default" : "outline"}
+                          className={`h-auto p-4 flex flex-col items-center space-y-1 w-full ${
+                            isSelected 
+                              ? 'ring-2 ring-hanami-primary bg-hanami-primary text-white' 
+                              : 'hover:bg-hanami-secondary/10'
+                          }`}
+                          onClick={() => handleDateSelect(date)}
+                        >
+                          <span className="text-xs font-medium">{dayName}</span>
+                          <span className="text-lg font-bold">{dayNumber}</span>
+                          <span className="text-xs">{monthName}</span>
+                        </Button>
+                        <DateAvailabilityIndicator 
+                          date={date} 
+                          therapistId={selectedTherapist.id}
+                          serviceDuration={selectedService?.duration || 30}
+                        />
+                      </div>
                     );
                   })}
                 </div>
