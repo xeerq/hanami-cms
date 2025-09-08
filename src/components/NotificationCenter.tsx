@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, X, Check, CheckCheck, AlertCircle, Info, AlertTriangle } from "lucide-react";
+import { Bell, X, Check, CheckCheck, AlertCircle, Info, AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -22,6 +22,7 @@ const NotificationCenter = () => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    deleteAllNotifications,
   } = useNotifications();
 
   const getNotificationIcon = (type: string) => {
@@ -95,6 +96,17 @@ const NotificationCenter = () => {
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">Powiadomienia</h3>
             <div className="flex items-center space-x-2">
+              {notifications.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={deleteAllNotifications}
+                  className="text-xs text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Wyczyść wszystkie
+                </Button>
+              )}
               {unreadCount > 0 && (
                 <Button
                   variant="ghost"

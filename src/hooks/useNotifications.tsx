@@ -171,6 +171,29 @@ export const useNotifications = () => {
     }
   };
 
+  const deleteAllNotifications = async () => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch (error: any) {
+      console.error('Error deleting all notifications:', error);
+      toast({
+        title: "Błąd",
+        description: "Nie udało się usunąć wszystkich powiadomień",
+        variant: "destructive",
+      });
+    }
+  };
+
   const createNotification = async (
     userId: string, 
     title: string, 
@@ -205,6 +228,7 @@ export const useNotifications = () => {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    deleteAllNotifications,
     createNotification,
     fetchNotifications,
   };
