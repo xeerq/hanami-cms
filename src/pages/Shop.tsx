@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingBag, Heart, Plus, Minus, Gift } from "lucide-react";
+import { ShoppingBag, Heart, Plus, Minus, Gift, X } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,8 +15,10 @@ const Shop = () => {
   const [services, setServices] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showCart, setShowCart] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
 
   const categories = ["Wszystkie", "Olejki", "Kosmetyki", "Akcesoria", "Aromaterapia", "Bony"];
@@ -105,7 +108,47 @@ const Shop = () => {
     : allProducts.filter(product => product.category === selectedCategory);
 
   const addToCart = (product: any) => {
-    setCart([...cart, product]);
+    const cartItem = { ...product, cartId: Date.now() + Math.random() };
+    setCart([...cart, cartItem]);
+    toast({
+      title: "Dodano do koszyka",
+      description: `${product.name} został dodany do koszyka`,
+    });
+  };
+
+  const removeFromCart = (cartId: string) => {
+    setCart(cart.filter(item => item.cartId !== cartId));
+    toast({
+      title: "Usunięto z koszyka",
+      description: "Produkt został usunięty z koszyka",
+    });
+  };
+
+  const proceedToCheckout = () => {
+    if (!user) {
+      toast({
+        title: "Wymagane logowanie",
+        description: "Musisz być zalogowany, aby przejść do kasy",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
+    if (cart.length === 0) {
+      toast({
+        title: "Pusty koszyk",
+        description: "Dodaj produkty do koszyka przed przejściem do kasy",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // For now, just show a success message since we don't have a checkout page
+    toast({
+      title: "Przejście do kasy",
+      description: "Funkcjonalność kasy będzie dostępna wkrótce",
+    });
   };
 
   const purchaseVoucher = async (voucher: any) => {
@@ -181,9 +224,19 @@ const Shop = () => {
               </p>
             </div>
             <div className="hidden md:block">
-              <Button variant="secondary" size="lg">
+              <Button 
+                variant="secondary" 
+                size="lg"
+                onClick={() => setShowCart(!showCart)}
+                className="relative"
+              >
                 <ShoppingBag className="h-5 w-5 mr-2" />
                 Koszyk ({getCartItemCount()})
+                {getCartItemCount() > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center">
+                    {getCartItemCount()}
+                  </Badge>
+                )}
               </Button>
             </div>
           </div>
@@ -349,12 +402,77 @@ const Shop = () => {
                     Łącznie: {cart.reduce((sum, item) => sum + item.price, 0)} zł
                   </p>
                 </div>
-                <Button size="sm">
+                <Button size="sm" onClick={proceedToCheckout}>
                   Przejdź do kasy
                 </Button>
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Cart Sidebar */}
+      {showCart && (
+        <div className="fixed inset-0 z-50 bg-black/50" onClick={() => setShowCart(false)}>
+          <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-xl overflow-hidden">
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h2 className="text-lg font-semibold">Koszyk ({getCartItemCount()})</h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowCart(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4">
+                {cart.length === 0 ? (
+                  <div className="text-center py-8">
+                    <ShoppingBag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">Koszyk jest pusty</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {cart.map((item) => (
+                      <div key={item.cartId} className="flex items-center space-x-3 border rounded-lg p-3">
+                        <img
+                          src={item.image_url || item.image || "/lovable-uploads/6abfd03e-faab-45ef-8c3f-8eb2cf6b0ea7.png"}
+                          alt={item.name}
+                          className="w-12 h-12 object-cover rounded"
+                        />
+                        <div className="flex-1">
+                          <h3 className="font-medium text-sm">{item.name}</h3>
+                          <p className="text-hanami-primary font-bold">{item.price} zł</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFromCart(item.cartId)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              {cart.length > 0 && (
+                <div className="border-t p-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-semibold">Łącznie:</span>
+                    <span className="font-bold text-lg text-hanami-primary">
+                      {cart.reduce((sum, item) => sum + item.price, 0)} zł
+                    </span>
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    onClick={proceedToCheckout}
+                  >
+                    Przejdź do kasy
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
