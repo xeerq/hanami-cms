@@ -124,7 +124,9 @@ const UsersManager = () => {
 
       toast({
         title: "Sukces",
-        description: `Rola ${role} została przyznana`,
+        description: role === 'therapist' 
+          ? `Rola ${role} została przyznana i automatycznie utworzono profil terapeuty`
+          : `Rola ${role} została przyznana`,
       });
 
       fetchUsers();
@@ -160,7 +162,9 @@ const UsersManager = () => {
 
       toast({
         title: "Sukces",
-        description: `Rola ${role} została odebrana`,
+        description: role === 'therapist' 
+          ? `Rola ${role} została odebrana i automatycznie usunięto profil terapeuty`
+          : `Rola ${role} została odebrana`,
       });
 
       fetchUsers();

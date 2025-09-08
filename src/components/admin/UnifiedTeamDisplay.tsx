@@ -6,11 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Edit, Trash2, Stethoscope, RefreshCw } from "lucide-react";
+import { Edit, Trash2, RefreshCw } from "lucide-react";
 import { usePagination, usePaginatedData } from "@/hooks/usePagination";
 import { PaginationControlsComponent } from "@/components/ui/pagination-controls";
-import CreateTherapistDialog from "@/components/admin/CreateTherapistDialog";
-import EditTherapistDialog from "@/components/admin/EditTherapistDialog";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { useActivityLogger } from "@/hooks/useActivityLogger";
 
@@ -48,9 +46,6 @@ export function UnifiedTeamDisplay() {
   const { isAdmin, loading: adminLoading } = useAdminCheck();
   const [teamMembers, setTeamMembers] = useState<UnifiedTeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
   const { toast } = useToast();
   const { logActivity } = useActivityLogger();
 
@@ -76,7 +71,26 @@ export function UnifiedTeamDisplay() {
 
       if (therapistsError) throw therapistsError;
 
-      // Fetch team members
+      // Fetch profiles for therapists with user_id
+      let profilesMap: Record<string, any> = {};
+      
+      const therapistsWithUserIds = therapists?.filter(t => t.user_id) || [];
+      if (therapistsWithUserIds.length > 0) {
+        const userIds = therapistsWithUserIds.map(t => t.user_id);
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("user_id, first_name, last_name, phone")
+          .in("user_id", userIds);
+
+        if (!profilesError && profiles) {
+          profilesMap = profiles.reduce((acc, profile) => {
+            acc[profile.user_id] = profile;
+            return acc;
+          }, {} as Record<string, any>);
+        }
+      }
+
+      // Fetch team members (non-therapist staff)
       const { data: teamData, error: teamError } = await supabase
         .rpc('get_team_members_safe', { include_contacts: true });
 
@@ -84,19 +98,28 @@ export function UnifiedTeamDisplay() {
 
       // Combine and format data
       const unifiedMembers: UnifiedTeamMember[] = [
-        ...(therapists || []).map(therapist => ({
-          id: therapist.id,
-          name: therapist.name,
-          type: 'therapist' as const,
-          specialization: therapist.specialization,
-          experience: therapist.experience,
-          bio: therapist.bio,
-          avatar_url: therapist.avatar_url,
-          is_active: therapist.is_active,
-          user_id: therapist.user_id,
-          created_at: therapist.created_at,
-          updated_at: therapist.updated_at,
-        })),
+        ...(therapists || []).map(therapist => {
+          // Preferuj dane z profilu użytkownika jeśli istnieją
+          const profile = therapist.user_id ? profilesMap[therapist.user_id] : null;
+          const profileName = profile?.first_name && profile?.last_name
+            ? `${profile.first_name} ${profile.last_name}`
+            : null;
+          
+          return {
+            id: therapist.id,
+            name: profileName || therapist.name,
+            type: 'therapist' as const,
+            specialization: therapist.specialization,
+            experience: therapist.experience,
+            bio: therapist.bio,
+            phone: profile?.phone,
+            avatar_url: therapist.avatar_url,
+            is_active: therapist.is_active,
+            user_id: therapist.user_id,
+            created_at: therapist.created_at,
+            updated_at: therapist.updated_at,
+          };
+        }),
         ...(teamData || []).map(member => ({
           id: member.id,
           name: member.name,
@@ -126,21 +149,13 @@ export function UnifiedTeamDisplay() {
   };
 
   const handleEditTherapist = (member: UnifiedTeamMember) => {
-    if (member.type === 'therapist') {
-      const therapist: Therapist = {
-        id: member.id,
-        name: member.name,
-        specialization: member.specialization,
-        experience: member.experience,
-        bio: member.bio,
-        avatar_url: member.avatar_url,
-        is_active: member.is_active,
-        user_id: member.user_id,
-        created_at: member.created_at,
-        updated_at: member.updated_at,
-      };
-      setSelectedTherapist(therapist);
-      setShowEditDialog(true);
+    if (member.type === 'therapist' && member.user_id) {
+      // Przekieruj do edycji użytkownika zamiast terapeuty
+      toast({
+        title: "Informacja",
+        description: "Aby edytować dane terapeuty, przejdź do zarządzania użytkownikami i edytuj jego profil oraz role.",
+        variant: "default",
+      });
     }
   };
 
@@ -265,10 +280,6 @@ export function UnifiedTeamDisplay() {
         <CardContent>
           <div className="flex justify-between items-center mb-6">
             <div className="flex gap-2">
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <Stethoscope className="w-4 h-4 mr-2" />
-                Dodaj terapeutę
-              </Button>
               <Button variant="outline" onClick={fetchTeamMembers}>
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Odśwież
@@ -286,12 +297,12 @@ export function UnifiedTeamDisplay() {
 
           <div className="rounded-md border">
             <Table>
-              <TableHeader>
+               <TableHeader>
                 <TableRow>
                   <TableHead>Członek zespołu</TableHead>
                   <TableHead>Typ</TableHead>
                   <TableHead>Specjalizacja/Stanowisko</TableHead>
-                  <TableHead>Doświadczenie</TableHead>
+                  <TableHead>Telefon</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Akcje</TableHead>
                 </TableRow>
@@ -310,10 +321,13 @@ export function UnifiedTeamDisplay() {
                             {getAvatarFallback(member.name)}
                           </AvatarFallback>
                         </Avatar>
-                        <div>
+                         <div>
                           <div className="font-medium">{member.name}</div>
                           {member.email && (
                             <div className="text-sm text-muted-foreground">{member.email}</div>
+                          )}
+                          {member.type === 'therapist' && member.user_id && (
+                            <div className="text-xs text-blue-600">Z konta użytkownika</div>
                           )}
                         </div>
                       </div>
@@ -326,7 +340,7 @@ export function UnifiedTeamDisplay() {
                     <TableCell>
                       {member.specialization || member.position || '-'}
                     </TableCell>
-                    <TableCell>{member.experience || '-'}</TableCell>
+                    <TableCell>{member.phone || '-'}</TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -382,27 +396,6 @@ export function UnifiedTeamDisplay() {
         </CardContent>
       </Card>
 
-      <CreateTherapistDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        onSuccess={() => {
-          fetchTeamMembers();
-          setShowCreateDialog(false);
-        }}
-      />
-
-      {selectedTherapist && (
-        <EditTherapistDialog
-          open={showEditDialog}
-          onOpenChange={setShowEditDialog}
-          therapist={selectedTherapist}
-          onSuccess={() => {
-            fetchTeamMembers();
-            setShowEditDialog(false);
-            setSelectedTherapist(null);
-          }}
-        />
-      )}
     </div>
   );
 }
