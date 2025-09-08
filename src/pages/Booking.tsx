@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Calendar, Clock, User, CheckCircle, ArrowLeft, Gift } from "lucide-react";
@@ -37,6 +38,7 @@ interface Therapist {
   experience: string;
   bio: string;
   is_active: boolean;
+  avatar_url?: string;
 }
 
 const Booking = () => {
@@ -48,9 +50,8 @@ const Booking = () => {
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [therapists, setTherapists] = useState<Therapist[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>("Wszystkie");
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -61,6 +62,21 @@ const Booking = () => {
   const [voucherError, setVoucherError] = useState<string>("");
   const [availableDates, setAvailableDates] = useState<string[]>([]);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
+
+  // Get filtered services based on category
+  const filteredServices = selectedCategory === "Wszystkie" 
+    ? services 
+    : services.filter(service => service.category === selectedCategory);
+  
+  // Create categories list with "Wszystkie" option
+  const categoriesList = ["Wszystkie", ...categories.map(cat => cat.name)];
+
+  // Get available therapists for selected service
+  const availableTherapists = therapists.filter(therapist => {
+    if (!selectedService) return true;
+    // If service requires specific therapists, filter them here
+    return true; // For now, show all active therapists
+  });
 
   // Generowanie godzin co 30 minut
   const generateTimeSlots = () => {
@@ -269,30 +285,17 @@ const Booking = () => {
     }
   };
 
-  const handleCategorySelect = (category: Category) => {
-    setSelectedCategory(category);
-    
-    // Filter services by selected category
-    const filtered = services.filter(service => service.category === category.name);
-    setFilteredServices(filtered);
-    
-    // Reset subsequent selections
-    setSelectedService(null);
-    setSelectedTherapist(null);
-    setStep(2);
-  };
-
   const handleServiceSelect = (service: Service) => {
     setSelectedService(service);
     // Reset selected therapist when service changes
     setSelectedTherapist(null);
-    setStep(3);
+    setStep(2);
   };
 
   const handleTherapistSelect = (therapist: Therapist) => {
     setSelectedTherapist(therapist);
     setAvailableDates(generateAvailableDates());
-    setStep(4);
+    setStep(3);
   };
 
   const handleDateSelect = async (date: string) => {
@@ -303,12 +306,12 @@ const Booking = () => {
     if (selectedTherapist) {
       await checkAvailableTimes(date, selectedTherapist.id);
     }
-    setStep(5);
+    setStep(4);
   };
 
   const handleTimeSelect = (time: string) => {
     setSelectedTime(time);
-    setStep(6);
+    setStep(5);
   };
 
   const verifyVoucher = async () => {
@@ -498,62 +501,66 @@ const Booking = () => {
               : "Ten termin został właśnie zarezerwowany przez kogoś innego. Proszę wybrać inną godzinę.",
             variant: "destructive",
           });
-          // Refresh available times
+          
+          // Refresh available times for selected date
           if (selectedDate && selectedTherapist) {
             checkAvailableTimes(selectedDate, selectedTherapist.id);
           }
+          
+          setStep(4); // Go back to time selection
+          setSelectedTime(""); // Clear selected time
           setLoading(false);
           return;
         }
-        throw insertError;
-      }
-
-      // Assign voucher to user if voucher was used and not already assigned
-      if (voucherData && user) {
-        const { error: assignError } = await supabase
-          .from('vouchers')
-          .update({ user_id: user.id })
-          .eq('code', voucherData.code)
-          .is('user_id', null);
-
-        if (assignError) {
-          console.error("Error assigning voucher to user:", assignError);
-        }
-      }
-
-      // Process voucher redemption if voucher was used
-      if (voucherData && appointment) {
-        const servicePrice = selectedService.price;
         
-        const { data: voucherResult, error: voucherError } = await supabase
-          .rpc('process_voucher_redemption', {
-            p_voucher_code: voucherData.code,
-            p_appointment_id: appointment.id,
-            ...(servicePrice && { p_service_price: servicePrice })
-          });
+        console.error("Error creating appointment:", insertError);
+        toast({
+          title: "Błąd",
+          description: "Nie udało się zarezerwować wizyty. Spróbuj ponownie.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
 
-        if (voucherError) {
-          console.error("Voucher redemption error:", voucherError);
-          // Don't fail the appointment creation, just log the error
-          toast({
-            title: "Uwaga",
-            description: "Wizyta została zarezerwowana, ale wystąpił problem z bonem. Skontaktuj się z recepcją.",
-            variant: "destructive",
-          });
+      // Process voucher if used
+      if (voucherData && appointment) {
+        try {
+          const { data: redemptionResult, error: redemptionError } = await supabase
+            .rpc('process_voucher_redemption', {
+              p_voucher_code: voucherData.code,
+              p_appointment_id: appointment.id,
+              p_service_price: selectedService.price
+            });
+
+          if (redemptionError) {
+            console.error('Error processing voucher redemption:', redemptionError);
+            // Don't fail the whole booking if voucher processing fails
+            toast({
+              title: "Ostrzeżenie",
+              description: "Wizyta została zarezerwowana, ale wystąpił problem z przetworzeniem bonu. Skontaktuj się z administracją.",
+              variant: "destructive",
+            });
+          } else {
+            console.log('Voucher redemption successful:', redemptionResult);
+          }
+        } catch (redemptionError) {
+          console.error('Error processing voucher:', redemptionError);
         }
       }
 
       toast({
-        title: "Sukces!",
-        description: "Wizyta została zarezerwowana pomyślnie",
+        title: "Sukces",
+        description: "Wizyta została pomyślnie zarezerwowana!",
       });
-      
+
+      // Navigate to dashboard or confirmation page
       navigate("/dashboard");
     } catch (error: any) {
-      console.error("Error creating booking:", error);
+      console.error("Error creating appointment:", error);
       toast({
-        title: "Błąd rezerwacji",
-        description: error.message || "Nie udało się zarezerwować wizyty",
+        title: "Błąd",
+        description: "Nie udało się zarezerwować wizyty",
         variant: "destructive",
       });
     } finally {
@@ -562,200 +569,158 @@ const Booking = () => {
   };
 
   if (!user) {
-    return null;
+    return null; // This will redirect in useEffect
   }
 
   return (
     <div className="min-h-screen bg-gradient-warm">
       <Header />
       
-      {/* Hero Section */}
-      <section className="relative py-20 bg-gradient-hanami text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-light mb-6">Rezerwacja wizyty</h1>
-          <p className="text-xl max-w-3xl mx-auto text-white/90">
-            Zarezerwuj swoją wizytę w kilku prostych krokach
-          </p>
-        </div>
-      </section>
-
-      {/* Booking Steps */}
-      <section className="py-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Progress Bar */}
-          <div className="mb-12">
-            <div className="flex items-center justify-between">
-              {[1, 2, 3, 4, 5, 6].map((stepNumber) => (
-                <div key={stepNumber} className="flex items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step >= stepNumber 
-                      ? "bg-hanami-primary text-white" 
-                      : "bg-hanami-secondary text-hanami-neutral"
-                  }`}>
-                    {step > stepNumber ? <CheckCircle className="h-5 w-5" /> : stepNumber}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Steps Indicator */}
+        <div className="mb-8">
+          <div className="flex justify-center">
+            <div className="flex items-center space-x-4">
+              {[
+                { num: 1, label: "Usługa", icon: "💆‍♀️" },
+                { num: 2, label: "Terapeuta", icon: "👤" },
+                { num: 3, label: "Data", icon: "📅" },
+                { num: 4, label: "Godzina", icon: "🕐" },
+                { num: 5, label: "Podsumowanie", icon: "✅" },
+              ].map((stepItem, index) => (
+                <div key={stepItem.num} className="flex items-center">
+                  <div 
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium ${
+                      step >= stepItem.num 
+                        ? 'bg-hanami-primary text-white' 
+                        : 'bg-hanami-accent text-hanami-neutral'
+                    }`}
+                  >
+                    {stepItem.num}
                   </div>
-                  {stepNumber < 6 && (
-                    <div className={`h-1 w-12 mx-2 ${
-                      step > stepNumber ? "bg-hanami-primary" : "bg-hanami-secondary"
+                  <span className="ml-2 text-sm text-hanami-neutral hidden sm:block">
+                    {stepItem.label}
+                  </span>
+                  {index < 4 && (
+                    <div className={`w-8 h-0.5 mx-4 ${
+                      step > stepItem.num ? 'bg-hanami-primary' : 'bg-hanami-accent'
                     }`} />
                   )}
                 </div>
               ))}
             </div>
-            <div className="flex justify-between mt-4 text-sm text-hanami-neutral">
-              <span>Kategoria</span>
-              <span>Usługa</span>
-              <span>Terapeuta</span>
-              <span>Data</span>
-              <span>Godzina</span>
-              <span>Potwierdzenie</span>
-            </div>
           </div>
+        </div>
 
-          {/* Step 1: Category Selection */}
-          {step === 1 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl text-hanami-primary">
-                  Wybierz kategorię zabiegów
-                </CardTitle>
-                <p className="text-hanami-neutral">
-                  Znajdź zabiegi odpowiednie dla Twoich potrzeb
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {categories.map((category) => (
-                    <Card 
-                      key={category.id}
-                      className="cursor-pointer hover:shadow-elegant transition-zen border-hanami-accent/20 hover:border-hanami-primary bg-card hover:bg-accent/50"
-                      onClick={() => handleCategorySelect(category)}
-                    >
-                      <CardContent className="p-6 text-center">
-                        <h3 className="text-xl font-semibold text-hanami-primary mb-3">
-                          {category.name}
-                        </h3>
-                        <p className="text-hanami-neutral text-sm">
-                          {category.description}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
+        <Card className="border-hanami-accent/20">
+          <CardHeader>
+            <CardTitle className="text-2xl text-center text-hanami-primary">
+              Rezerwacja wizyty
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            {/* Step 1: Service Selection */}
+            {step === 1 && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-semibold">Wybierz usługę</h3>
+                  {/* Category Filters */}
+                  <div className="flex flex-wrap gap-2">
+                    {categoriesList.map((category) => (
+                      <Badge 
+                        key={category} 
+                        variant={selectedCategory === category ? "default" : "outline"}
+                        className="cursor-pointer hover:bg-hanami-secondary transition-zen"
+                        onClick={() => setSelectedCategory(category)}
+                      >
+                        {category}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Step 2: Service Selection */}
-          {step === 2 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl text-hanami-primary">
-                  Wybierz usługę z kategorii: {selectedCategory?.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredServices.map((service) => (
-                    <Card 
-                      key={service.id}
-                      className="cursor-pointer hover:shadow-elegant transition-zen border-hanami-accent/20 hover:border-hanami-primary bg-card hover:bg-accent/50"
-                      onClick={() => handleServiceSelect(service)}
-                    >
-                      <CardContent className="p-6 text-center">
-                        <h3 className="text-xl font-semibold text-hanami-primary mb-2">
-                          {service.name}
-                        </h3>
-                        <p className="text-hanami-neutral text-sm mb-4">
-                          {service.description}
-                        </p>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-center space-x-2 text-sm text-hanami-neutral">
-                            <Clock className="h-4 w-4" />
-                            <span>{service.duration} min</span>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredServices.length === 0 ? (
+                    <div className="col-span-full text-center py-12">
+                      <p className="text-hanami-neutral text-lg">
+                        Brak usług w wybranej kategorii.
+                      </p>
+                    </div>
+                  ) : (
+                    filteredServices.map((service) => (
+                      <Card
+                        key={service.id}
+                        className={`cursor-pointer transition-all ${
+                          selectedService?.id === service.id 
+                            ? 'ring-2 ring-hanami-primary bg-hanami-secondary/10' 
+                            : 'hover:shadow-md'
+                        }`}
+                        onClick={() => handleServiceSelect(service)}
+                      >
+                        <CardContent className="p-6">
+                          <div className="flex justify-between items-start mb-2">
+                            <h4 className="font-semibold text-hanami-primary">{service.name}</h4>
+                            <Badge variant="secondary">{service.category}</Badge>
                           </div>
-                          <div className="text-2xl font-bold text-hanami-primary">
-                            {service.price} zł
+                          <p className="text-sm text-hanami-neutral mb-4">{service.description}</p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-lg font-bold text-hanami-primary">
+                              {service.price} zł
+                            </span>
+                            <span className="text-sm text-hanami-neutral">
+                              {service.duration} min
+                            </span>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    ))
+                  )}
                 </div>
-                <div className="mt-6">
-                  <Button variant="outline" onClick={() => setStep(1)}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Wróć do wyboru kategorii
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {/* Step 3: Therapist Selection */}
-          {step === 3 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl text-hanami-primary">
-                  Wybierz terapeutkę
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {therapists.map((therapist) => (
-                    <Card 
+            {/* Step 2: Therapist Selection */}
+            {step === 2 && selectedService && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold">Wybierz terapeutę</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {availableTherapists.map((therapist) => (
+                    <Card
                       key={therapist.id}
-                      className="cursor-pointer hover:shadow-elegant transition-zen border-hanami-accent/20 hover:border-hanami-primary bg-card hover:bg-accent/50"
+                      className={`cursor-pointer transition-all ${
+                        selectedTherapist?.id === therapist.id 
+                          ? 'ring-2 ring-hanami-primary bg-hanami-secondary/10' 
+                          : 'hover:shadow-md'
+                      }`}
                       onClick={() => handleTherapistSelect(therapist)}
                     >
                       <CardContent className="p-6">
-                        <div className="flex items-center space-x-4 mb-4">
-                          <div className="w-16 h-16 bg-hanami-secondary rounded-full flex items-center justify-center">
-                            <User className="h-8 w-8 text-hanami-primary" />
-                          </div>
+                        <div className="flex items-center space-x-4">
+                          <img
+                            src={therapist.avatar_url || "/placeholder.svg"}
+                            alt={therapist.name}
+                            className="w-16 h-16 rounded-full object-cover"
+                          />
                           <div>
-                            <h3 className="text-xl font-semibold text-hanami-primary">
-                              {therapist.name}
-                            </h3>
-                            <p className="text-hanami-neutral text-sm">
-                              {therapist.experience}
-                            </p>
+                            <h4 className="font-semibold text-hanami-primary">{therapist.name}</h4>
+                            <p className="text-sm text-hanami-neutral">{therapist.specialization}</p>
                           </div>
                         </div>
-                        <p className="text-hanami-neutral mb-2">
-                          <strong>Specjalizacja:</strong> {therapist.specialization}
-                        </p>
-                        {therapist.bio && (
-                          <p className="text-hanami-neutral text-sm">
-                            {therapist.bio}
-                          </p>
-                        )}
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-                <div className="mt-6">
-                  <Button variant="outline" onClick={() => setStep(2)}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Wróć do wyboru usługi
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {/* Step 4: Date Selection */}
-          {step === 4 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl text-hanami-primary">
-                  Wybierz datę
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 md:grid-cols-7 gap-4">
-                  {availableDates.map((date) => {
+            {/* Step 3: Date Selection */}
+            {step === 3 && selectedTherapist && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold">Wybierz datę</h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {generateAvailableDates().map((date) => {
                     const dateObj = new Date(date);
+                    const isSelected = selectedDate === date;
                     const dayName = dateObj.toLocaleDateString('pl-PL', { weekday: 'short' });
                     const dayNumber = dateObj.getDate();
                     const monthName = dateObj.toLocaleDateString('pl-PL', { month: 'short' });
@@ -763,11 +728,14 @@ const Booking = () => {
                     return (
                       <Button
                         key={date}
-                        variant="outline"
-                        className="p-4 h-auto flex flex-col hover:bg-hanami-primary hover:text-white"
+                        variant={isSelected ? "default" : "outline"}
+                        className={`h-auto p-4 flex flex-col items-center space-y-1 ${
+                          isSelected 
+                            ? 'ring-2 ring-hanami-primary bg-hanami-primary text-white' 
+                            : 'hover:bg-hanami-secondary/10'
+                        }`}
                         onClick={() => handleDateSelect(date)}
                       >
-                        <Calendar className="h-5 w-5 mb-2" />
                         <span className="text-xs font-medium">{dayName}</span>
                         <span className="text-lg font-bold">{dayNumber}</span>
                         <span className="text-xs">{monthName}</span>
@@ -775,98 +743,64 @@ const Booking = () => {
                     );
                   })}
                 </div>
-                <div className="mt-6">
-                  <Button variant="outline" onClick={() => setStep(3)}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Wróć do wyboru terapeutki
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {/* Step 5: Time Selection */}
-          {step === 5 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl text-hanami-primary">
-                  Wybierz godzinę
-                </CardTitle>
-                <p className="text-hanami-neutral">
-                  Dostępne terminy na {new Date(selectedDate).toLocaleDateString('pl-PL')}
-                </p>
-              </CardHeader>
-              <CardContent>
+            {/* Step 4: Time Selection */}
+            {step === 4 && selectedDate && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold">Wybierz godzinę</h3>
                 {loading ? (
                   <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-hanami-primary mx-auto mb-4"></div>
-                    <p className="text-hanami-neutral">
-                      Sprawdzanie dostępnych terminów...
-                    </p>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-hanami-primary mx-auto"></div>
+                    <p className="mt-2 text-hanami-neutral">Sprawdzanie dostępności...</p>
                   </div>
                 ) : availableTimes.length === 0 ? (
                   <div className="text-center py-8">
-                    <p className="text-hanami-neutral">
-                      Brak dostępnych terminów w tym dniu. Wybierz inną datę.
-                    </p>
+                    <p className="text-hanami-neutral">Brak dostępnych terminów w wybranym dniu.</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {availableTimes.map((time) => (
                       <Button
                         key={time}
-                        variant="outline"
-                        className="p-4 hover:bg-hanami-primary hover:text-white"
+                        variant={selectedTime === time ? "default" : "outline"}
+                        className={`h-12 ${
+                          selectedTime === time 
+                            ? 'ring-2 ring-hanami-primary bg-hanami-primary text-white' 
+                            : 'hover:bg-hanami-secondary/10'
+                        }`}
                         onClick={() => handleTimeSelect(time)}
                       >
-                        <Clock className="h-4 w-4 mr-2" />
                         {time}
                       </Button>
                     ))}
                   </div>
                 )}
-                <div className="mt-6">
-                  <Button variant="outline" onClick={() => setStep(4)}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
-                    Wróć do wyboru daty
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {/* Step 6: Confirmation */}
-          {step === 6 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl text-hanami-primary">
-                  Potwierdzenie rezerwacji
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="bg-hanami-cream p-6 rounded-lg">
-                    <h3 className="text-lg font-semibold text-hanami-primary mb-4">
-                      Szczegóły rezerwacji
-                    </h3>
-                    <div className="space-y-3">
+            {/* Step 5: Summary and Voucher */}
+            {step === 5 && (
+              <div className="space-y-6">
+                <h3 className="text-xl font-semibold">Podsumowanie rezerwacji</h3>
+                
+                {/* Booking Summary */}
+                <Card className="border-hanami-accent/20">
+                  <CardContent className="p-6">
+                    <div className="space-y-4">
                       <div className="flex justify-between">
                         <span className="text-hanami-neutral">Usługa:</span>
                         <span className="font-medium">{selectedService?.name}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-hanami-neutral">Terapeutka:</span>
+                        <span className="text-hanami-neutral">Terapeuta:</span>
                         <span className="font-medium">{selectedTherapist?.name}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-hanami-neutral">Data:</span>
                         <span className="font-medium">
-                          {new Date(selectedDate).toLocaleDateString('pl-PL', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
+                          {selectedDate && new Date(selectedDate).toLocaleDateString('pl-PL')}
                         </span>
                       </div>
                       <div className="flex justify-between">
@@ -877,94 +811,133 @@ const Booking = () => {
                         <span className="text-hanami-neutral">Czas trwania:</span>
                         <span className="font-medium">{selectedService?.duration} min</span>
                       </div>
-                      <div className="flex justify-between border-t pt-3">
-                        <span className="text-lg font-semibold">Cena:</span>
-                        <div className="text-right">
-                          {voucherData ? (
-                            <>
-                              <div className="text-sm text-gray-500 line-through">
-                                {selectedService?.price} zł
-                              </div>
-                              <div className="text-lg font-bold text-hanami-primary">
-                                {calculateFinalPrice()} zł
-                              </div>
-                            </>
-                          ) : (
-                            <span className="text-lg font-bold text-hanami-primary">
-                              {selectedService?.price} zł
-                            </span>
-                          )}
+                      <div className="border-t pt-4">
+                        <div className="flex justify-between text-lg font-bold">
+                          <span>Cena końcowa:</span>
+                          <span className="text-hanami-primary">
+                            {voucherData ? calculateFinalPrice() : selectedService?.price} zł
+                          </span>
                         </div>
+                        {voucherData && (
+                          <div className="text-sm text-green-600 mt-1">
+                            Zastosowano bon: {voucherData.code}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Voucher Section */}
-                  <div className="bg-hanami-secondary/20 p-6 rounded-lg space-y-4">
-                    <div className="flex items-center space-x-2">
+                {/* Voucher Section */}
+                <Card className="border-hanami-accent/20">
+                  <CardContent className="p-6">
+                    <div className="flex items-center space-x-2 mb-4">
                       <Gift className="h-5 w-5 text-hanami-primary" />
-                      <h3 className="text-lg font-semibold text-hanami-primary">
-                        Masz bon podarunkowy?
-                      </h3>
+                      <h4 className="font-semibold">Bon rabatowy (opcjonalnie)</h4>
                     </div>
-                    <div className="flex space-x-2">
-                      <Input
-                        placeholder="Wprowadź kod bonu"
-                        value={voucherCode}
-                        onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                      />
-                      <Button variant="outline" onClick={verifyVoucher}>
-                        Sprawdź
-                      </Button>
-                    </div>
-                    {voucherError && (
-                      <p className="text-red-500 text-sm">{voucherError}</p>
-                    )}
-                    {voucherData && (
-                      <div className="bg-green-50 p-4 rounded border border-green-200">
-                        <p className="text-green-700 font-medium">
-                          ✓ Bon {voucherData.code} został zweryfikowany!
-                        </p>
-                        <p className="text-sm text-green-600">
-                          {voucherData.voucher_type === 'single' 
-                            ? `Rabat: ${Math.min(voucherData.remaining_value, selectedService?.price || 0)} zł`
-                            : `Darmowa sesja z pakietu (pozostało: ${voucherData.remaining_sessions})`
-                          }
-                        </p>
+                    
+                    <div className="space-y-4">
+                      <div className="flex space-x-2">
+                        <Input
+                          placeholder="Wprowadź kod bonu"
+                          value={voucherCode}
+                          onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                          disabled={!!voucherData}
+                        />
+                        <Button 
+                          onClick={verifyVoucher}
+                          disabled={!!voucherData || !voucherCode.trim()}
+                        >
+                          Sprawdź
+                        </Button>
                       </div>
-                    )}
-                  </div>
+                      
+                      {voucherError && (
+                        <p className="text-red-500 text-sm">{voucherError}</p>
+                      )}
+                      
+                      {voucherData && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium text-green-800">Bon został zastosowany!</p>
+                              <p className="text-sm text-green-600">
+                                {voucherData.voucher_type === 'single' 
+                                  ? `Rabat: ${Math.min(voucherData.remaining_value, selectedService?.price || 0)} zł`
+                                  : `Sesja z pakietu (pozostało: ${voucherData.remaining_sessions})`
+                                }
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setVoucherData(null);
+                                setVoucherCode("");
+                                setVoucherError("");
+                              }}
+                            >
+                              Usuń
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Uwagi do wizyty (opcjonalnie)</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Dodatkowe informacje, preferencje, itp."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="flex space-x-4">
-                    <Button variant="outline" onClick={() => setStep(5)}>
-                      <ArrowLeft className="h-4 w-4 mr-2" />
-                      Wróć do wyboru godziny
-                    </Button>
-                    <Button 
-                      onClick={handleConfirm} 
-                      className="flex-1"
-                      disabled={loading}
-                    >
-                      {loading ? "Rezerwowanie..." : "Potwierdź rezerwację"}
-                    </Button>
-                  </div>
+                {/* Notes Section */}
+                <div className="space-y-4">
+                  <Label htmlFor="notes">Dodatkowe uwagi (opcjonalnie)</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Wpisz dodatkowe informacje dla terapeuty..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={3}
+                  />
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </section>
+
+                {/* Confirm Button */}
+                <Button 
+                  onClick={handleConfirm} 
+                  disabled={loading}
+                  className="w-full"
+                  size="lg"
+                >
+                  {loading ? "Rezerwuję..." : "Potwierdź rezerwację"}
+                </Button>
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div className="flex justify-between mt-8">
+              <Button
+                variant="outline"
+                onClick={() => setStep(Math.max(1, step - 1))}
+                disabled={step === 1}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Wstecz
+              </Button>
+              
+              {step < 5 && (
+                <Button
+                  onClick={() => setStep(step + 1)}
+                  disabled={
+                    (step === 1 && !selectedService) ||
+                    (step === 2 && !selectedTherapist) ||
+                    (step === 3 && !selectedDate) ||
+                    (step === 4 && !selectedTime)
+                  }
+                >
+                  Dalej
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <Footer />
     </div>
