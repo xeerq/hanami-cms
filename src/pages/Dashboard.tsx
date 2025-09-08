@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, User, ShoppingBag, Settings, Clock, Heart, Utensils, Star } from "lucide-react";
+import { Calendar, User, ShoppingBag, Settings, Clock, Heart, Star } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProfileForm from "@/components/ProfileForm";
@@ -13,7 +13,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  const [selectedCalories, setSelectedCalories] = useState(1500);
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
   const [appointmentHistory, setAppointmentHistory] = useState<any[]>([]);
   const [orderHistory, setOrderHistory] = useState<any[]>([]);
@@ -159,39 +158,6 @@ const Dashboard = () => {
     navigate('/booking');
   };
 
-  const generateMealPlan = () => {
-    const meals = {
-      1200: {
-        breakfast: "Owsianka z jagodami i migdałami (300 kcal)",
-        lunch: "Sałatka z kurczakiem i quinoa (400 kcal)",
-        dinner: "Pieczony łosoś z warzywami (350 kcal)",
-        snacks: "Jogurt naturalny z orzechami (150 kcal)"
-      },
-      1500: {
-        breakfast: "Omlet z warzywami i awokado (400 kcal)",
-        lunch: "Curry z ciecierzycą i ryżem brązowym (500 kcal)",
-        dinner: "Grillowany kurczak z batatami (450 kcal)", 
-        snacks: "Smoothie z bananem i szpinakiem (150 kcal)"
-      },
-      1800: {
-        breakfast: "Tosty z awokado i jajkiem (500 kcal)",
-        lunch: "Bowl z łososiem i quinoa (600 kcal)",
-        dinner: "Makaron z krewetkami i warzywami (550 kcal)",
-        snacks: "Orzechy i owoce (150 kcal)"
-      },
-      2000: {
-        breakfast: "Pancakes owsiane z owocami (550 kcal)",
-        lunch: "Burger z indyka z frytkami z batata (700 kcal)",
-        dinner: "Risotto z kurczakiem i grzybami (600 kcal)",
-        snacks: "Batonik proteinowy i owoc (150 kcal)"
-      }
-    };
-    
-    return meals[selectedCalories as keyof typeof meals] || meals[1500];
-  };
-
-  const mealPlan = generateMealPlan();
-
   return (
     <div className="min-h-screen bg-gradient-warm">
       <Header />
@@ -210,7 +176,7 @@ const Dashboard = () => {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Tabs defaultValue="appointments" className="space-y-8">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="appointments" className="flex items-center space-x-2">
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline">Wizyty</span>
@@ -226,10 +192,6 @@ const Dashboard = () => {
               <TabsTrigger value="orders" className="flex items-center space-x-2">
                 <ShoppingBag className="h-4 w-4" />
                 <span className="hidden sm:inline">Zamówienia</span>
-              </TabsTrigger>
-              <TabsTrigger value="meals" className="flex items-center space-x-2">
-                <Utensils className="h-4 w-4" />
-                <span className="hidden sm:inline">Jadłospis</span>
               </TabsTrigger>
               <TabsTrigger value="profile" className="flex items-center space-x-2">
                 <User className="h-4 w-4" />
@@ -480,88 +442,6 @@ const Dashboard = () => {
               </Card>
             </TabsContent>
 
-            {/* Meal Plan Generator */}
-            <TabsContent value="meals">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-hanami-primary">Generator jadłospisu</CardTitle>
-                  <CardDescription>
-                    Wygeneruj personalizowany plan posiłków na podstawie docelowej liczby kalorii
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {/* Calorie Selection */}
-                    <div>
-                      <label className="block text-sm font-medium text-hanami-primary mb-3">
-                        Wybierz dzienną liczbę kalorii:
-                      </label>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {[1200, 1500, 1800, 2000].map((calories) => (
-                          <Button
-                            key={calories}
-                            variant={selectedCalories === calories ? "default" : "outline"}
-                            onClick={() => setSelectedCalories(calories)}
-                          >
-                            {calories} kcal
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Generated Meal Plan */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Card className="border-hanami-accent/20">
-                        <CardContent className="p-4">
-                          <h3 className="font-semibold text-hanami-primary mb-2 flex items-center">
-                            <Utensils className="h-4 w-4 mr-2" />
-                            Śniadanie
-                          </h3>
-                          <p className="text-sm text-hanami-neutral">{mealPlan.breakfast}</p>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="border-hanami-accent/20">
-                        <CardContent className="p-4">
-                          <h3 className="font-semibold text-hanami-primary mb-2 flex items-center">
-                            <Utensils className="h-4 w-4 mr-2" />
-                            Obiad
-                          </h3>
-                          <p className="text-sm text-hanami-neutral">{mealPlan.lunch}</p>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="border-hanami-accent/20">
-                        <CardContent className="p-4">
-                          <h3 className="font-semibold text-hanami-primary mb-2 flex items-center">
-                            <Utensils className="h-4 w-4 mr-2" />
-                            Kolacja
-                          </h3>
-                          <p className="text-sm text-hanami-neutral">{mealPlan.dinner}</p>
-                        </CardContent>
-                      </Card>
-
-                      <Card className="border-hanami-accent/20">
-                        <CardContent className="p-4">
-                          <h3 className="font-semibold text-hanami-primary mb-2 flex items-center">
-                            <Heart className="h-4 w-4 mr-2" />
-                            Przekąski
-                          </h3>
-                          <p className="text-sm text-hanami-neutral">{mealPlan.snacks}</p>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <div className="bg-hanami-cream p-4 rounded-lg">
-                      <p className="text-sm text-hanami-neutral">
-                        <strong>Uwaga:</strong> Przedstawiony jadłospis ma charakter orientacyjny. 
-                        Przed wprowadzeniem zmian w diecie zalecamy konsultację z dietetykiem.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
             {/* Profile Settings */}
             <TabsContent value="profile">
