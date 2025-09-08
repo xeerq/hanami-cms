@@ -175,12 +175,22 @@ const Booking = () => {
         return;
       }
 
+      setLoading(true);
       const selectedServiceDuration = selectedService.duration;
-      const blockedTimes = new Set<string>();
 
       // Sprawdź każdy slot czasowy czy jest dostępny według grafiku terapeuty i istniejących wizyt
-      for (const slot of timeSlots) {
+      const availabilityChecks = timeSlots.map(async (slot) => {
         try {
+          // Sprawdź czy wizyta nie wykracza poza godziny pracy (18:00)
+          const slotTimeMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
+          const slotEndTimeMinutes = slotTimeMinutes + selectedServiceDuration;
+          const endHour = Math.floor(slotEndTimeMinutes / 60);
+          const endMinute = slotEndTimeMinutes % 60;
+          
+          if (endHour > 18 || (endHour === 18 && endMinute > 0)) {
+            return { slot, available: false, reason: 'outside_hours' };
+          }
+
           const { data: isAvailable, error } = await supabase
             .rpc('check_therapist_availability', {
               p_therapist_id: therapistId,
@@ -190,40 +200,39 @@ const Booking = () => {
             });
 
           if (error) {
-            console.error("Error checking slot availability:", error);
-            // W przypadku błędu, domyślnie blokuj slot
-            blockedTimes.add(slot);
-            continue;
+            console.error("Error checking slot availability:", slot, error);
+            return { slot, available: false, reason: 'error' };
           }
 
-          // Jeśli funkcja zwróci false, slot jest niedostępny
-          if (!isAvailable) {
-            blockedTimes.add(slot);
-          }
-
-          // Dodatkowo sprawdź czy wizyta nie wykracza poza godziny pracy (18:00)
-          const slotTimeMinutes = parseInt(slot.split(':')[0]) * 60 + parseInt(slot.split(':')[1]);
-          const slotEndTimeMinutes = slotTimeMinutes + selectedServiceDuration;
-          const endHour = Math.floor(slotEndTimeMinutes / 60);
-          const endMinute = slotEndTimeMinutes % 60;
-          if (endHour > 18 || (endHour === 18 && endMinute > 0)) {
-            blockedTimes.add(slot);
-          }
+          return { slot, available: isAvailable, reason: isAvailable ? 'available' : 'unavailable' };
         } catch (error) {
           console.error("Error checking slot:", slot, error);
-          blockedTimes.add(slot);
+          return { slot, available: false, reason: 'error' };
         }
-      }
+      });
+
+      // Poczekaj na wszystkie sprawdzenia
+      const results = await Promise.all(availabilityChecks);
       
-      console.log("Blocked times (including schedule):", Array.from(blockedTimes));
+      // Filtruj tylko dostępne sloty
+      const finalAvailableSlots = results
+        .filter(result => result.available)
+        .map(result => result.slot);
       
-      const available = timeSlots.filter(time => !blockedTimes.has(time));
+      const unavailableSlots = results
+        .filter(result => !result.available)
+        .map(result => ({ slot: result.slot, reason: result.reason }));
       
-      console.log("Available times:", available);
-      setAvailableTimes(available);
+      console.log("Available times:", finalAvailableSlots);
+      console.log("Unavailable times:", unavailableSlots);
+      
+      setAvailableTimes(finalAvailableSlots);
     } catch (error: any) {
       console.error("Error checking availability:", error);
+      // W przypadku błędu, pokaż wszystkie sloty
       setAvailableTimes(timeSlots);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -240,10 +249,13 @@ const Booking = () => {
     setStep(3);
   };
 
-  const handleDateSelect = (date: string) => {
+  const handleDateSelect = async (date: string) => {
     setSelectedDate(date);
+    setSelectedTime(""); // Reset selected time when date changes
+    setAvailableTimes([]); // Clear available times while loading
+    
     if (selectedTherapist) {
-      checkAvailableTimes(date, selectedTherapist.id);
+      await checkAvailableTimes(date, selectedTherapist.id);
     }
     setStep(4);
   };
@@ -691,7 +703,14 @@ const Booking = () => {
                 </p>
               </CardHeader>
               <CardContent>
-                {availableTimes.length === 0 ? (
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-hanami-primary mx-auto mb-4"></div>
+                    <p className="text-hanami-neutral">
+                      Sprawdzanie dostępnych terminów...
+                    </p>
+                  </div>
+                ) : availableTimes.length === 0 ? (
                   <div className="text-center py-8">
                     <p className="text-hanami-neutral">
                       Brak dostępnych terminów w tym dniu. Wybierz inną datę.
