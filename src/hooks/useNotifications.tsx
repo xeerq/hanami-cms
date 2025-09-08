@@ -147,12 +147,19 @@ export const useNotifications = () => {
 
   const deleteNotification = async (notificationId: string) => {
     try {
-      const { error } = await supabase
+      console.log('Attempting to delete notification:', notificationId);
+      const { data, error } = await supabase
         .from('notifications')
         .delete()
-        .eq('id', notificationId);
+        .eq('id', notificationId)
+        .select();
 
-      if (error) throw error;
+      console.log('Delete notification result:', { data, error });
+      
+      if (error) {
+        console.error('Database error deleting notification:', error);
+        throw error;
+      }
       
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
       
@@ -161,6 +168,8 @@ export const useNotifications = () => {
       if (deletedNotification && !deletedNotification.is_read) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
+      
+      console.log('Notification deleted successfully from state');
     } catch (error: any) {
       console.error('Error deleting notification:', error);
       toast({
@@ -175,15 +184,24 @@ export const useNotifications = () => {
     if (!user) return;
     
     try {
-      const { error } = await supabase
+      console.log('Attempting to delete all notifications for user:', user.id);
+      const { data, error } = await supabase
         .from('notifications')
         .delete()
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select();
 
-      if (error) throw error;
+      console.log('Delete all notifications result:', { data, error });
+
+      if (error) {
+        console.error('Database error deleting all notifications:', error);
+        throw error;
+      }
       
       setNotifications([]);
       setUnreadCount(0);
+      
+      console.log('All notifications deleted successfully from state');
     } catch (error: any) {
       console.error('Error deleting all notifications:', error);
       toast({
