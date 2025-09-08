@@ -1041,6 +1041,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      sync_therapist_names: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       unban_user: {
         Args: { user_id: string }
         Returns: boolean
