@@ -87,9 +87,11 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
 
     try {
       setLoading(true);
+      console.log("Starting user update for:", user.id, { firstName: sanitizedFirstName, lastName: sanitizedLastName, phone: sanitizedPhone });
 
       // Update auth user email using service function
       if (email !== user.email) {
+        console.log("Updating email from", user.email, "to", email);
         const { error: emailError } = await supabase.functions.invoke('update-user-email', {
           body: { 
             userId: user.id, 
@@ -101,12 +103,27 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
           console.error("Email update error:", emailError);
           toast({
             title: "Błąd",
-            description: "Nie udało się zaktualizować adresu email",
+            description: "Nie udało się zaktualizować adresu email: " + emailError.message,
             variant: "destructive",
           });
           return;
         }
+        console.log("Email updated successfully");
       }
+
+      // First, check if profile exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error("Error checking existing profile:", checkError);
+        throw new Error("Nie udało się sprawdzić istniejącego profilu: " + checkError.message);
+      }
+
+      console.log("Existing profile:", existingProfile);
 
       // Use upsert to handle cases where profile doesn't exist yet
       const { data: updatedProfile, error } = await supabase
@@ -124,7 +141,7 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
 
       if (error) {
         console.error("Profile upsert error:", error);
-        throw error;
+        throw new Error("Błąd podczas aktualizacji profilu: " + error.message + " (kod: " + error.code + ")");
       }
 
       console.log("Profile updated/created successfully:", updatedProfile);
@@ -154,7 +171,7 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
       console.error("Error updating user:", error);
       toast({
         title: "Błąd",
-        description: "Nie udało się zaktualizować danych użytkownika",
+        description: error.message || "Nie udało się zaktualizować danych użytkownika",
         variant: "destructive",
       });
     } finally {
