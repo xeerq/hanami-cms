@@ -108,24 +108,26 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
         }
       }
 
-      // Update profile data with sanitized inputs
+      // Use upsert to handle cases where profile doesn't exist yet
       const { data: updatedProfile, error } = await supabase
         .from("profiles")
-        .update({
+        .upsert({
+          user_id: user.id,
           first_name: sanitizedFirstName,
           last_name: sanitizedLastName,
           phone: sanitizedPhone
+        }, {
+          onConflict: 'user_id'
         })
-        .eq("user_id", user.id)
         .select()
         .single();
 
       if (error) {
-        console.error("Profile update error:", error);
+        console.error("Profile upsert error:", error);
         throw error;
       }
 
-      console.log("Profile updated successfully:", updatedProfile);
+      console.log("Profile updated/created successfully:", updatedProfile);
 
       await logActivity({
         action: 'user_updated',
