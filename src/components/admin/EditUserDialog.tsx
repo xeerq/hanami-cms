@@ -20,6 +20,13 @@ interface User {
   created_at: string;
   last_sign_in_at: string | null;
   is_banned?: boolean;
+  profile?: {
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+    created_at?: string;
+    updated_at?: string;
+  };
 }
 
 interface EditUserDialogProps {
@@ -34,6 +41,7 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [emailConfirmed, setEmailConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { logActivity } = useActivityLogger();
@@ -41,10 +49,11 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
   // Reset form when user changes
   React.useEffect(() => {
     if (user) {
-      setFirstName(user.user_metadata?.first_name || "");
-      setLastName(user.user_metadata?.last_name || "");
+      setFirstName(user.profile?.first_name || user.user_metadata?.first_name || "");
+      setLastName(user.profile?.last_name || user.user_metadata?.last_name || "");
       setEmail(user.email || "");
-      setPhone(user.phone || "");
+      setPhone(user.profile?.phone || user.phone || "");
+      setEmailConfirmed(!!user.email_confirmed_at);
     }
   }, [user]);
 
@@ -170,6 +179,22 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
                 required
               />
             </div>
+            
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label className="text-right text-sm text-muted-foreground">
+                Status email
+              </Label>
+              <div className="col-span-3 flex items-center gap-2">
+                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                  emailConfirmed 
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                }`}>
+                  {emailConfirmed ? '✓ Potwierdzony' : '⚠ Niepotwierdzony'}
+                </span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firstName" className="text-right">
                 Imię
@@ -182,6 +207,7 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
                 required
               />
             </div>
+            
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="lastName" className="text-right">
                 Nazwisko
@@ -194,6 +220,7 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
                 required
               />
             </div>
+            
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="phone" className="text-right">
                 Telefon
@@ -206,6 +233,61 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
                 placeholder="np. +48 123 456 789"
               />
             </div>
+
+            {user && (
+              <>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right text-sm text-muted-foreground">
+                    Data utworzenia
+                  </Label>
+                  <div className="col-span-3 text-sm text-muted-foreground">
+                    {new Date(user.created_at).toLocaleString('pl-PL')}
+                  </div>
+                </div>
+
+                {user.last_sign_in_at && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right text-sm text-muted-foreground">
+                      Ostatnie logowanie
+                    </Label>
+                    <div className="col-span-3 text-sm text-muted-foreground">
+                      {new Date(user.last_sign_in_at).toLocaleString('pl-PL')}
+                    </div>
+                  </div>
+                )}
+
+                {user.profile?.created_at && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right text-sm text-muted-foreground">
+                      Profil utworzony
+                    </Label>
+                    <div className="col-span-3 text-sm text-muted-foreground">
+                      {new Date(user.profile.created_at).toLocaleString('pl-PL')}
+                    </div>
+                  </div>
+                )}
+
+                {user.profile?.updated_at && (
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right text-sm text-muted-foreground">
+                      Profil zaktualizowany
+                    </Label>
+                    <div className="col-span-3 text-sm text-muted-foreground">
+                      {new Date(user.profile.updated_at).toLocaleString('pl-PL')}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label className="text-right text-sm text-muted-foreground">
+                    ID użytkownika
+                  </Label>
+                  <div className="col-span-3 text-xs font-mono text-muted-foreground break-all">
+                    {user.id}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button 
