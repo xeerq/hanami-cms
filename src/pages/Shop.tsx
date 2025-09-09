@@ -124,7 +124,7 @@ const Shop = () => {
     });
   };
 
-  const proceedToCheckout = () => {
+  const proceedToCheckout = async () => {
     if (!user) {
       toast({
         title: "Wymagane logowanie",
@@ -144,11 +144,40 @@ const Shop = () => {
       return;
     }
 
-    // For now, just show a success message since we don't have a checkout page
-    toast({
-      title: "Przejście do kasy",
-      description: "Funkcjonalność kasy będzie dostępna wkrótce",
-    });
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: { 
+          items: cart,
+          userId: user.id
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        // Open Stripe checkout in a new tab
+        window.open(data.url, '_blank');
+        
+        // Clear cart after successful checkout initiation
+        setCart([]);
+        setShowCart(false);
+        
+        toast({
+          title: "Przekierowanie do płatności",
+          description: "Zostaniesz przekierowany do bezpiecznej strony płatności Stripe",
+        });
+      }
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Błąd płatności",
+        description: "Nie udało się zainicjować płatności. Spróbuj ponownie.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const purchaseVoucher = async (voucher: any) => {
@@ -466,8 +495,9 @@ const Shop = () => {
                   <Button 
                     className="w-full" 
                     onClick={proceedToCheckout}
+                    disabled={loading}
                   >
-                    Przejdź do kasy
+                    {loading ? "Przetwarzanie..." : "Przejdź do kasy"}
                   </Button>
                 </div>
               )}

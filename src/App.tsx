@@ -20,8 +20,10 @@ import ResetPassword from "./pages/ResetPassword";
 import TherapistsCalendars from "./pages/TherapistsCalendars";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import CookieBanner from "@/components/CookieBanner";
 import { ActivityLogger } from "@/components/admin/ActivityLogger";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -48,6 +50,7 @@ const App = () => (
             <Route path="/therapists-calendars" element={<TherapistsCalendars />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
