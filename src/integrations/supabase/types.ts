@@ -274,6 +274,10 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          delivery_address: Json | null
           id: string
           shipping_address: string | null
           status: string | null
@@ -283,6 +287,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_address?: Json | null
           id?: string
           shipping_address?: string | null
           status?: string | null
@@ -292,6 +300,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          delivery_address?: Json | null
           id?: string
           shipping_address?: string | null
           status?: string | null
@@ -382,6 +394,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          delivery_address: Json | null
           first_name: string | null
           id: string
           last_name: string | null
@@ -391,6 +404,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          delivery_address?: Json | null
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -400,6 +414,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          delivery_address?: Json | null
           first_name?: string | null
           id?: string
           last_name?: string | null
@@ -904,6 +919,10 @@ export type Database = {
       generate_voucher_code: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_order_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       get_safe_team_data: {
         Args: Record<PropertyKey, never>
