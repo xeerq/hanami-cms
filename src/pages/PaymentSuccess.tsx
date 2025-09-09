@@ -12,7 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 const PaymentSuccess = () => {
   const [searchParams] = useSearchParams();
   const [processing, setProcessing] = useState(true);
-  const [orderDetails, setOrderDetails] = useState<any>(null);
+  const [orderDetails, setOrderDetails] = useState<{
+    id: string;
+    total_amount: number;
+    status: string;
+    created_at: string;
+  } | null>(null);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -33,15 +38,10 @@ const PaymentSuccess = () => {
 
         if (error) throw error;
 
-        const { data: order, error: orderError } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('stripe_session_id', sessionId)
-          .maybeSingle();
-
-        if (orderError) throw orderError;
-
-        setOrderDetails(order);
+        // Get order details from the response instead of separate query
+        if (data?.order) {
+          setOrderDetails(data.order);
+        }
         
         if (data?.vouchersCreated > 0) {
           toast({
