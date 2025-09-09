@@ -65,6 +65,11 @@ const menuItems = [
     icon: Ticket 
   },
   { 
+    title: "Zamówienia", 
+    url: "/admin/orders", 
+    icon: Package 
+  },
+  { 
     title: "Użytkownicy", 
     url: "/admin/users", 
     icon: UserCog 

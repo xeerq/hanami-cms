@@ -15,6 +15,7 @@ import ContentManager from "@/components/admin/ContentManager";
 import { VouchersManager } from "@/components/admin/VouchersManager";
 import { NotificationManager } from "@/components/admin/NotificationManager";
 import { SecurityAuditLog } from "@/components/admin/SecurityAuditLog";
+import OrdersManager from "@/components/admin/OrdersManager";
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAdminCheck();
@@ -78,6 +79,7 @@ const AdminPanel = () => {
                 <Route path="assignments" element={<TherapistServicesManager />} />
                 <Route path="products" element={<ProductsManager />} />
                 <Route path="vouchers" element={<VouchersManager />} />
+                <Route path="orders" element={<OrdersManager />} />
                 <Route path="users" element={<UsersManager />} />
                 <Route path="categories" element={<CategoriesManager />} />
                 <Route path="content" element={<ContentManager />} />
