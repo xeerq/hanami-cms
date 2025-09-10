@@ -24,6 +24,14 @@ interface User {
     first_name?: string;
     last_name?: string;
     phone?: string;
+    delivery_address?: {
+      street?: string;
+      house_number?: string;
+      apartment_number?: string;
+      postal_code?: string;
+      city?: string;
+      country?: string;
+    };
     created_at?: string;
     updated_at?: string;
   };
@@ -43,6 +51,14 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
   const [email, setEmail] = useState("");
   const [emailConfirmed, setEmailConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Address fields
+  const [street, setStreet] = useState("");
+  const [houseNumber, setHouseNumber] = useState("");
+  const [apartmentNumber, setApartmentNumber] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("Polska");
   const { toast } = useToast();
   const { logActivity } = useActivityLogger();
 
@@ -54,6 +70,15 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
       setEmail(user.email || "");
       setPhone(user.profile?.phone || user.phone || "");
       setEmailConfirmed(!!user.email_confirmed_at);
+      
+      // Set address fields
+      const address = user.profile?.delivery_address;
+      setStreet(address?.street || "");
+      setHouseNumber(address?.house_number || "");
+      setApartmentNumber(address?.apartment_number || "");
+      setPostalCode(address?.postal_code || "");
+      setCity(address?.city || "");
+      setCountry(address?.country || "Polska");
     }
   }, [user]);
 
@@ -125,6 +150,16 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
 
       console.log("Existing profile:", existingProfile);
 
+      // Prepare delivery address object
+      const deliveryAddress = street || houseNumber || postalCode || city ? {
+        street: sanitizeInput(street),
+        house_number: sanitizeInput(houseNumber),
+        apartment_number: apartmentNumber ? sanitizeInput(apartmentNumber) : null,
+        postal_code: sanitizeInput(postalCode),
+        city: sanitizeInput(city),
+        country: sanitizeInput(country)
+      } : existingProfile?.delivery_address || {};
+
       // Use upsert to handle cases where profile doesn't exist yet
       const { data: updatedProfile, error } = await supabase
         .from("profiles")
@@ -132,7 +167,8 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
           user_id: user.id,
           first_name: sanitizedFirstName,
           last_name: sanitizedLastName,
-          phone: sanitizedPhone
+          phone: sanitizedPhone,
+          delivery_address: deliveryAddress
         }, {
           onConflict: 'user_id'
         })
@@ -257,6 +293,89 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
                 onChange={(e) => setPhone(e.target.value)}
                 className="col-span-3"
                 placeholder="np. +48 123 456 789"
+              />
+            </div>
+
+            {/* Address Section */}
+            <div className="col-span-4 border-t pt-4 mt-4">
+              <h4 className="text-sm font-medium text-muted-foreground mb-3">Adres dostawy (opcjonalny)</h4>
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="street" className="text-right">
+                Ulica
+              </Label>
+              <Input
+                id="street"
+                value={street}
+                onChange={(e) => setStreet(e.target.value)}
+                className="col-span-3"
+                placeholder="Nazwa ulicy"
+              />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="houseNumber" className="text-right">
+                Nr domu
+              </Label>
+              <Input
+                id="houseNumber"
+                value={houseNumber}
+                onChange={(e) => setHouseNumber(e.target.value)}
+                className="col-span-3"
+                placeholder="123"
+              />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="apartmentNumber" className="text-right">
+                Nr mieszkania
+              </Label>
+              <Input
+                id="apartmentNumber"
+                value={apartmentNumber}
+                onChange={(e) => setApartmentNumber(e.target.value)}
+                className="col-span-3"
+                placeholder="45 (opcjonalnie)"
+              />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="postalCode" className="text-right">
+                Kod pocztowy
+              </Label>
+              <Input
+                id="postalCode"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                className="col-span-3"
+                placeholder="00-000"
+              />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="city" className="text-right">
+                Miasto
+              </Label>
+              <Input
+                id="city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="col-span-3"
+                placeholder="Warszawa"
+              />
+            </div>
+
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="country" className="text-right">
+                Kraj
+              </Label>
+              <Input
+                id="country"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                className="col-span-3"
+                placeholder="Polska"
               />
             </div>
 
