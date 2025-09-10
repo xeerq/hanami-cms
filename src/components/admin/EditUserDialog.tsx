@@ -9,7 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useActivityLogger } from "@/hooks/useActivityLogger";
 import { validateEmail, validatePhone, sanitizeInput } from "@/lib/security";
-import { User, Mail, Phone, MapPin, Calendar, Shield } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar, Shield, Stethoscope } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 interface User {
   id: string;
@@ -38,6 +39,16 @@ interface User {
     created_at?: string;
     updated_at?: string;
   };
+  roles?: string[];
+}
+
+interface TherapistData {
+  id: string;
+  name: string;
+  specialization: string;
+  experience: string;
+  bio?: string;
+  is_active: boolean;
 }
 
 interface EditUserDialogProps {
@@ -62,6 +73,16 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
   const [postalCode, setPostalCode] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("Polska");
+
+  // Therapist fields
+  const [isTherapist, setIsTherapist] = useState(false);
+  const [therapistData, setTherapistData] = useState<TherapistData | null>(null);
+  const [therapistName, setTherapistName] = useState("");
+  const [specialization, setSpecialization] = useState("");
+  const [experience, setExperience] = useState("");
+  const [bio, setBio] = useState("");
+  const [isActive, setIsActive] = useState(true);
+
   const { toast } = useToast();
   const { logActivity } = useActivityLogger();
 
@@ -82,8 +103,50 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
       setPostalCode(address?.postal_code || "");
       setCity(address?.city || "");
       setCountry(address?.country || "Polska");
+
+      // Check if user is therapist and fetch therapist data
+      checkTherapistRole();
     }
   }, [user]);
+
+  const checkTherapistRole = async () => {
+    if (!user) return;
+
+    try {
+      // Check if user has therapist role
+      const { data: roles, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+
+      if (roleError) throw roleError;
+
+      const hasTherapistRole = roles?.some(r => r.role === 'therapist');
+      setIsTherapist(hasTherapistRole || false);
+
+      if (hasTherapistRole) {
+        // Fetch therapist data
+        const { data: therapist, error: therapistError } = await supabase
+          .from('therapists')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (therapistError) throw therapistError;
+
+        if (therapist) {
+          setTherapistData(therapist);
+          setTherapistName(therapist.name || "");
+          setSpecialization(therapist.specialization || "");
+          setExperience(therapist.experience || "");
+          setBio(therapist.bio || "");
+          setIsActive(therapist.is_active);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking therapist role:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,16 +248,38 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
 
       console.log("Profile updated/created successfully:", updatedProfile);
 
+      // Update therapist data if user is therapist
+      if (isTherapist && therapistData) {
+        const { error: therapistError } = await supabase
+          .from('therapists')
+          .update({
+            name: sanitizeInput(therapistName),
+            specialization: sanitizeInput(specialization),
+            experience: sanitizeInput(experience),
+            bio: bio ? sanitizeInput(bio) : null,
+            is_active: isActive
+          })
+          .eq('id', therapistData.id);
+
+        if (therapistError) {
+          console.error("Therapist update error:", therapistError);
+          throw new Error("Błąd podczas aktualizacji danych terapeuty: " + therapistError.message);
+        }
+
+        console.log("Therapist data updated successfully");
+      }
+
       await logActivity({
         action: 'user_updated',
         details: {
-          description: `Zaktualizowano dane użytkownika: ${sanitizedFirstName} ${sanitizedLastName}`,
+          description: `Zaktualizowano dane użytkownika: ${sanitizedFirstName} ${sanitizedLastName}${isTherapist ? ' (terapeuta)' : ''}`,
           user_id: user.id,
           changes: {
             first_name: sanitizedFirstName !== user.user_metadata?.first_name,
             last_name: sanitizedLastName !== user.user_metadata?.last_name,
             phone: sanitizedPhone !== user.phone,
-            email: email !== user.email
+            email: email !== user.email,
+            therapist_data_updated: isTherapist
           }
         }
       });
@@ -235,7 +320,7 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
         
         <form onSubmit={handleSubmit}>
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className={`grid w-full ${isTherapist ? 'grid-cols-4' : 'grid-cols-3'}`}>
               <TabsTrigger value="basic" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
                 Podstawowe
@@ -244,6 +329,12 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
                 <MapPin className="h-4 w-4" />
                 Adres
               </TabsTrigger>
+              {isTherapist && (
+                <TabsTrigger value="therapist" className="flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4" />
+                  Terapeuta
+                </TabsTrigger>
+              )}
               <TabsTrigger value="system" className="flex items-center gap-2">
                 <Shield className="h-4 w-4" />
                 System
@@ -410,6 +501,75 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {isTherapist && (
+              <TabsContent value="therapist" className="space-y-4 mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Stethoscope className="h-4 w-4" />
+                      Dane terapeuty
+                    </CardTitle>
+                    <CardDescription>
+                      Informacje specjalistyczne dotyczące terapeuty
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="therapistName">Nazwa wyświetlana</Label>
+                      <Input
+                        id="therapistName"
+                        value={therapistName}
+                        onChange={(e) => setTherapistName(e.target.value)}
+                        placeholder="Imię i nazwisko terapeuty"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="specialization">Specjalizacja</Label>
+                      <Input
+                        id="specialization"
+                        value={specialization}
+                        onChange={(e) => setSpecialization(e.target.value)}
+                        placeholder="np. Fizjoterapia, Masaż sportowy"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="experience">Doświadczenie</Label>
+                      <Input
+                        id="experience"
+                        value={experience}
+                        onChange={(e) => setExperience(e.target.value)}
+                        placeholder="np. 5 lat doświadczenia"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="bio">Biografia</Label>
+                      <Textarea
+                        id="bio"
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        placeholder="Krótki opis terapeuty, wykształcenie, doświadczenie..."
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="isActive"
+                        checked={isActive}
+                        onChange={(e) => setIsActive(e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="isActive">Aktywny terapeuta</Label>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             <TabsContent value="system" className="space-y-4 mt-4">
               <Card>
