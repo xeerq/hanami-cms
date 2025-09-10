@@ -3,10 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useActivityLogger } from "@/hooks/useActivityLogger";
 import { validateEmail, validatePhone, sanitizeInput } from "@/lib/security";
+import { User, Mail, Phone, MapPin, Calendar, Shield } from "lucide-react";
 
 interface User {
   id: string;
@@ -219,222 +222,276 @@ export const EditUserDialog = ({ user, open, onOpenChange, onUserUpdated }: Edit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edytuj użytkownika</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            Edytuj użytkownika
+          </DialogTitle>
           <DialogDescription>
-            Edytuj podstawowe dane użytkownika. Zmiany zostaną zapisane w profilu.
+            Zarządzaj danymi użytkownika w różnych kategoriach.
           </DialogDescription>
         </DialogHeader>
+        
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="col-span-3"
-                required
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label className="text-right text-sm text-muted-foreground">
-                Status email
-              </Label>
-              <div className="col-span-3 flex items-center gap-2">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                  emailConfirmed 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
-                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                }`}>
-                  {emailConfirmed ? '✓ Potwierdzony' : '⚠ Niepotwierdzony'}
-                </span>
-              </div>
-            </div>
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="basic" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Podstawowe
+              </TabsTrigger>
+              <TabsTrigger value="address" className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Adres
+              </TabsTrigger>
+              <TabsTrigger value="system" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                System
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="firstName" className="text-right">
-                Imię
-              </Label>
-              <Input
-                id="firstName"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                className="col-span-3"
-                required
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="lastName" className="text-right">
-                Nazwisko
-              </Label>
-              <Input
-                id="lastName"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                className="col-span-3"
-                required
-              />
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="phone" className="text-right">
-                Telefon
-              </Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="col-span-3"
-                placeholder="np. +48 123 456 789"
-              />
-            </div>
-
-            {/* Address Section */}
-            <div className="col-span-4 border-t pt-4 mt-4">
-              <h4 className="text-sm font-medium text-muted-foreground mb-3">Adres dostawy (opcjonalny)</h4>
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="street" className="text-right">
-                Ulica
-              </Label>
-              <Input
-                id="street"
-                value={street}
-                onChange={(e) => setStreet(e.target.value)}
-                className="col-span-3"
-                placeholder="Nazwa ulicy"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="houseNumber" className="text-right">
-                Nr domu
-              </Label>
-              <Input
-                id="houseNumber"
-                value={houseNumber}
-                onChange={(e) => setHouseNumber(e.target.value)}
-                className="col-span-3"
-                placeholder="123"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="apartmentNumber" className="text-right">
-                Nr mieszkania
-              </Label>
-              <Input
-                id="apartmentNumber"
-                value={apartmentNumber}
-                onChange={(e) => setApartmentNumber(e.target.value)}
-                className="col-span-3"
-                placeholder="45 (opcjonalnie)"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="postalCode" className="text-right">
-                Kod pocztowy
-              </Label>
-              <Input
-                id="postalCode"
-                value={postalCode}
-                onChange={(e) => setPostalCode(e.target.value)}
-                className="col-span-3"
-                placeholder="00-000"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="city" className="text-right">
-                Miasto
-              </Label>
-              <Input
-                id="city"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="col-span-3"
-                placeholder="Warszawa"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="country" className="text-right">
-                Kraj
-              </Label>
-              <Input
-                id="country"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                className="col-span-3"
-                placeholder="Polska"
-              />
-            </div>
-
-            {user && (
-              <>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right text-sm text-muted-foreground">
-                    Data utworzenia
-                  </Label>
-                  <div className="col-span-3 text-sm text-muted-foreground">
-                    {new Date(user.created_at).toLocaleString('pl-PL')}
-                  </div>
-                </div>
-
-                {user.last_sign_in_at && (
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right text-sm text-muted-foreground">
-                      Ostatnie logowanie
-                    </Label>
-                    <div className="col-span-3 text-sm text-muted-foreground">
-                      {new Date(user.last_sign_in_at).toLocaleString('pl-PL')}
+            <TabsContent value="basic" className="space-y-4 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <User className="h-4 w-4" />
+                    Informacje podstawowe
+                  </CardTitle>
+                  <CardDescription>
+                    Podstawowe dane kontaktowe użytkownika
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName" className="flex items-center gap-2">
+                        <User className="h-3 w-3" />
+                        Imię *
+                      </Label>
+                      <Input
+                        id="firstName"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="Wprowadź imię"
+                        required
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="flex items-center gap-2">
+                        <User className="h-3 w-3" />
+                        Nazwisko *
+                      </Label>
+                      <Input
+                        id="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Wprowadź nazwisko"
+                        required
+                      />
                     </div>
                   </div>
-                )}
 
-                {user.profile?.created_at && (
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right text-sm text-muted-foreground">
-                      Profil utworzony
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="flex items-center gap-2">
+                      <Mail className="h-3 w-3" />
+                      Email *
                     </Label>
-                    <div className="col-span-3 text-sm text-muted-foreground">
-                      {new Date(user.profile.created_at).toLocaleString('pl-PL')}
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="user@example.com"
+                      required
+                    />
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        emailConfirmed 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' 
+                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                      }`}>
+                        {emailConfirmed ? '✓ Potwierdzony' : '⚠ Niepotwierdzony'}
+                      </span>
                     </div>
                   </div>
-                )}
 
-                {user.profile?.updated_at && (
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label className="text-right text-sm text-muted-foreground">
-                      Profil zaktualizowany
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="flex items-center gap-2">
+                      <Phone className="h-3 w-3" />
+                      Telefon
                     </Label>
-                    <div className="col-span-3 text-sm text-muted-foreground">
-                      {new Date(user.profile.updated_at).toLocaleString('pl-PL')}
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+48 123 456 789"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="address" className="space-y-4 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <MapPin className="h-4 w-4" />
+                    Adres dostawy
+                  </CardTitle>
+                  <CardDescription>
+                    Adres używany do dostaw zamówień (opcjonalny)
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2 space-y-2">
+                      <Label htmlFor="street">Ulica</Label>
+                      <Input
+                        id="street"
+                        value={street}
+                        onChange={(e) => setStreet(e.target.value)}
+                        placeholder="Nazwa ulicy"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="houseNumber">Numer domu</Label>
+                      <Input
+                        id="houseNumber"
+                        value={houseNumber}
+                        onChange={(e) => setHouseNumber(e.target.value)}
+                        placeholder="123"
+                      />
                     </div>
                   </div>
-                )}
 
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label className="text-right text-sm text-muted-foreground">
-                    ID użytkownika
-                  </Label>
-                  <div className="col-span-3 text-xs font-mono text-muted-foreground break-all">
-                    {user.id}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="apartmentNumber">Numer mieszkania</Label>
+                      <Input
+                        id="apartmentNumber"
+                        value={apartmentNumber}
+                        onChange={(e) => setApartmentNumber(e.target.value)}
+                        placeholder="45 (opcjonalnie)"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="postalCode">Kod pocztowy</Label>
+                      <Input
+                        id="postalCode"
+                        value={postalCode}
+                        onChange={(e) => setPostalCode(e.target.value)}
+                        placeholder="00-000"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Miasto</Label>
+                      <Input
+                        id="city"
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="Warszawa"
+                      />
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Kraj</Label>
+                    <Input
+                      id="country"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      placeholder="Polska"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="system" className="space-y-4 mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Shield className="h-4 w-4" />
+                    Informacje systemowe
+                  </CardTitle>
+                  <CardDescription>
+                    Dane systemowe i statusy użytkownika
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {user && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Calendar className="h-3 w-3" />
+                            Data utworzenia
+                          </Label>
+                          <div className="p-2 bg-muted rounded-md text-sm">
+                            {new Date(user.created_at).toLocaleString('pl-PL')}
+                          </div>
+                        </div>
+
+                        {user.last_sign_in_at && (
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              Ostatnie logowanie
+                            </Label>
+                            <div className="p-2 bg-muted rounded-md text-sm">
+                              {new Date(user.last_sign_in_at).toLocaleString('pl-PL')}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {user.profile?.created_at && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Calendar className="h-3 w-3" />
+                              Profil utworzony
+                            </Label>
+                            <div className="p-2 bg-muted rounded-md text-sm">
+                              {new Date(user.profile.created_at).toLocaleString('pl-PL')}
+                            </div>
+                          </div>
+
+                          {user.profile?.updated_at && (
+                            <div className="space-y-2">
+                              <Label className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                Profil zaktualizowany
+                              </Label>
+                              <div className="p-2 bg-muted rounded-md text-sm">
+                                {new Date(user.profile.updated_at).toLocaleString('pl-PL')}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Shield className="h-3 w-3" />
+                          ID użytkownika
+                        </Label>
+                        <div className="p-2 bg-muted rounded-md text-xs font-mono break-all">
+                          {user.id}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="mt-6">
             <Button 
               type="button" 
               variant="outline" 
