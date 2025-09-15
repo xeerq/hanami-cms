@@ -10,9 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import { UnifiedTeamDisplay } from "@/components/admin/UnifiedTeamDisplay";
 import { TeamMembersManager } from "@/components/admin/TeamMembersManager";
 import BlockedSlotsManager from "@/components/admin/BlockedSlotsManager";
-import { ScheduleApprovalManager } from "@/components/admin/ScheduleApprovalManager";
-import { TherapistScheduleManager } from "@/components/admin/TherapistScheduleManager";
-import TherapistsCalendarsView from "@/pages/TherapistsCalendars";
+import { UnifiedScheduleManager } from "@/components/admin/UnifiedScheduleManager";
+import { EnhancedCalendarManager } from "@/components/admin/EnhancedCalendarManager";
 
 interface TeamStats {
   totalTherapists: number;
@@ -164,34 +163,27 @@ export function UnifiedTeamManager() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="team" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="team">Zespół</TabsTrigger>
-              <TabsTrigger value="settings">Ustawienia zespołu</TabsTrigger>
-              <TabsTrigger value="schedules">Grafiki (Zatwierdzanie)</TabsTrigger>
-              <TabsTrigger value="admin-schedules">Zarządzanie grafikami</TabsTrigger>
-              <TabsTrigger value="calendars">Kalendarze</TabsTrigger>
-              <TabsTrigger value="blocked">Blokady</TabsTrigger>
+          <Tabs defaultValue="overview" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="overview">Przegląd zespołu</TabsTrigger>
+              <TabsTrigger value="schedules">Grafiki i harmonogramy</TabsTrigger>
+              <TabsTrigger value="calendar">Kalendarze zarządzania</TabsTrigger>
+              <TabsTrigger value="blocked">Blokady czasu</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="team" className="mt-6">
-              <UnifiedTeamDisplay />
-            </TabsContent>
-
-            <TabsContent value="settings" className="mt-6">
-              <TeamMembersManager />
+            <TabsContent value="overview" className="mt-6">
+              <div className="space-y-6">
+                <UnifiedTeamDisplay />
+                <TeamMembersManager />
+              </div>
             </TabsContent>
 
             <TabsContent value="schedules" className="mt-6">
-              <ScheduleApprovalManager />
+              <UnifiedScheduleManager />
             </TabsContent>
 
-            <TabsContent value="admin-schedules" className="mt-6">
-              <TherapistScheduleManager />
-            </TabsContent>
-
-            <TabsContent value="calendars" className="mt-6">
-              <TherapistsCalendarsView embedded={true} />
+            <TabsContent value="calendar" className="mt-6">
+              <EnhancedCalendarManager />
             </TabsContent>
 
             <TabsContent value="blocked" className="mt-6">
