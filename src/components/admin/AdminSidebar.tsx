@@ -94,6 +94,11 @@ const menuItems = [
     url: "/admin/security", 
     icon: ShieldCheck 
   },
+  { 
+    title: "Obiekty SPA", 
+    url: "/admin/facilities", 
+    icon: Home 
+  },
 ];
 
 export function AdminSidebar() {

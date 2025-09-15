@@ -190,6 +190,65 @@ export type Database = {
         }
         Relationships: []
       }
+      equipment: {
+        Row: {
+          brand: string | null
+          created_at: string
+          description: string | null
+          equipment_type: string
+          id: string
+          maintenance_schedule: Json | null
+          model: string | null
+          name: string
+          purchase_date: string | null
+          room_id: string | null
+          serial_number: string | null
+          status: string
+          updated_at: string
+          warranty_expires: string | null
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string
+          description?: string | null
+          equipment_type: string
+          id?: string
+          maintenance_schedule?: Json | null
+          model?: string | null
+          name: string
+          purchase_date?: string | null
+          room_id?: string | null
+          serial_number?: string | null
+          status?: string
+          updated_at?: string
+          warranty_expires?: string | null
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string
+          description?: string | null
+          equipment_type?: string
+          id?: string
+          maintenance_schedule?: Json | null
+          model?: string | null
+          name?: string
+          purchase_date?: string | null
+          room_id?: string | null
+          serial_number?: string | null
+          status?: string
+          updated_at?: string
+          warranty_expires?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipment_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string
@@ -454,6 +513,99 @@ export type Database = {
         }
         Relationships: []
       }
+      room_bookings: {
+        Row: {
+          appointment_id: string | null
+          booking_date: string
+          created_at: string
+          end_time: string
+          id: string
+          notes: string | null
+          room_id: string
+          start_time: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          booking_date: string
+          created_at?: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          room_id: string
+          start_time: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          booking_date?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          room_id?: string
+          start_time?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_bookings_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_bookings_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          amenities: string[] | null
+          capacity: number
+          created_at: string
+          description: string | null
+          floor_area: number | null
+          floor_plan_data: Json | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          amenities?: string[] | null
+          capacity?: number
+          created_at?: string
+          description?: string | null
+          floor_area?: number | null
+          floor_plan_data?: Json | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          amenities?: string[] | null
+          capacity?: number
+          created_at?: string
+          description?: string | null
+          floor_area?: number | null
+          floor_plan_data?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       security_audit_log: {
         Row: {
           action: string
@@ -489,6 +641,45 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      service_room_requirements: {
+        Row: {
+          created_at: string
+          id: string
+          is_preferred: boolean
+          room_id: string
+          service_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_preferred?: boolean
+          room_id: string
+          service_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_preferred?: boolean
+          room_id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_room_requirements_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_room_requirements_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {
@@ -899,6 +1090,16 @@ export type Database = {
         Args: { p_ip_address: unknown }
         Returns: boolean
       }
+      check_room_availability: {
+        Args: {
+          p_booking_date: string
+          p_end_time: string
+          p_exclude_booking_id?: string
+          p_room_id: string
+          p_start_time: string
+        }
+        Returns: boolean
+      }
       check_sensitive_operation_rate_limit: {
         Args: { p_operation_type: string }
         Returns: boolean
@@ -937,6 +1138,16 @@ export type Database = {
           position_title: string
           social_links: Json
           updated_at: string
+        }[]
+      }
+      get_suitable_rooms_for_service: {
+        Args: { p_service_id: string }
+        Returns: {
+          amenities: string[]
+          capacity: number
+          is_preferred: boolean
+          room_id: string
+          room_name: string
         }[]
       }
       get_team_members_safe: {
