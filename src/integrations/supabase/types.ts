@@ -992,6 +992,42 @@ export type Database = {
           },
         ]
       }
+      voucher_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          design_config: Json
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          design_config?: Json
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          design_config?: Json
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vouchers: {
         Row: {
           code: string
@@ -1009,6 +1045,7 @@ export type Database = {
           remaining_value: number | null
           service_id: string | null
           status: string
+          template_id: string | null
           updated_at: string
           user_id: string | null
           voucher_type: string
@@ -1029,6 +1066,7 @@ export type Database = {
           remaining_value?: number | null
           service_id?: string | null
           status?: string
+          template_id?: string | null
           updated_at?: string
           user_id?: string | null
           voucher_type: string
@@ -1049,6 +1087,7 @@ export type Database = {
           remaining_value?: number | null
           service_id?: string | null
           status?: string
+          template_id?: string | null
           updated_at?: string
           user_id?: string | null
           voucher_type?: string
@@ -1059,6 +1098,13 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vouchers_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "voucher_templates"
             referencedColumns: ["id"]
           },
         ]

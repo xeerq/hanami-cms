@@ -12,7 +12,9 @@ import {
   FileText,
   Shield,
   ShieldCheck,
-  Home
+  Home,
+  Palette,
+  Layout
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
@@ -98,6 +100,16 @@ const menuItems = [
     title: "Obiekty SPA", 
     url: "/admin/facilities", 
     icon: Home 
+  },
+  { 
+    title: "Projektant Bonów", 
+    url: "/admin/voucher-designer", 
+    icon: Palette 
+  },
+  { 
+    title: "Szablony Bonów", 
+    url: "/admin/voucher-templates", 
+    icon: Layout 
   },
 ];
 

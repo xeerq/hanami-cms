@@ -17,6 +17,8 @@ import { NotificationManager } from "@/components/admin/NotificationManager";
 import { SecurityAuditLog } from "@/components/admin/SecurityAuditLog";
 import OrdersManager from "@/components/admin/OrdersManager";
 import { SpaFacilityManager } from "@/components/admin/SpaFacilityManager";
+import { VoucherDesigner } from "@/components/admin/VoucherDesigner";
+import { TemplateManager } from "@/components/admin/TemplateManager";
 
 const AdminPanel = () => {
   const { isAdmin, loading } = useAdminCheck();
@@ -87,6 +89,8 @@ const AdminPanel = () => {
                 <Route path="notifications" element={<NotificationManager />} />
                 <Route path="security" element={<SecurityAuditLog />} />
                 <Route path="facilities" element={<SpaFacilityManager />} />
+                <Route path="voucher-designer" element={<VoucherDesigner />} />
+                <Route path="voucher-templates" element={<TemplateManager />} />
                 {/* Redirect any unknown admin routes to dashboard */}
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Routes>
