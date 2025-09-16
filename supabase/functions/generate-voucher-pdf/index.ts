@@ -77,7 +77,7 @@ serve(async (req) => {
       ? new Date(voucher.expires_at).toLocaleDateString('pl-PL')
       : 'Bezterminowy'
 
-    // Create professional spa voucher HTML template
+    // Create HTML template matching original voucher design with fixed spacing
     const htmlContent = `
     <!DOCTYPE html>
     <html>
@@ -89,302 +89,208 @@ serve(async (req) => {
                 margin: 15mm;
             }
             
-            * {
-                box-sizing: border-box;
-            }
-            
             body {
-                font-family: 'Georgia', 'Times New Roman', serif;
+                font-family: 'Times New Roman', serif;
                 margin: 0;
                 padding: 20px;
-                background: #f5f5f5;
-                color: #2c3e50;
-                font-size: 14px;
-                line-height: 1.6;
+                background: white;
+                color: black;
+                font-size: 16px;
+                line-height: 1.4;
             }
             
             .voucher-container {
-                width: 520px;
-                min-height: 380px;
-                padding: 40px;
-                background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-                border: 3px solid #d4a574;
-                border-radius: 15px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-                margin: 0 auto;
+                width: 500px;
+                height: 350px;
+                padding: 30px;
+                box-sizing: border-box;
                 position: relative;
+                margin: 20px auto;
+                border: 2px solid #333;
                 overflow: hidden;
-            }
-            
-            .voucher-container::before {
-                content: '';
-                position: absolute;
-                top: -5px;
-                left: -5px;
-                right: -5px;
-                bottom: -5px;
-                background: linear-gradient(45deg, #d4a574, #f4e4c1, #d4a574);
-                z-index: -1;
-                border-radius: 18px;
-            }
-            
-            .decorative-corners {
-                position: absolute;
-                width: 30px;
-                height: 30px;
-                border: 2px solid #d4a574;
-            }
-            
-            .corner-top-left {
-                top: 15px;
-                left: 15px;
-                border-right: none;
-                border-bottom: none;
-            }
-            
-            .corner-top-right {
-                top: 15px;
-                right: 15px;
-                border-left: none;
-                border-bottom: none;
-            }
-            
-            .corner-bottom-left {
-                bottom: 15px;
-                left: 15px;
-                border-right: none;
-                border-top: none;
-            }
-            
-            .corner-bottom-right {
-                bottom: 15px;
-                right: 15px;
-                border-left: none;
-                border-top: none;
             }
             
             .header {
                 text-align: center;
-                margin-bottom: 35px;
-                padding-bottom: 20px;
-                border-bottom: 2px solid #d4a574;
+                margin-bottom: 25px;
             }
             
-            .spa-title {
-                font-size: 32px;
-                font-weight: bold;
-                color: #d4a574;
-                margin: 0 0 5px 0;
-                text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-                font-family: 'Georgia', serif;
-            }
-            
-            .spa-subtitle {
+            .salon-title {
                 font-size: 16px;
-                color: #7f8c8d;
-                margin: 0 0 15px 0;
-                font-style: italic;
+                font-weight: normal;
+                margin: 0 0 8px 0;
+                letter-spacing: 1px;
             }
             
-            .voucher-type {
-                background: #d4a574;
-                color: white;
-                padding: 8px 20px;
-                border-radius: 25px;
-                font-size: 14px;
-                font-weight: bold;
-                display: inline-block;
-                margin: 10px 0;
+            .logo-container {
+                margin: 5px 0 8px 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            
+            .logo-image {
+                max-width: 140px;
+                height: auto;
+            }
+            
+            .subtitle {
+                font-size: 12px;
+                margin: 8px 0 0 0;
+                font-weight: normal;
             }
             
             .content {
-                margin: 30px 0;
-                text-align: center;
+                margin: 25px 0 20px 0;
+                font-size: 13px;
             }
             
-            .recipient-section {
-                background: rgba(212, 165, 116, 0.1);
-                padding: 20px;
-                border-radius: 10px;
+            .content-line {
+                margin: 18px 0;
+                display: flex;
+                align-items: baseline;
+                min-height: 20px;
+            }
+            
+            .line-text {
+                white-space: nowrap;
+            }
+            
+            .dotted-line {
+                flex: 1;
+                border-bottom: 1px dotted #333;
+                margin: 0 8px;
+                min-height: 1px;
+                position: relative;
+                top: -2px;
+            }
+            
+            .filled-value {
+                font-weight: bold;
+                white-space: nowrap;
+                min-width: fit-content;
+            }
+            
+            .service-line {
+                margin: 12px 0;
+                font-size: 13px;
+                line-height: 1.5;
+            }
+            
+            .contact-text {
                 margin: 20px 0;
-                border-left: 4px solid #d4a574;
-            }
-            
-            .recipient-line {
-                font-size: 16px;
-                margin: 10px 0;
-                color: #2c3e50;
-            }
-            
-            .recipient-name {
-                font-weight: bold;
-                color: #d4a574;
-                font-size: 18px;
-            }
-            
-            .service-info {
-                margin: 25px 0;
-                padding: 15px;
-                background: rgba(255, 255, 255, 0.7);
-                border-radius: 8px;
-                border: 1px solid #d4a574;
-            }
-            
-            .service-title {
-                font-size: 18px;
-                font-weight: bold;
-                color: #2c3e50;
-                margin-bottom: 8px;
-            }
-            
-            .value-section {
-                background: #d4a574;
-                color: white;
-                padding: 15px 25px;
-                border-radius: 10px;
-                margin: 20px 0;
-                text-align: center;
-            }
-            
-            .value-label {
-                font-size: 14px;
-                margin-bottom: 5px;
-            }
-            
-            .value-amount {
-                font-size: 24px;
-                font-weight: bold;
-            }
-            
-            .instructions {
-                margin: 25px 0;
-                padding: 15px;
-                background: rgba(52, 152, 219, 0.1);
-                border-radius: 8px;
-                border-left: 4px solid #3498db;
-                font-size: 14px;
-                color: #2c3e50;
+                font-size: 13px;
+                line-height: 1.4;
                 text-align: left;
             }
             
             .footer {
-                margin-top: 40px;
-                padding-top: 20px;
-                border-top: 2px solid #d4a574;
+                position: absolute;
+                bottom: 20px;
+                left: 30px;
+                right: 30px;
                 display: flex;
                 justify-content: space-between;
-                align-items: flex-start;
-                flex-wrap: wrap;
+                align-items: flex-end;
             }
             
-            .contact-info {
-                flex: 1;
-                min-width: 200px;
+            .contact-section {
+                font-size: 11px;
+                line-height: 1.3;
+                text-align: left;
+                max-width: 200px;
             }
             
-            .contact-title {
-                font-weight: bold;
-                color: #d4a574;
-                margin-bottom: 8px;
-            }
-            
-            .contact-details {
-                font-size: 13px;
-                line-height: 1.5;
-                color: #5a6c7d;
-            }
-            
-            .voucher-details {
-                flex: 1;
+            .validity-section {
                 text-align: right;
-                min-width: 200px;
+                font-size: 11px;
+                max-width: 150px;
             }
             
-            .detail-line {
-                margin: 5px 0;
-                font-size: 13px;
+            .validity-line {
+                display: flex;
+                align-items: baseline;
+                justify-content: flex-end;
+                margin: 3px 0;
+                min-height: 12px;
             }
             
-            .detail-label {
-                color: #7f8c8d;
+            .validity-label {
+                white-space: nowrap;
+                margin-right: 5px;
             }
             
-            .detail-value {
+            .validity-value {
                 font-weight: bold;
-                color: #2c3e50;
+                white-space: nowrap;
             }
             
             @media print {
                 body {
-                    background: white;
+                    padding: 10px;
                 }
                 
                 .voucher-container {
+                    width: 480px;
+                    height: 320px;
+                    margin: 10px auto;
+                    border: 2px solid #333;
                     box-shadow: none;
-                    margin: 0;
-                    page-break-inside: avoid;
+                }
+                
+                .footer {
+                    bottom: 15px;
                 }
             }
         </style>
     </head>
     <body>
         <div class="voucher-container">
-            <div class="decorative-corners corner-top-left"></div>
-            <div class="decorative-corners corner-top-right"></div>
-            <div class="decorative-corners corner-bottom-left"></div>
-            <div class="decorative-corners corner-bottom-right"></div>
-            
             <div class="header">
-                <div class="spa-title">HANAMI SPA</div>
-                <div class="spa-subtitle">Centrum Relaksu i Odnowy</div>
-                <div class="voucher-type">BON PREZENTOWY</div>
+                <div class="salon-title">Salon</div>
+                <div class="logo-container">
+                    <img src="/lovable-uploads/ca126b9c-7595-42ce-ba12-c10c932b3e07.png" alt="Hanami SPA" class="logo-image">
+                </div>
+                <div class="subtitle">serdecznie zaprasza</div>
             </div>
             
             <div class="content">
-                <div class="recipient-section">
-                    <div class="recipient-line">
-                        Ten bon uprawnia
-                    </div>
-                    <div class="recipient-name">${voucherOwner}</div>
-                    <div class="recipient-line">
-                        do skorzystania z naszych usług
-                    </div>
+                <div class="content-line">
+                    <span class="line-text">Panią/Pana: </span>
+                    <span class="filled-value">${voucherOwner}</span>
                 </div>
                 
-                <div class="service-info">
-                    <div class="service-title">${serviceInfo}</div>
+                <div class="service-line">
+                    na zabieg ${serviceInfo.toLowerCase()}
                 </div>
                 
-                <div class="value-section">
-                    <div class="value-label">Wartość bonu</div>
-                    <div class="value-amount">${voucherValue}</div>
+                <div class="contact-text">
+                    Prosimy o kontakt w celu<br>
+                    ustalenia daty wizyty w Salonie.
                 </div>
                 
-                <div class="instructions">
-                    <strong>Instrukcja korzystania:</strong><br>
-                    Prosimy o wcześniejszy kontakt telefoniczny w celu umówienia wizyty. 
-                    Bon należy okazać przed rozpoczęciem zabiegu.
+                <div class="content-line">
+                    <span class="line-text">o wartości</span>
+                    <div class="dotted-line"></div>
+                    <span class="filled-value">${voucherValue}</span>
                 </div>
             </div>
             
             <div class="footer">
-                <div class="contact-info">
-                    <div class="contact-title">Kontakt i rezerwacje</div>
-                    <div class="contact-details">
-                        📞 605 412 692<br>
-                        📍 ul. Raszkowska 80e<br>
-                        63-400 Ostrów Wielkopolski
-                    </div>
+                <div class="contact-section">
+                    tel: 605 412 692<br>
+                    63-400 Ostrów Wielkopolski,<br>
+                    ul. Raszkowska 80e
                 </div>
                 
-                <div class="voucher-details">
-                    <div class="detail-line">
-                        <span class="detail-label">Numer bonu:</span><br>
-                        <span class="detail-value">${voucher.code}</span>
+                <div class="validity-section">
+                    <div class="validity-line">
+                        <span class="validity-label">bon ważny do: </span>
+                        <span class="validity-value">${expiryDate}</span>
                     </div>
-                    <div class="detail-line">
-                        <span class="detail-label">Ważny do:</span><br>
-                        <span class="detail-value">${expiryDate}</span>
+                    <div class="validity-line">
+                        <span class="validity-label">numer: </span>
+                        <span class="validity-value">${voucher.code}</span>
                     </div>
                 </div>
             </div>
