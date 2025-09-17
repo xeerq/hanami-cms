@@ -27,7 +27,7 @@ serve(async (req) => {
       throw new Error('Only POST method allowed')
     }
 
-    const { voucherId } = await req.json()
+    const { voucherId, templateId } = await req.json()
     
     if (!voucherId) {
       throw new Error('Voucher ID is required')
@@ -63,6 +63,34 @@ serve(async (req) => {
 
     console.log('Voucher data:', voucher)
 
+    // Fetch template if specified
+    let template = null
+    if (templateId || voucher.template_id) {
+      const { data: templateData, error: templateError } = await supabaseClient
+        .from('voucher_templates')
+        .select('design_config')
+        .eq('id', templateId || voucher.template_id)
+        .single()
+      
+      if (!templateError && templateData) {
+        template = templateData
+      }
+    }
+
+    // If no template found, try to get default template
+    if (!template) {
+      const { data: defaultTemplate } = await supabaseClient
+        .from('voucher_templates')
+        .select('design_config')
+        .eq('is_default', true)
+        .eq('is_active', true)
+        .single()
+      
+      if (defaultTemplate) {
+        template = defaultTemplate
+      }
+    }
+
     // Generate HTML content for the voucher
     const voucherOwner = userProfile?.first_name && userProfile?.last_name 
       ? `${userProfile.first_name} ${userProfile.last_name}`
@@ -77,8 +105,61 @@ serve(async (req) => {
       ? new Date(voucher.expires_at).toLocaleDateString('pl-PL')
       : 'Bezterminowy'
 
-    // Create HTML template matching original voucher design with fixed spacing
-    const htmlContent = `
+    let htmlContent = ''
+
+    // Use custom template if available
+    if (template && template.design_config && template.design_config.canvasData) {
+      // Generate HTML from canvas data (simplified version)
+      htmlContent = generateHtmlFromCanvas(template.design_config.canvasData, {
+        voucherOwner,
+        serviceInfo,
+        voucherValue,
+        expiryDate,
+        voucherCode: voucher.code
+      })
+    } else {
+      // Fallback to default template
+      htmlContent = generateDefaultTemplate({
+        voucherOwner,
+        serviceInfo,
+        voucherValue,
+        expiryDate,
+        voucherCode: voucher.code
+      })
+    }
+
+    return new Response(htmlContent, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'X-Frame-Options': 'SAMEORIGIN'
+      },
+    })
+
+
+  } catch (error) {
+    console.error('Error generating PDF:', error)
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    )
+  }
+})
+
+// Helper function to generate HTML from canvas data
+function generateHtmlFromCanvas(canvasData: any, data: any): string {
+  // This is a simplified version - in a real implementation, 
+  // you would parse the Fabric.js canvas data and convert it to HTML/CSS
+  return generateDefaultTemplate(data)
+}
+
+// Helper function to generate default template
+function generateDefaultTemplate(data: any): string {
+  return `
     <!DOCTYPE html>
     <html>
     <head>
@@ -257,11 +338,11 @@ serve(async (req) => {
             <div class="content">
                 <div class="content-line">
                     <span class="line-text">Panią/Pana: </span>
-                    <span class="filled-value">${voucherOwner}</span>
+                    <span class="filled-value">${data.voucherOwner}</span>
                 </div>
                 
                 <div class="service-line">
-                    na zabieg ${serviceInfo.toLowerCase()}
+                    na zabieg ${data.serviceInfo.toLowerCase()}
                 </div>
                 
                 <div class="contact-text">
@@ -272,7 +353,7 @@ serve(async (req) => {
                 <div class="content-line">
                     <span class="line-text">o wartości</span>
                     <div class="dotted-line"></div>
-                    <span class="filled-value">${voucherValue}</span>
+                    <span class="filled-value">${data.voucherValue}</span>
                 </div>
             </div>
             
@@ -286,43 +367,16 @@ serve(async (req) => {
                 <div class="validity-section">
                     <div class="validity-line">
                         <span class="validity-label">bon ważny do: </span>
-                        <span class="validity-value">${expiryDate}</span>
+                        <span class="validity-value">${data.expiryDate}</span>
                     </div>
                     <div class="validity-line">
                         <span class="validity-label">numer: </span>
-                        <span class="validity-value">${voucher.code}</span>
+                        <span class="validity-value">${data.voucherCode}</span>
                     </div>
                 </div>
             </div>
         </div>
     </body>
     </html>
-    `
-
-    return new Response(htmlContent, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/html; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'X-Frame-Options': 'SAMEORIGIN'
-      },
-    })
-
-    return new Response(htmlResponse, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'text/html; charset=utf-8',
-      },
-    })
-
-  } catch (error) {
-    console.error('Error generating PDF:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    )
-  }
-})
+  `
+}

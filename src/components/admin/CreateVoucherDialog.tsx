@@ -32,8 +32,10 @@ export function CreateVoucherDialog({ open, onOpenChange, onSuccess }: CreateVou
   const [sessions, setSessions] = useState('1');
   const [expiresAt, setExpiresAt] = useState('');
   const [notes, setNotes] = useState('');
+  const [templateId, setTemplateId] = useState('');
   const [services, setServices] = useState<Service[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -46,16 +48,25 @@ export function CreateVoucherDialog({ open, onOpenChange, onSuccess }: CreateVou
 
   const loadData = async () => {
     try {
-      const [servicesResponse, profilesResponse] = await Promise.all([
+      const [servicesResponse, profilesResponse, templatesResponse] = await Promise.all([
         supabase.from('services').select('id, name, price').eq('is_active', true),
-        supabase.from('profiles').select('user_id, first_name, last_name')
+        supabase.from('profiles').select('user_id, first_name, last_name'),
+        supabase.from('voucher_templates').select('id, name, description, is_default').eq('is_active', true).order('is_default', { ascending: false })
       ]);
 
       if (servicesResponse.error) throw servicesResponse.error;
       if (profilesResponse.error) throw profilesResponse.error;
+      if (templatesResponse.error) throw templatesResponse.error;
 
       setServices(servicesResponse.data || []);
       setProfiles(profilesResponse.data || []);
+      setTemplates(templatesResponse.data || []);
+      
+      // Set default template if available
+      const defaultTemplate = templatesResponse.data?.find(t => t.is_default);
+      if (defaultTemplate) {
+        setTemplateId(defaultTemplate.id);
+      }
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -78,6 +89,7 @@ export function CreateVoucherDialog({ open, onOpenChange, onSuccess }: CreateVou
     setExpiresAt('');
     setNotes('');
     setSelectedUserId('');
+    setTemplateId('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,7 +117,8 @@ export function CreateVoucherDialog({ open, onOpenChange, onSuccess }: CreateVou
         remaining_sessions: parseInt(sessions),
         expires_at: expiresAt || null,
         notes: notes || null,
-        status: 'active'
+        status: 'active',
+        template_id: templateId || null
       };
 
       const { error } = await supabase
@@ -285,14 +298,33 @@ export function CreateVoucherDialog({ open, onOpenChange, onSuccess }: CreateVou
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notatki (opcjonalne)</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Dodatkowe informacje o bonie..."
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="template">Szablon bonu</Label>
+              <Select value={templateId} onValueChange={setTemplateId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Wybierz szablon" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name} {template.is_default && '(domyślny)'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notatki (opcjonalne)</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Dodatkowe informacje o bonie..."
+                className="h-[42px]"
+              />
+            </div>
           </div>
 
           <DialogFooter>

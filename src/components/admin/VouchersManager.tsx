@@ -20,6 +20,7 @@ interface Voucher {
   voucher_type: string;
   service_id?: string;
   user_id?: string;
+  template_id?: string;
   purchaser_email?: string;
   purchaser_phone?: string;
   purchaser_name?: string;
@@ -215,12 +216,15 @@ export function VouchersManager() {
     }
   };
 
-  const handleDownloadPDF = async (voucher: Voucher) => {
+  const handleDownloadPDF = async (voucher: Voucher, templateId?: string) => {
     try {
       console.log('Generating PDF for voucher:', voucher.id);
       
       const { data, error } = await supabase.functions.invoke('generate-voucher-pdf', {
-        body: { voucherId: voucher.id }
+        body: { 
+          voucherId: voucher.id,
+          templateId: templateId || voucher.template_id || null
+        }
       });
 
       if (error) {
