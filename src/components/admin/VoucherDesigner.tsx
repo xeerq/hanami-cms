@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,40 +8,37 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
-import { Save, Eye, Palette, Type, Layout, Settings } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { 
+  Save, 
+  Eye, 
+  Palette, 
+  Type, 
+  Square, 
+  Circle,
+  Image as ImageIcon,
+  Layers,
+  Undo,
+  Redo,
+  Trash2,
+  Copy,
+  Move,
+  RotateCcw,
+  AlignLeft,
+  AlignCenter,
+  AlignRight
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Canvas as FabricCanvas, FabricText, Rect, FabricObject, Circle as FabricCircle } from 'fabric';
 
-interface DesignConfig {
-  layout: string;
-  colors: {
-    primary: string;
-    secondary: string;
-    accent: string;
-    background: string;
-  };
-  fonts: {
-    header: string;
-    body: string;
-    sizes: {
-      title: string;
-      subtitle: string;
-      content: string;
-      footer: string;
-    };
-  };
-  spacing: {
-    padding: string;
-    margins: string;
-    lineHeight: string;
-  };
-  elements: {
-    showLogo: boolean;
-    showBorder: boolean;
-    borderStyle: string;
-    borderWidth: string;
-    logoSize: string;
-  };
+interface CanvasElement {
+  id: string;
+  type: 'text' | 'shape' | 'image';
+  name: string;
+  visible: boolean;
+  locked: boolean;
 }
 
 interface VoucherTemplate {
@@ -54,56 +51,357 @@ interface VoucherTemplate {
 }
 
 export const VoucherDesigner: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+  const [activeObject, setActiveObject] = useState<FabricObject | null>(null);
+  const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
+  const [selectedTool, setSelectedTool] = useState<'select' | 'text' | 'rectangle' | 'circle' | 'image'>('select');
   const [templates, setTemplates] = useState<VoucherTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<VoucherTemplate | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [previewData, setPreviewData] = useState({
-    ownerName: 'Jan Kowalski',
-    serviceName: 'Masaż relaksacyjny',
-    value: '200 zł',
-    expiryDate: '31.12.2024',
-    code: 'VOC123456'
-  });
-
-  const defaultConfig: DesignConfig = {
-    layout: 'classic',
-    colors: {
-      primary: '#000000',
-      secondary: '#666666',
-      accent: '#8B4513',
-      background: '#ffffff'
-    },
-    fonts: {
-      header: 'Times New Roman',
-      body: 'Times New Roman',
-      sizes: {
-        title: '16px',
-        subtitle: '12px',
-        content: '13px',
-        footer: '11px'
-      }
-    },
-    spacing: {
-      padding: '30px',
-      margins: '20px',
-      lineHeight: '1.4'
-    },
-    elements: {
-      showLogo: true,
-      showBorder: true,
-      borderStyle: 'solid',
-      borderWidth: '2px',
-      logoSize: '140px'
-    }
-  };
-
-  const [designConfig, setDesignConfig] = useState<DesignConfig>(defaultConfig);
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  // Initialize canvas
+  useEffect(() => {
+    if (!canvasRef.current) return;
+
+    const canvas = new FabricCanvas(canvasRef.current, {
+      width: 500,
+      height: 350,
+      backgroundColor: '#ffffff',
+      selection: true,
+    });
+
+    // Setup canvas events
+    canvas.on('selection:created', (e) => {
+      setActiveObject(e.selected?.[0] || null);
+    });
+
+    canvas.on('selection:updated', (e) => {
+      setActiveObject(e.selected?.[0] || null);
+    });
+
+    canvas.on('selection:cleared', () => {
+      setActiveObject(null);
+    });
+
+    canvas.on('object:added', () => {
+      updateCanvasElements(canvas);
+      saveToHistory(canvas);
+    });
+
+    canvas.on('object:removed', () => {
+      updateCanvasElements(canvas);
+      saveToHistory(canvas);
+    });
+
+    canvas.on('object:modified', () => {
+      saveToHistory(canvas);
+    });
+
+    setFabricCanvas(canvas);
+
+    // Add default elements
+    addDefaultElements(canvas);
+
+    return () => {
+      canvas.dispose();
+    };
+  }, []);
 
   useEffect(() => {
     loadTemplates();
   }, []);
+
+  const addDefaultElements = (canvas: FabricCanvas) => {
+    // Add salon title
+    const salonTitle = new FabricText('Salon', {
+      left: 250,
+      top: 30,
+      fontSize: 16,
+      fontFamily: 'Times New Roman',
+      textAlign: 'center',
+      originX: 'center',
+      originY: 'center',
+      selectable: true,
+    });
+    canvas.add(salonTitle);
+
+    // Add logo placeholder
+    const logoRect = new Rect({
+      left: 250,
+      top: 60,
+      width: 140,
+      height: 50,
+      fill: 'rgba(200, 200, 200, 0.5)',
+      stroke: '#ccc',
+      strokeDashArray: [5, 5],
+      originX: 'center',
+      originY: 'center',
+      selectable: true,
+    });
+    canvas.add(logoRect);
+
+    const logoText = new FabricText('LOGO', {
+      left: 250,
+      top: 60,
+      fontSize: 12,
+      fontFamily: 'Arial',
+      textAlign: 'center',
+      originX: 'center',
+      originY: 'center',
+      selectable: false,
+      fill: '#999',
+    });
+    canvas.add(logoText);
+
+    // Add subtitle
+    const subtitle = new FabricText('serdecznie zaprasza', {
+      left: 250,
+      top: 90,
+      fontSize: 12,
+      fontFamily: 'Times New Roman',
+      textAlign: 'center',
+      originX: 'center',
+      originY: 'center',
+      selectable: true,
+    });
+    canvas.add(subtitle);
+
+    // Add content
+    const ownerLabel = new FabricText('Panią/Pana:', {
+      left: 50,
+      top: 130,
+      fontSize: 13,
+      fontFamily: 'Times New Roman',
+      selectable: true,
+    });
+    canvas.add(ownerLabel);
+
+    const ownerName = new FabricText('Jan Kowalski', {
+      left: 130,
+      top: 130,
+      fontSize: 13,
+      fontFamily: 'Times New Roman',
+      fontWeight: 'bold',
+      selectable: true,
+    });
+    canvas.add(ownerName);
+
+    const serviceText = new FabricText('na zabieg masaż relaksacyjny', {
+      left: 50,
+      top: 155,
+      fontSize: 13,
+      fontFamily: 'Times New Roman',
+      selectable: true,
+    });
+    canvas.add(serviceText);
+
+    const contactText = new FabricText('Prosimy o kontakt w celu\nustalenia daty wizyty w Salonie.', {
+      left: 50,
+      top: 180,
+      fontSize: 13,
+      fontFamily: 'Times New Roman',
+      lineHeight: 1.4,
+      selectable: true,
+    });
+    canvas.add(contactText);
+
+    const valueLabel = new FabricText('o wartości:', {
+      left: 50,
+      top: 220,
+      fontSize: 13,
+      fontFamily: 'Times New Roman',
+      selectable: true,
+    });
+    canvas.add(valueLabel);
+
+    const valueAmount = new FabricText('200 zł', {
+      left: 120,
+      top: 220,
+      fontSize: 13,
+      fontFamily: 'Times New Roman',
+      fontWeight: 'bold',
+      selectable: true,
+    });
+    canvas.add(valueAmount);
+
+    // Footer
+    const contactInfo = new FabricText('tel: 605 412 692\n63-400 Ostrów Wielkopolski,\nul. Raszkowska 80e', {
+      left: 30,
+      top: 280,
+      fontSize: 11,
+      fontFamily: 'Times New Roman',
+      lineHeight: 1.3,
+      selectable: true,
+    });
+    canvas.add(contactInfo);
+
+    const validity = new FabricText('bon ważny do: 31.12.2024\nnumer: VOC123456', {
+      left: 350,
+      top: 290,
+      fontSize: 11,
+      fontFamily: 'Times New Roman',
+      textAlign: 'right',
+      selectable: true,
+    });
+    canvas.add(validity);
+
+    canvas.renderAll();
+  };
+
+  const updateCanvasElements = (canvas: FabricCanvas) => {
+    const objects = canvas.getObjects();
+    const elements: CanvasElement[] = objects.map((obj, index) => ({
+      id: `element-${index}`,
+      type: obj.type === 'text' ? 'text' : obj.type === 'image' ? 'image' : 'shape',
+      name: obj.type === 'text' ? (obj as fabric.Text).text || 'Tekst' : `${obj.type} ${index + 1}`,
+      visible: obj.visible !== false,
+      locked: !obj.selectable,
+    }));
+    setCanvasElements(elements);
+  };
+
+  const saveToHistory = (canvas: FabricCanvas) => {
+    const json = JSON.stringify(canvas.toJSON());
+    setHistory(prev => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push(json);
+      if (newHistory.length > 50) newHistory.shift();
+      return newHistory;
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 49));
+  };
+
+  const undo = () => {
+    if (historyIndex > 0 && fabricCanvas) {
+      const prevState = history[historyIndex - 1];
+      fabricCanvas.loadFromJSON(prevState, () => {
+        fabricCanvas.renderAll();
+        setHistoryIndex(prev => prev - 1);
+        updateCanvasElements(fabricCanvas);
+      });
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1 && fabricCanvas) {
+      const nextState = history[historyIndex + 1];
+      fabricCanvas.loadFromJSON(nextState, () => {
+        fabricCanvas.renderAll();
+        setHistoryIndex(prev => prev + 1);
+        updateCanvasElements(fabricCanvas);
+      });
+    }
+  };
+
+  const addText = () => {
+    if (!fabricCanvas) return;
+    
+    const text = new FabricText('Nowy tekst', {
+      left: 100,
+      top: 100,
+      fontSize: 16,
+      fontFamily: 'Times New Roman',
+      selectable: true,
+    });
+    fabricCanvas.add(text);
+    fabricCanvas.setActiveObject(text);
+    fabricCanvas.renderAll();
+  };
+
+  const addRectangle = () => {
+    if (!fabricCanvas) return;
+    
+    const rect = new Rect({
+      left: 100,
+      top: 100,
+      width: 100,
+      height: 60,
+      fill: 'rgba(255, 0, 0, 0.3)',
+      stroke: '#ff0000',
+      strokeWidth: 2,
+      selectable: true,
+    });
+    fabricCanvas.add(rect);
+    fabricCanvas.setActiveObject(rect);
+    fabricCanvas.renderAll();
+  };
+
+  const addCircle = () => {
+    if (!fabricCanvas) return;
+    
+    const circle = new FabricCircle({
+      left: 100,
+      top: 100,
+      radius: 30,
+      fill: 'rgba(0, 255, 0, 0.3)',
+      stroke: '#00ff00',
+      strokeWidth: 2,
+      selectable: true,
+    });
+    fabricCanvas.add(circle);
+    fabricCanvas.setActiveObject(circle);
+    fabricCanvas.renderAll();
+  };
+
+  const deleteSelected = () => {
+    if (!fabricCanvas || !activeObject) return;
+    fabricCanvas.remove(activeObject);
+    fabricCanvas.renderAll();
+  };
+
+  const duplicateSelected = () => {
+    if (!fabricCanvas || !activeObject) return;
+    
+    const props = {
+      left: (activeObject.left || 0) + 10,
+      top: (activeObject.top || 0) + 10,
+    };
+    
+    if (activeObject.type === 'text') {
+      const cloned = new FabricText((activeObject as any).text || '', props);
+      fabricCanvas.add(cloned);
+      fabricCanvas.setActiveObject(cloned);
+    } else if (activeObject.type === 'rect') {
+      const cloned = new Rect({ width: 100, height: 60, fill: 'red', ...props });
+      fabricCanvas.add(cloned);
+      fabricCanvas.setActiveObject(cloned);
+    } else if (activeObject.type === 'circle') {
+      const cloned = new FabricCircle({ radius: 30, fill: 'green', ...props });
+      fabricCanvas.add(cloned);
+      fabricCanvas.setActiveObject(cloned);
+    }
+    
+    fabricCanvas.renderAll();
+  };
+
+  const alignLeft = () => {
+    if (!fabricCanvas || !activeObject) return;
+    activeObject.set({ left: 30 });
+    fabricCanvas.renderAll();
+  };
+
+  const alignCenter = () => {
+    if (!fabricCanvas || !activeObject) return;
+    activeObject.set({ left: 250, originX: 'center' });
+    fabricCanvas.renderAll();
+  };
+
+  const alignRight = () => {
+    if (!fabricCanvas || !activeObject) return;
+    activeObject.set({ left: 470, originX: 'right' });
+    fabricCanvas.renderAll();
+  };
+
+  const updateObjectProperty = (property: string, value: any) => {
+    if (!activeObject) return;
+    activeObject.set(property, value);
+    fabricCanvas?.renderAll();
+  };
 
   const loadTemplates = async () => {
     try {
@@ -115,47 +413,26 @@ export const VoucherDesigner: React.FC = () => {
 
       if (error) throw error;
       setTemplates(data || []);
-
-      // Load default template
-      const defaultTemplate = data?.find(t => t.is_default);
-      if (defaultTemplate) {
-        setSelectedTemplate(defaultTemplate);
-        setDesignConfig(defaultTemplate.design_config as unknown as DesignConfig);
-      }
     } catch (error) {
       console.error('Error loading templates:', error);
       toast.error('Błąd podczas ładowania szablonów');
     }
   };
 
-  const handleConfigChange = (path: string, value: any) => {
-    setDesignConfig(prev => {
-      const newConfig = { ...prev };
-      const keys = path.split('.');
-      let current = newConfig;
-
-      for (let i = 0; i < keys.length - 1; i++) {
-        current = current[keys[i] as keyof typeof current] as any;
-      }
-
-      current[keys[keys.length - 1] as keyof typeof current] = value;
-      return newConfig;
-    });
-  };
-
   const saveTemplate = async () => {
-    if (!templateName.trim()) {
+    if (!templateName.trim() || !fabricCanvas) {
       toast.error('Nazwa szablonu jest wymagana');
       return;
     }
 
     try {
+      const canvasData = JSON.stringify(fabricCanvas.toJSON());
       const { data, error } = await supabase
         .from('voucher_templates')
         .insert({
           name: templateName,
           description: templateDescription,
-          design_config: designConfig as any,
+          design_config: { canvasData },
           created_by: (await supabase.auth.getUser()).data.user?.id
         })
         .select()
@@ -175,477 +452,396 @@ export const VoucherDesigner: React.FC = () => {
   };
 
   const loadTemplate = (template: VoucherTemplate) => {
-    setSelectedTemplate(template);
-    setDesignConfig(template.design_config as unknown as DesignConfig);
-    setIsEditing(false);
-  };
-
-  const generatePreview = () => {
-    const config = designConfig;
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <style>
-          body {
-            font-family: ${config.fonts.body};
-            margin: 0;
-            padding: 20px;
-            background: ${config.colors.background};
-            color: ${config.colors.primary};
-            font-size: ${config.fonts.sizes.content};
-            line-height: ${config.spacing.lineHeight};
-          }
-          
-          .voucher-container {
-            width: 500px;
-            height: 350px;
-            padding: ${config.spacing.padding};
-            box-sizing: border-box;
-            position: relative;
-            margin: 20px auto;
-            border: ${config.elements.showBorder ? `${config.elements.borderWidth} ${config.elements.borderStyle} ${config.colors.primary}` : 'none'};
-            overflow: hidden;
-          }
-          
-          .header {
-            text-align: center;
-            margin-bottom: 25px;
-          }
-          
-          .salon-title {
-            font-size: ${config.fonts.sizes.title};
-            font-weight: normal;
-            margin: 0 0 8px 0;
-            letter-spacing: 1px;
-          }
-          
-          .logo-container {
-            margin: 5px 0 8px 0;
-            display: ${config.elements.showLogo ? 'flex' : 'none'};
-            justify-content: center;
-            align-items: center;
-          }
-          
-          .logo-image {
-            max-width: ${config.elements.logoSize};
-            height: auto;
-          }
-          
-          .subtitle {
-            font-size: ${config.fonts.sizes.subtitle};
-            margin: 8px 0 0 0;
-            font-weight: normal;
-          }
-          
-          .content {
-            margin: 25px 0 20px 0;
-            font-size: ${config.fonts.sizes.content};
-          }
-          
-          .content-line {
-            margin: 18px 0;
-            display: flex;
-            align-items: baseline;
-            min-height: 20px;
-          }
-          
-          .filled-value {
-            font-weight: bold;
-            white-space: nowrap;
-            min-width: fit-content;
-          }
-          
-          .footer {
-            position: absolute;
-            bottom: 20px;
-            left: ${config.spacing.padding};
-            right: ${config.spacing.padding};
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-          }
-          
-          .contact-section {
-            font-size: ${config.fonts.sizes.footer};
-            line-height: 1.3;
-            text-align: left;
-          }
-          
-          .validity-section {
-            text-align: right;
-            font-size: ${config.fonts.sizes.footer};
-          }
-        </style>
-      </head>
-      <body>
-        <div class="voucher-container">
-          <div class="header">
-            <div class="salon-title">Salon</div>
-            <div class="logo-container">
-              <img src="/lovable-uploads/ca126b9c-7595-42ce-ba12-c10c932b3e07.png" alt="Hanami SPA" class="logo-image">
-            </div>
-            <div class="subtitle">serdecznie zaprasza</div>
-          </div>
-          
-          <div class="content">
-            <div class="content-line">
-              <span>Panią/Pana: </span>
-              <span class="filled-value">${previewData.ownerName}</span>
-            </div>
-            
-            <div style="margin: 12px 0; font-size: ${config.fonts.sizes.content};">
-              na zabieg ${previewData.serviceName.toLowerCase()}
-            </div>
-            
-            <div style="margin: 20px 0; line-height: 1.4;">
-              Prosimy o kontakt w celu<br>
-              ustalenia daty wizyty w Salonie.
-            </div>
-            
-            <div class="content-line">
-              <span>o wartości: </span>
-              <span class="filled-value">${previewData.value}</span>
-            </div>
-          </div>
-          
-          <div class="footer">
-            <div class="contact-section">
-              tel: 605 412 692<br>
-              63-400 Ostrów Wielkopolski,<br>
-              ul. Raszkowska 80e
-            </div>
-            
-            <div class="validity-section">
-              <div>bon ważny do: <strong>${previewData.expiryDate}</strong></div>
-              <div>numer: <strong>${previewData.code}</strong></div>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    if (!fabricCanvas) return;
+    
+    try {
+      const canvasData = template.design_config?.canvasData;
+      if (canvasData) {
+        fabricCanvas.loadFromJSON(canvasData, () => {
+          fabricCanvas.renderAll();
+          updateCanvasElements(fabricCanvas);
+          setSelectedTemplate(template);
+          toast.success('Szablon został wczytany');
+        });
+      }
+    } catch (error) {
+      console.error('Error loading template:', error);
+      toast.error('Błąd podczas wczytywania szablonu');
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+    <div className="h-screen flex flex-col">
+      {/* Top Toolbar */}
+      <div className="border-b p-4 bg-background">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
             <Palette className="h-5 w-5" />
-            Projektant Bonów
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Editor */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <Select
-                  value={selectedTemplate?.id || ''}
-                  onValueChange={(value) => {
-                    const template = templates.find(t => t.id === value);
-                    if (template) loadTemplate(template);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Wybierz szablon" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {templates.map(template => (
-                      <SelectItem key={template.id} value={template.id}>
-                        {template.name} {template.is_default && '(domyślny)'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <h1 className="text-lg font-semibold">Projektant Bonów WYSIWYG</h1>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={undo}
+              disabled={historyIndex <= 0}
+            >
+              <Undo className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={redo}
+              disabled={historyIndex >= history.length - 1}
+            >
+              <Redo className="h-4 w-4" />
+            </Button>
+            <Separator orientation="vertical" className="h-6" />
+            <Select
+              value={selectedTemplate?.id || ''}
+              onValueChange={(value) => {
+                const template = templates.find(t => t.id === value);
+                if (template) loadTemplate(template);
+              }}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Wybierz szablon" />
+              </SelectTrigger>
+              <SelectContent>
+                {templates.map(template => (
+                  <SelectItem key={template.id} value={template.id}>
+                    {template.name} {template.is_default && '(domyślny)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              variant="outline" 
+              size="sm"
+              onClick={() => setIsEditing(!isEditing)}
+            >
+              {isEditing ? 'Anuluj' : 'Zapisz jako szablon'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Toolbar */}
+        <Card className="w-64 m-0 rounded-none border-r">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Narzędzia</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Button
+              variant={selectedTool === 'select' ? 'default' : 'outline'}
+              size="sm"
+              className="w-full justify-start"
+              onClick={() => setSelectedTool('select')}
+            >
+              <Move className="h-4 w-4 mr-2" />
+              Wybierz
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={addText}
+            >
+              <Type className="h-4 w-4 mr-2" />
+              Dodaj tekst
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={addRectangle}
+            >
+              <Square className="h-4 w-4 mr-2" />
+              Prostokąt
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={addCircle}
+            >
+              <Circle className="h-4 w-4 mr-2" />
+              Koło
+            </Button>
+            
+            <Separator />
+            
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              onClick={duplicateSelected}
+              disabled={!activeObject}
+            >
+              <Copy className="h-4 w-4 mr-2" />
+              Duplikuj
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-destructive"
+              onClick={deleteSelected}
+              disabled={!activeObject}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Usuń
+            </Button>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">Wyrównanie</Label>
+              <div className="flex gap-1">
                 <Button
                   variant="outline"
-                  onClick={() => setIsEditing(!isEditing)}
+                  size="sm"
+                  onClick={alignLeft}
+                  disabled={!activeObject}
                 >
-                  {isEditing ? 'Anuluj' : 'Nowy szablon'}
+                  <AlignLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={alignCenter}
+                  disabled={!activeObject}
+                >
+                  <AlignCenter className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={alignRight}
+                  disabled={!activeObject}
+                >
+                  <AlignRight className="h-4 w-4" />
                 </Button>
               </div>
-
-              {isEditing && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Zapisz jako nowy szablon</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="templateName">Nazwa szablonu</Label>
-                      <Input
-                        id="templateName"
-                        value={templateName}
-                        onChange={(e) => setTemplateName(e.target.value)}
-                        placeholder="np. Elegancki złoty"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="templateDescription">Opis</Label>
-                      <Textarea
-                        id="templateDescription"
-                        value={templateDescription}
-                        onChange={(e) => setTemplateDescription(e.target.value)}
-                        placeholder="Krótki opis szablonu..."
-                      />
-                    </div>
-                    <Button onClick={saveTemplate} className="w-full">
-                      <Save className="h-4 w-4 mr-2" />
-                      Zapisz szablon
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Tabs defaultValue="colors" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="colors">Kolory</TabsTrigger>
-                  <TabsTrigger value="fonts">Czcionki</TabsTrigger>
-                  <TabsTrigger value="layout">Układ</TabsTrigger>
-                  <TabsTrigger value="elements">Elementy</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="colors" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Kolor główny</Label>
-                      <Input
-                        type="color"
-                        value={designConfig.colors.primary}
-                        onChange={(e) => handleConfigChange('colors.primary', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label>Kolor drugorzędny</Label>
-                      <Input
-                        type="color"
-                        value={designConfig.colors.secondary}
-                        onChange={(e) => handleConfigChange('colors.secondary', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label>Kolor akcentu</Label>
-                      <Input
-                        type="color"
-                        value={designConfig.colors.accent}
-                        onChange={(e) => handleConfigChange('colors.accent', e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <Label>Tło</Label>
-                      <Input
-                        type="color"
-                        value={designConfig.colors.background}
-                        onChange={(e) => handleConfigChange('colors.background', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="fonts" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Czcionka nagłówka</Label>
-                      <Select
-                        value={designConfig.fonts.header}
-                        onValueChange={(value) => handleConfigChange('fonts.header', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-                          <SelectItem value="Arial">Arial</SelectItem>
-                          <SelectItem value="Georgia">Georgia</SelectItem>
-                          <SelectItem value="Playfair Display">Playfair Display</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Czcionka treści</Label>
-                      <Select
-                        value={designConfig.fonts.body}
-                        onValueChange={(value) => handleConfigChange('fonts.body', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-                          <SelectItem value="Arial">Arial</SelectItem>
-                          <SelectItem value="Georgia">Georgia</SelectItem>
-                          <SelectItem value="Open Sans">Open Sans</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Rozmiar tytułu ({designConfig.fonts.sizes.title})</Label>
-                      <Slider
-                        value={[parseInt(designConfig.fonts.sizes.title)]}
-                        onValueChange={([value]) => handleConfigChange('fonts.sizes.title', `${value}px`)}
-                        min={12}
-                        max={24}
-                        step={1}
-                      />
-                    </div>
-                    <div>
-                      <Label>Rozmiar treści ({designConfig.fonts.sizes.content})</Label>
-                      <Slider
-                        value={[parseInt(designConfig.fonts.sizes.content)]}
-                        onValueChange={([value]) => handleConfigChange('fonts.sizes.content', `${value}px`)}
-                        min={10}
-                        max={18}
-                        step={1}
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="layout" className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Padding ({designConfig.spacing.padding})</Label>
-                      <Slider
-                        value={[parseInt(designConfig.spacing.padding)]}
-                        onValueChange={([value]) => handleConfigChange('spacing.padding', `${value}px`)}
-                        min={10}
-                        max={50}
-                        step={5}
-                      />
-                    </div>
-                    <div>
-                      <Label>Marginesy ({designConfig.spacing.margins})</Label>
-                      <Slider
-                        value={[parseInt(designConfig.spacing.margins)]}
-                        onValueChange={([value]) => handleConfigChange('spacing.margins', `${value}px`)}
-                        min={5}
-                        max={40}
-                        step={5}
-                      />
-                    </div>
-                    <div>
-                      <Label>Wysokość linii ({designConfig.spacing.lineHeight})</Label>
-                      <Slider
-                        value={[parseFloat(designConfig.spacing.lineHeight) * 10]}
-                        onValueChange={([value]) => handleConfigChange('spacing.lineHeight', (value / 10).toString())}
-                        min={10}
-                        max={20}
-                        step={1}
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="elements" className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label>Pokaż logo</Label>
-                      <Switch
-                        checked={designConfig.elements.showLogo}
-                        onCheckedChange={(checked) => handleConfigChange('elements.showLogo', checked)}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label>Pokaż obramowanie</Label>
-                      <Switch
-                        checked={designConfig.elements.showBorder}
-                        onCheckedChange={(checked) => handleConfigChange('elements.showBorder', checked)}
-                      />
-                    </div>
-                    {designConfig.elements.showBorder && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label>Styl obramowania</Label>
-                          <Select
-                            value={designConfig.elements.borderStyle}
-                            onValueChange={(value) => handleConfigChange('elements.borderStyle', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="solid">Ciągła</SelectItem>
-                              <SelectItem value="dashed">Przerywana</SelectItem>
-                              <SelectItem value="dotted">Kropkowana</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>Grubość obramowania ({designConfig.elements.borderWidth})</Label>
-                          <Slider
-                            value={[parseInt(designConfig.elements.borderWidth)]}
-                            onValueChange={([value]) => handleConfigChange('elements.borderWidth', `${value}px`)}
-                            min={1}
-                            max={5}
-                            step={1}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Preview */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Eye className="h-5 w-5" />
-                  Podgląd
-                </h3>
-              </div>
-              
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <iframe
-                  srcDoc={generatePreview()}
-                  className="w-full h-96 border-0"
-                  title="Podgląd bonu"
-                />
-              </div>
+        {/* Main Canvas Area */}
+        <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 p-8">
+          <div className="bg-white shadow-lg rounded-lg p-4">
+            <canvas ref={canvasRef} className="border" />
+          </div>
+        </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Dane testowe</CardTitle>
+        {/* Right Properties Panel */}
+        <Card className="w-80 m-0 rounded-none border-l">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Właściwości</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isEditing && (
+              <Card className="mb-4">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Zapisz szablon</CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
+                <CardContent className="space-y-3">
                   <div>
-                    <Label>Właściciel</Label>
+                    <Label htmlFor="templateName" className="text-xs">Nazwa</Label>
                     <Input
-                      value={previewData.ownerName}
-                      onChange={(e) => setPreviewData(prev => ({ ...prev, ownerName: e.target.value }))}
+                      id="templateName"
+                      value={templateName}
+                      onChange={(e) => setTemplateName(e.target.value)}
+                      placeholder="np. Elegancki złoty"
+                      size="sm"
                     />
                   </div>
                   <div>
-                    <Label>Usługa</Label>
-                    <Input
-                      value={previewData.serviceName}
-                      onChange={(e) => setPreviewData(prev => ({ ...prev, serviceName: e.target.value }))}
+                    <Label htmlFor="templateDescription" className="text-xs">Opis</Label>
+                    <Textarea
+                      id="templateDescription"
+                      value={templateDescription}
+                      onChange={(e) => setTemplateDescription(e.target.value)}
+                      placeholder="Krótki opis..."
+                      className="h-16 text-xs"
                     />
                   </div>
-                  <div>
-                    <Label>Wartość</Label>
-                    <Input
-                      value={previewData.value}
-                      onChange={(e) => setPreviewData(prev => ({ ...prev, value: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <Label>Data ważności</Label>
-                    <Input
-                      value={previewData.expiryDate}
-                      onChange={(e) => setPreviewData(prev => ({ ...prev, expiryDate: e.target.value }))}
-                    />
-                  </div>
+                  <Button onClick={saveTemplate} size="sm" className="w-full">
+                    <Save className="h-4 w-4 mr-2" />
+                    Zapisz
+                  </Button>
                 </CardContent>
               </Card>
+            )}
+
+            {activeObject ? (
+              <div className="space-y-4">
+                <h3 className="font-medium">Wybrany obiekt</h3>
+                
+                {activeObject.type === 'text' && (
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs">Tekst</Label>
+                      <Input
+                        value={(activeObject as fabric.Text).text || ''}
+                        onChange={(e) => updateObjectProperty('text', e.target.value)}
+                        size="sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Rozmiar czcionki</Label>
+                      <Slider
+                        value={[(activeObject as FabricText).fontSize || 16]}
+                        onValueChange={([value]) => updateObjectProperty('fontSize', value)}
+                        min={8}
+                        max={72}
+                        step={1}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Czcionka</Label>
+                      <Select
+                        value={(activeObject as FabricText).fontFamily || 'Times New Roman'}
+                        onValueChange={(value) => updateObjectProperty('fontFamily', value)}
+                      >
+                        <SelectTrigger className="h-8">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                          <SelectItem value="Arial">Arial</SelectItem>
+                          <SelectItem value="Georgia">Georgia</SelectItem>
+                          <SelectItem value="Helvetica">Helvetica</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Kolor</Label>
+                      <Input
+                        type="color"
+                        value={(activeObject as FabricText).fill as string || '#000000'}
+                        onChange={(e) => updateObjectProperty('fill', e.target.value)}
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {(activeObject.type === 'rect' || activeObject.type === 'circle') && (
+                  <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs">Kolor wypełnienia</Label>
+                      <Input
+                        type="color"
+                        value={((activeObject as any).fill as string) || '#000000'}
+                        onChange={(e) => updateObjectProperty('fill', e.target.value)}
+                        className="h-8"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Kolor obramowania</Label>
+                      <Input
+                        type="color"
+                        value={((activeObject as any).stroke as string) || '#000000'}
+                        onChange={(e) => updateObjectProperty('stroke', e.target.value)}
+                        className="h-8"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Grubość obramowania</Label>
+                      <Slider
+                        value={[(activeObject as any).strokeWidth || 1]}
+                        onValueChange={([value]) => updateObjectProperty('strokeWidth', value)}
+                        min={0}
+                        max={10}
+                        step={1}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-xs">Pozycja X</Label>
+                    <Input
+                      type="number"
+                        value={Math.round(activeObject.left || 0).toString()}
+                        onChange={(e) => updateObjectProperty('left', Number(e.target.value))}
+                      size="sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Pozycja Y</Label>
+                    <Input
+                      type="number"
+                        value={Math.round(activeObject.top || 0).toString()}
+                        onChange={(e) => updateObjectProperty('top', Number(e.target.value))}
+                      size="sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Obrót (°)</Label>
+                    <Slider
+                      value={[activeObject.angle || 0]}
+                      onValueChange={([value]) => updateObjectProperty('angle', value)}
+                      min={-180}
+                      max={180}
+                      step={1}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Przezroczystość</Label>
+                    <Slider
+                      value={[activeObject.opacity || 1]}
+                      onValueChange={([value]) => updateObjectProperty('opacity', value)}
+                      min={0}
+                      max={1}
+                      step={0.1}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                Wybierz obiekt aby edytować jego właściwości
+              </div>
+            )}
+
+            <Separator className="my-4" />
+
+            {/* Layers Panel */}
+            <div>
+              <h3 className="font-medium mb-2 flex items-center gap-2">
+                <Layers className="h-4 w-4" />
+                Warstwy
+              </h3>
+              <ScrollArea className="h-32">
+                <div className="space-y-1">
+                  {canvasElements.map((element, index) => (
+                    <div
+                      key={element.id}
+                      className="flex items-center justify-between p-2 rounded text-xs hover:bg-muted cursor-pointer"
+                      onClick={() => {
+                        const objects = fabricCanvas?.getObjects();
+                        if (objects && objects[index]) {
+                          fabricCanvas?.setActiveObject(objects[index]);
+                          fabricCanvas?.renderAll();
+                        }
+                      }}
+                    >
+                      <span className="truncate">{element.name}</span>
+                      <div className="flex items-center gap-1">
+                        <Eye className={`h-3 w-3 ${element.visible ? 'text-primary' : 'text-muted-foreground'}`} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
