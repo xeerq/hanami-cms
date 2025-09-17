@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Slider } from '@/components/ui/slider';
 import { Separator } from '@/components/ui/separator';
@@ -16,22 +15,20 @@ import {
   Palette, 
   Type, 
   Square, 
-  Circle,
-  Image as ImageIcon,
+  Circle as LucideCircle,
   Layers,
   Undo,
   Redo,
   Trash2,
   Copy,
   Move,
-  RotateCcw,
   AlignLeft,
   AlignCenter,
   AlignRight
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Canvas as FabricCanvas, FabricText, Rect, FabricObject, Circle as FabricCircle } from 'fabric';
+import { Canvas, Text, Rect, Circle, FabricObject } from 'fabric';
 
 interface CanvasElement {
   id: string;
@@ -52,10 +49,9 @@ interface VoucherTemplate {
 
 export const VoucherDesigner: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
+  const [fabricCanvas, setFabricCanvas] = useState<Canvas | null>(null);
   const [activeObject, setActiveObject] = useState<FabricObject | null>(null);
   const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
-  const [selectedTool, setSelectedTool] = useState<'select' | 'text' | 'rectangle' | 'circle' | 'image'>('select');
   const [templates, setTemplates] = useState<VoucherTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<VoucherTemplate | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -68,7 +64,7 @@ export const VoucherDesigner: React.FC = () => {
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    const canvas = new FabricCanvas(canvasRef.current, {
+    const canvas = new Canvas(canvasRef.current, {
       width: 500,
       height: 350,
       backgroundColor: '#ffffff',
@@ -76,11 +72,11 @@ export const VoucherDesigner: React.FC = () => {
     });
 
     // Setup canvas events
-    canvas.on('selection:created', (e) => {
+    canvas.on('selection:created', (e: any) => {
       setActiveObject(e.selected?.[0] || null);
     });
 
-    canvas.on('selection:updated', (e) => {
+    canvas.on('selection:updated', (e: any) => {
       setActiveObject(e.selected?.[0] || null);
     });
 
@@ -103,8 +99,6 @@ export const VoucherDesigner: React.FC = () => {
     });
 
     setFabricCanvas(canvas);
-
-    // Add default elements
     addDefaultElements(canvas);
 
     return () => {
@@ -116,9 +110,9 @@ export const VoucherDesigner: React.FC = () => {
     loadTemplates();
   }, []);
 
-  const addDefaultElements = (canvas: FabricCanvas) => {
+  const addDefaultElements = (canvas: Canvas) => {
     // Add salon title
-    const salonTitle = new FabricText('Salon', {
+    const salonTitle = new Text('Salon', {
       left: 250,
       top: 30,
       fontSize: 16,
@@ -126,7 +120,6 @@ export const VoucherDesigner: React.FC = () => {
       textAlign: 'center',
       originX: 'center',
       originY: 'center',
-      selectable: true,
     });
     canvas.add(salonTitle);
 
@@ -141,25 +134,11 @@ export const VoucherDesigner: React.FC = () => {
       strokeDashArray: [5, 5],
       originX: 'center',
       originY: 'center',
-      selectable: true,
     });
     canvas.add(logoRect);
 
-    const logoText = new FabricText('LOGO', {
-      left: 250,
-      top: 60,
-      fontSize: 12,
-      fontFamily: 'Arial',
-      textAlign: 'center',
-      originX: 'center',
-      originY: 'center',
-      selectable: false,
-      fill: '#999',
-    });
-    canvas.add(logoText);
-
     // Add subtitle
-    const subtitle = new FabricText('serdecznie zaprasza', {
+    const subtitle = new Text('serdecznie zaprasza', {
       left: 250,
       top: 90,
       fontSize: 12,
@@ -167,105 +146,96 @@ export const VoucherDesigner: React.FC = () => {
       textAlign: 'center',
       originX: 'center',
       originY: 'center',
-      selectable: true,
     });
     canvas.add(subtitle);
 
     // Add content
-    const ownerLabel = new FabricText('Panią/Pana:', {
+    const ownerLabel = new Text('Panią/Pana:', {
       left: 50,
       top: 130,
       fontSize: 13,
       fontFamily: 'Times New Roman',
-      selectable: true,
     });
     canvas.add(ownerLabel);
 
-    const ownerName = new FabricText('Jan Kowalski', {
+    const ownerName = new Text('Jan Kowalski', {
       left: 130,
       top: 130,
       fontSize: 13,
       fontFamily: 'Times New Roman',
       fontWeight: 'bold',
-      selectable: true,
     });
     canvas.add(ownerName);
 
-    const serviceText = new FabricText('na zabieg masaż relaksacyjny', {
+    const serviceText = new Text('na zabieg masaż relaksacyjny', {
       left: 50,
       top: 155,
       fontSize: 13,
       fontFamily: 'Times New Roman',
-      selectable: true,
     });
     canvas.add(serviceText);
 
-    const contactText = new FabricText('Prosimy o kontakt w celu\nustalenia daty wizyty w Salonie.', {
+    const contactText = new Text('Prosimy o kontakt w celu\nustalenia daty wizyty w Salonie.', {
       left: 50,
       top: 180,
       fontSize: 13,
       fontFamily: 'Times New Roman',
       lineHeight: 1.4,
-      selectable: true,
     });
     canvas.add(contactText);
 
-    const valueLabel = new FabricText('o wartości:', {
+    const valueLabel = new Text('o wartości:', {
       left: 50,
       top: 220,
       fontSize: 13,
       fontFamily: 'Times New Roman',
-      selectable: true,
     });
     canvas.add(valueLabel);
 
-    const valueAmount = new FabricText('200 zł', {
+    const valueAmount = new Text('200 zł', {
       left: 120,
       top: 220,
       fontSize: 13,
       fontFamily: 'Times New Roman',
       fontWeight: 'bold',
-      selectable: true,
     });
     canvas.add(valueAmount);
 
     // Footer
-    const contactInfo = new FabricText('tel: 605 412 692\n63-400 Ostrów Wielkopolski,\nul. Raszkowska 80e', {
+    const contactInfo = new Text('tel: 605 412 692\n63-400 Ostrów Wielkopolski,\nul. Raszkowska 80e', {
       left: 30,
       top: 280,
       fontSize: 11,
       fontFamily: 'Times New Roman',
       lineHeight: 1.3,
-      selectable: true,
     });
     canvas.add(contactInfo);
 
-    const validity = new FabricText('bon ważny do: 31.12.2024\nnumer: VOC123456', {
+    const validity = new Text('bon ważny do: 31.12.2024\nnumer: VOC123456', {
       left: 350,
       top: 290,
       fontSize: 11,
       fontFamily: 'Times New Roman',
       textAlign: 'right',
-      selectable: true,
     });
     canvas.add(validity);
 
     canvas.renderAll();
   };
 
-  const updateCanvasElements = (canvas: FabricCanvas) => {
+  const updateCanvasElements = (canvas: Canvas) => {
     const objects = canvas.getObjects();
-    const elements: CanvasElement[] = objects.map((obj, index) => ({
+    const elements: CanvasElement[] = objects.map((obj: any, index) => ({
       id: `element-${index}`,
       type: obj.type === 'text' ? 'text' : obj.type === 'image' ? 'image' : 'shape',
-      name: obj.type === 'text' ? (obj as fabric.Text).text || 'Tekst' : `${obj.type} ${index + 1}`,
+      name: obj.type === 'text' ? (obj.text || 'Tekst') : `${obj.type} ${index + 1}`,
       visible: obj.visible !== false,
       locked: !obj.selectable,
     }));
     setCanvasElements(elements);
   };
 
-  const saveToHistory = (canvas: FabricCanvas) => {
+  const saveToHistory = (canvas: Canvas) => {
     const json = JSON.stringify(canvas.toJSON());
     setHistory(prev => {
       const newHistory = prev.slice(0, historyIndex + 1);
@@ -301,12 +271,11 @@ export const VoucherDesigner: React.FC = () => {
   const addText = () => {
     if (!fabricCanvas) return;
     
-    const text = new FabricText('Nowy tekst', {
+    const text = new Text('Nowy tekst', {
       left: 100,
       top: 100,
       fontSize: 16,
       fontFamily: 'Times New Roman',
-      selectable: true,
     });
     fabricCanvas.add(text);
     fabricCanvas.setActiveObject(text);
@@ -324,7 +293,6 @@ export const VoucherDesigner: React.FC = () => {
       fill: 'rgba(255, 0, 0, 0.3)',
       stroke: '#ff0000',
       strokeWidth: 2,
-      selectable: true,
     });
     fabricCanvas.add(rect);
     fabricCanvas.setActiveObject(rect);
@@ -334,14 +302,13 @@ export const VoucherDesigner: React.FC = () => {
   const addCircle = () => {
     if (!fabricCanvas) return;
     
-    const circle = new FabricCircle({
+    const circle = new Circle({
       left: 100,
       top: 100,
       radius: 30,
       fill: 'rgba(0, 255, 0, 0.3)',
       stroke: '#00ff00',
       strokeWidth: 2,
-      selectable: true,
     });
     fabricCanvas.add(circle);
     fabricCanvas.setActiveObject(circle);
@@ -363,7 +330,7 @@ export const VoucherDesigner: React.FC = () => {
     };
     
     if (activeObject.type === 'text') {
-      const cloned = new FabricText((activeObject as any).text || '', props);
+      const cloned = new Text((activeObject as any).text || '', props);
       fabricCanvas.add(cloned);
       fabricCanvas.setActiveObject(cloned);
     } else if (activeObject.type === 'rect') {
@@ -371,7 +338,7 @@ export const VoucherDesigner: React.FC = () => {
       fabricCanvas.add(cloned);
       fabricCanvas.setActiveObject(cloned);
     } else if (activeObject.type === 'circle') {
-      const cloned = new FabricCircle({ radius: 30, fill: 'green', ...props });
+      const cloned = new Circle({ radius: 30, fill: 'green', ...props });
       fabricCanvas.add(cloned);
       fabricCanvas.setActiveObject(cloned);
     }
@@ -399,7 +366,7 @@ export const VoucherDesigner: React.FC = () => {
 
   const updateObjectProperty = (property: string, value: any) => {
     if (!activeObject) return;
-    activeObject.set(property, value);
+    (activeObject as any).set(property, value);
     fabricCanvas?.renderAll();
   };
 
@@ -535,15 +502,6 @@ export const VoucherDesigner: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-2">
             <Button
-              variant={selectedTool === 'select' ? 'default' : 'outline'}
-              size="sm"
-              className="w-full justify-start"
-              onClick={() => setSelectedTool('select')}
-            >
-              <Move className="h-4 w-4 mr-2" />
-              Wybierz
-            </Button>
-            <Button
               variant="outline"
               size="sm"
               className="w-full justify-start"
@@ -567,7 +525,7 @@ export const VoucherDesigner: React.FC = () => {
               className="w-full justify-start"
               onClick={addCircle}
             >
-              <Circle className="h-4 w-4 mr-2" />
+              <LucideCircle className="h-4 w-4 mr-2" />
               Koło
             </Button>
             
@@ -649,13 +607,12 @@ export const VoucherDesigner: React.FC = () => {
                 <CardContent className="space-y-3">
                   <div>
                     <Label htmlFor="templateName" className="text-xs">Nazwa</Label>
-                    <Input
-                      id="templateName"
-                      value={templateName}
-                      onChange={(e) => setTemplateName(e.target.value)}
-                      placeholder="np. Elegancki złoty"
-                      size="sm"
-                    />
+                       <Input
+                         id="templateName"
+                         value={templateName}
+                         onChange={(e) => setTemplateName(e.target.value)}
+                         placeholder="np. Elegancki złoty"
+                       />
                   </div>
                   <div>
                     <Label htmlFor="templateDescription" className="text-xs">Opis</Label>
@@ -683,16 +640,15 @@ export const VoucherDesigner: React.FC = () => {
                   <div className="space-y-3">
                     <div>
                       <Label className="text-xs">Tekst</Label>
-                      <Input
-                        value={(activeObject as fabric.Text).text || ''}
-                        onChange={(e) => updateObjectProperty('text', e.target.value)}
-                        size="sm"
-                      />
+                       <Input
+                         value={(activeObject as any).text || ''}
+                         onChange={(e) => updateObjectProperty('text', e.target.value)}
+                       />
                     </div>
                     <div>
                       <Label className="text-xs">Rozmiar czcionki</Label>
                       <Slider
-                        value={[(activeObject as FabricText).fontSize || 16]}
+                        value={[(activeObject as any).fontSize || 16]}
                         onValueChange={([value]) => updateObjectProperty('fontSize', value)}
                         min={8}
                         max={72}
@@ -700,27 +656,10 @@ export const VoucherDesigner: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <Label className="text-xs">Czcionka</Label>
-                      <Select
-                        value={(activeObject as FabricText).fontFamily || 'Times New Roman'}
-                        onValueChange={(value) => updateObjectProperty('fontFamily', value)}
-                      >
-                        <SelectTrigger className="h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Times New Roman">Times New Roman</SelectItem>
-                          <SelectItem value="Arial">Arial</SelectItem>
-                          <SelectItem value="Georgia">Georgia</SelectItem>
-                          <SelectItem value="Helvetica">Helvetica</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
                       <Label className="text-xs">Kolor</Label>
                       <Input
                         type="color"
-                        value={(activeObject as FabricText).fill as string || '#000000'}
+                        value={(activeObject as any).fill as string || '#000000'}
                         onChange={(e) => updateObjectProperty('fill', e.target.value)}
                         className="h-8"
                       />
@@ -748,57 +687,25 @@ export const VoucherDesigner: React.FC = () => {
                         className="h-8"
                       />
                     </div>
-                    <div>
-                      <Label className="text-xs">Grubość obramowania</Label>
-                      <Slider
-                        value={[(activeObject as any).strokeWidth || 1]}
-                        onValueChange={([value]) => updateObjectProperty('strokeWidth', value)}
-                        min={0}
-                        max={10}
-                        step={1}
-                      />
-                    </div>
                   </div>
                 )}
 
                 <div className="space-y-3">
                   <div>
                     <Label className="text-xs">Pozycja X</Label>
-                    <Input
-                      type="number"
+                      <Input
+                        type="number"
                         value={Math.round(activeObject.left || 0).toString()}
                         onChange={(e) => updateObjectProperty('left', Number(e.target.value))}
-                      size="sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Pozycja Y</Label>
-                    <Input
-                      type="number"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">Pozycja Y</Label>
+                      <Input
+                        type="number"
                         value={Math.round(activeObject.top || 0).toString()}
                         onChange={(e) => updateObjectProperty('top', Number(e.target.value))}
-                      size="sm"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Obrót (°)</Label>
-                    <Slider
-                      value={[activeObject.angle || 0]}
-                      onValueChange={([value]) => updateObjectProperty('angle', value)}
-                      min={-180}
-                      max={180}
-                      step={1}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Przezroczystość</Label>
-                    <Slider
-                      value={[activeObject.opacity || 1]}
-                      onValueChange={([value]) => updateObjectProperty('opacity', value)}
-                      min={0}
-                      max={1}
-                      step={0.1}
-                    />
+                      />
                   </div>
                 </div>
               </div>
